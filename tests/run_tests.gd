@@ -666,6 +666,28 @@ func test_staff_sweep_hits_hard_and_can_knock_down() -> void:
 
 # --- Story missions --------------------------------------------------------------
 
+func test_bridge_duel_is_staffs_only() -> void:
+	var robin = db.make_hero("robin")
+	var before: Array = robin.available_abilities()
+	var run = MissionRun.new(db, MissionGen.new(db).story("little_john_bridge", 25, 1), [robin, db.make_hero("will")])
+	run.arrive()
+	run.advance()
+	run.arrive()
+	run.choose(0)
+	run.advance()
+	var step: Dictionary = run.arrive()
+	check(step["type"] == "battle", "the bridge bout begins")
+	var b = run.make_battle(step["enemies"])
+	check(robin.sprite == "robin_staff" and ResourceLoader.exists("res://assets/sprites/robin_staff.png"), "Robin carries a staff on the bridge")
+	check(robin.row == "front" and robin.available_abilities() == ["strike", "staff_sweep", "defend"], "Robin brings only his staff to the bridge (%s)" % [robin.available_abilities()])
+	b.swap_row(robin)
+	check(not robin.available_abilities().has("bow_shot"), "no bow on the bridge, even from the back row")
+	b.result = "victory"
+	run.battle_finished(b)
+	check(robin.available_abilities() == before, "Robin has his bow back after the bout")
+	check(robin.sprite == "robin", "and looks like himself again")
+
+
 func test_story_data_is_valid() -> void:
 	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape"]
 	for h in db.stories["start_band"]:

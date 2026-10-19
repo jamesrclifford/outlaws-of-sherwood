@@ -112,7 +112,7 @@ def sword(s, hx=22, hy=18, blade="#d8dde3"):
     s.px(hx - 1, hy + 1, "#6b3d1e")
 
 
-def robin():
+def robin_body():
     s = Sprite()
     top = humanoid(s, "#e0ac82", "#3f7d3a", "#2d5a29", "#5a4a2a", "#4a2f18", belt="#6b3d1e")
     s.rect(12, top - 1, 19, top + 1, "#3f7d3a")      # hood
@@ -120,9 +120,21 @@ def robin():
     s.rect(14, top - 2, 17, top - 2, "#3f7d3a")
     s.line(17, top - 1, 21, top - 4, "#c0392b")       # red feather
     s.rect(14, top + 6, 18, top + 6, "#8a5a2b")       # short beard
+    return s, top
+
+
+def robin():
+    s, top = robin_body()
     quiver(s, top)
     bow(s)
     return s.save("robin")
+
+
+def robin_staff():
+    """Robin with the oak staff he cut for the bout on the bridge."""
+    s, top = robin_body()
+    staff(s, x=24, y0=2)
+    return s.save("robin_staff")
 
 
 def little_john():
@@ -429,7 +441,7 @@ def king():
     return s.save("king")
 
 
-DRAWERS = [robin, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king]
+DRAWERS = [robin, robin_staff, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king]
 
 
 def contact_sheet(images, path, scale=5):

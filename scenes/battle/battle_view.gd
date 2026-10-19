@@ -92,7 +92,9 @@ func _build_layout() -> void:
 	add_child(bg)
 	# The backdrop is 180x220 pixel art shown at 2x behind the turn order and the field.
 	backdrop = TextureRect.new()
-	backdrop.position = Vector2.ZERO
+	# Units stand in the middle of the field, so on a short phone the scenery rises with them
+	# (a duel on a log keeps its fighters on the log).
+	backdrop.position = Vector2(0, (panel_top - 436.0) / 2)
 	backdrop.size = Vector2(360, 440)
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_SCALE

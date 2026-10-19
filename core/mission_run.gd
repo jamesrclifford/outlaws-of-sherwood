@@ -19,6 +19,7 @@ var result := ""              # "", "success", "failed", "called_off"
 var mission_log: Array = []
 var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
+var _duel_loadouts := {}      # hero id -> [abilities, row, sprite] kept while a duel sets the weapons
 
 
 func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
@@ -121,9 +122,32 @@ func _battle_or_continue(enemy_ids: Array) -> Dictionary:
 
 func make_battle(enemy_ids: Array):
 	var node := current_node()
+	if node.has("abilities"):
+		_arm_for_duel(node["abilities"], node.get("sprites", {}))
 	var b = db.make_custom_battle(fighters(), enemy_ids, rng.randi())
 	b.friendly = node.get("friendly", false)
 	return b
+
+
+## A duel can set the weapons (quarterstaves on the bridge): the fighters stand in the front row
+## with only those abilities, and maybe a matching look, until the bout ends.
+func _arm_for_duel(ability_ids: Array, sprites: Dictionary) -> void:
+	for h in fighters():
+		_duel_loadouts[h.id] = [h.abilities, h.row, h.sprite]
+		h.abilities = ability_ids.duplicate()
+		h.sprite = sprites.get(h.id, h.sprite)
+		h.row = "front"
+		h.fixed_abilities = true
+
+
+func _disarm_after_duel() -> void:
+	for h in heroes:
+		if _duel_loadouts.has(h.id):
+			h.abilities = _duel_loadouts[h.id][0]
+			h.row = _duel_loadouts[h.id][1]
+			h.sprite = _duel_loadouts[h.id][2]
+			h.fixed_abilities = false
+	_duel_loadouts.clear()
 
 
 func active_heroes() -> Array:
@@ -139,6 +163,7 @@ func fighters() -> Array:
 
 func battle_finished(battle) -> void:
 	_sprung.clear()
+	_disarm_after_duel()
 	var node := current_node()
 	if battle.friendly:
 		# A sporting bout: win or lose, the story goes on.

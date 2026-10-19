@@ -23,6 +23,7 @@ var carries_gold: int = 0
 var ap: int = 0
 var statuses := {}        # status id -> turns remaining
 var fled := false
+var fixed_abilities := false  # a story duel set the weapons: no bow from the back row
 
 
 ## One word for tight spots on screen: the data's "short", else the first word of the name.
@@ -54,7 +55,7 @@ static func from_data(unit_id: String, data: Dictionary, unit_side: String):
 ## Abilities usable right now. Anyone standing in the back row can loose a bow shot.
 func available_abilities() -> Array:
 	var out := abilities.duplicate()
-	if row == "back" and not out.has(BACK_ROW_ABILITY):
+	if row == "back" and not fixed_abilities and not out.has(BACK_ROW_ABILITY):
 		out.append(BACK_ROW_ABILITY)
 	return out
 

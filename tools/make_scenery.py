@@ -486,34 +486,44 @@ def bd_sheriffs_toll_bridge():
 
 
 def bd_brook_bridge():
-    """Where Robin met Little John: a log over a woodland brook."""
+    """Where Robin met Little John: a single great log over a woodland brook, seen from the side.
+    The duellists stand on the log; its top is where the battle screen puts their feet."""
     rng = random.Random(17)
     c = bd_sherwood_edge()
-    # a brook running across the ground, crossed by a single great log
-    for y in range(118, 168):
-        wob = round(math.sin(y / 5) * 2)
-        for x in range(BW):
-            edge = min(y - 118, 167 - y)
-            colour = "#4a7a9a" if edge > 3 else ("#6a9ab8" if edge > 1 else "#5a4a2e")
-            c.px(x + wob * 0, y, colour)
-    for _ in range(70):
-        x, y = rng.randint(0, BW), rng.randint(122, 164)
+    top = 124                 # the log's upper surface, under the fighters' feet
+    left, right = 34, 148     # where the banks fall away to the water
+    # the brook fills the gap between the banks, from just below the far bank to the bottom
+    for y in range(HORIZON + 30, BH):
+        for x in range(left, right):
+            depth = y - (HORIZON + 30)
+            colour = "#6a9ab8" if depth < 3 else ("#4a7a9a" if depth < 40 else "#3e6a8a")
+            c.px(x, y, colour)
+    for _ in range(90):   # ripples
+        x, y = rng.randint(left, right - 6), rng.randint(HORIZON + 34, BH - 2)
         c.rect(x, y, x + rng.randint(2, 6), y, "#a8d0e4")
-    for _ in range(12):   # stones in the water
-        x, y = rng.randint(0, BW), rng.randint(124, 162)
+    for _ in range(10):   # stones in the water
+        x, y = rng.randint(left + 4, right - 4), rng.randint(top + 20, BH - 6)
         c.ellipse(x, y, 3, 2, "#8a8478")
         c.rect(x - 1, y - 1, x + 1, y - 1, "#aaa496")
-    # the log runs from bank to bank, bark lines along its length
-    c.rect(81, 108, 99, 178, "#6a4a2c")
-    c.rect(81, 108, 83, 178, "#8a6a40")
-    c.rect(97, 108, 99, 178, "#3e2a18")
-    for x in range(85, 97, 4):
-        for y in range(110, 177, 2):
-            if rng.random() < 0.6:
+    # earth banks dropping into the water on both sides
+    for y in range(HORIZON + 26, BH):
+        drop = (y - HORIZON - 26) // 6
+        c.rect(left - 6 + drop, y, left + 1 + drop // 2, y, "#5a4a2e")
+        c.rect(right - 1 - drop // 2, y, right + 6 - drop, y, "#5a4a2e")
+    # the log, bank to bank: bark on top, shadowed underside, rings showing at each cut end
+    c.rect(left - 14, top, right + 14, top + 8, "#6a4a2c")
+    c.rect(left - 14, top, right + 14, top + 1, "#8a6a40")
+    c.rect(left - 14, top + 7, right + 14, top + 8, "#3e2a18")
+    for x in range(left - 12, right + 12, 3):
+        for y in range(top + 2, top + 7, 2):
+            if rng.random() < 0.5:
                 c.px(x, y, "#5a3d24")
-    c.ellipse(90, 108, 9, 3, "#a08050")   # cut end, showing the rings
-    c.ellipse(90, 108, 5, 1.5, "#c8a070")
-    c.ellipse(90, 178, 9, 3, "#3e2a18")
+    for end in (left - 14, right + 14):
+        c.ellipse(end, top + 4, 3, 5, "#a08050")
+        c.ellipse(end, top + 4, 1.5, 3, "#c8a070")
+    # its reflection, broken by the current
+    for x in range(left, right, 2):
+        c.px(x, top + 12 + (x // 4) % 2, "#2e5a7a")
     return c
 
 
