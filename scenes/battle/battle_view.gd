@@ -2,6 +2,9 @@
 ## Heroes stand on the left (back row outermost), enemies on the right.
 extends Control
 
+## Emitted when a battle set up with run_battle() ends and the player taps Continue.
+signal finished(battle)
+
 const GameData = preload("res://core/game_data.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
@@ -17,6 +20,7 @@ var encounter_index := 0
 var fight_number := 0
 var selected_ability := ""
 var unit_buttons := {}
+var _external := false
 
 var timeline_label: Label
 var field: Control
@@ -26,10 +30,29 @@ var commands_box: HBoxContainer
 
 
 func _ready() -> void:
-	db = GameData.new()
+	if db == null:
+		db = GameData.new()
 	encounter_ids = db.encounters.keys()
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_layout()
-	_start_battle()
+	if battle == null:
+		_start_battle()
+	else:
+		_begin()
+
+
+## Fights a battle built elsewhere (e.g. by a mission). Call before adding to the tree.
+func run_battle(game_data, b, title: String) -> void:
+	db = game_data
+	battle = b
+	_external = true
+	battle.battle_log.append(title)
+
+
+func _begin() -> void:
+	battle.event.connect(func(_t): _refresh_log())
+	_rebuild_units()
+	_advance()
 
 
 func _build_layout() -> void:
@@ -70,10 +93,8 @@ func _start_battle() -> void:
 	var enc: String = encounter_ids[encounter_index % encounter_ids.size()]
 	fight_number += 1
 	battle = db.make_battle(PARTY, enc, Time.get_ticks_usec() + fight_number)
-	battle.event.connect(func(_t): _refresh_log())
 	battle.battle_log.append(db.encounters[enc]["name"])
-	_rebuild_units()
-	_advance()
+	_begin()
 
 
 func _rebuild_units() -> void:
@@ -82,10 +103,13 @@ func _rebuild_units() -> void:
 	unit_buttons.clear()
 	for side in ["heroes", "enemies"]:
 		var counts := {"front": 0, "back": 0}
-		for u in battle.units.filter(func(x): return x.side == side):
+		var side_units: Array = battle.units.filter(func(x): return x.side == side)
+		var biggest_column: int = max(side_units.filter(func(x): return x.row == "front").size(), side_units.filter(func(x): return x.row == "back").size())
+		var step: float = min(92.0, 368.0 / max(1, biggest_column))
+		for u in side_units:
 			var b := Button.new()
-			b.size = Vector2(80, 84)
-			b.position = Vector2(COLUMN_X[side][u.row], 8 + counts[u.row] * 92)
+			b.size = Vector2(80, min(84.0, step - 4))
+			b.position = Vector2(COLUMN_X[side][u.row], 8 + counts[u.row] * step)
 			counts[u.row] += 1
 			b.add_theme_font_size_override("font_size", 9)
 			b.pressed.connect(_on_unit_pressed.bind(u))
@@ -139,6 +163,9 @@ func _refresh_log() -> void:
 func _refresh_actions() -> void:
 	for c in actions_box.get_children() + commands_box.get_children():
 		c.queue_free()
+	if battle.is_over() and _external:
+		_add_button(commands_box, "Continue", func(): finished.emit(battle))
+		return
 	if battle.is_over():
 		var label := "Next fight" if battle.result == "victory" else "Try again"
 		_add_button(commands_box, label, func():

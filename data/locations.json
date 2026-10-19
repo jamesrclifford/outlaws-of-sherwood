@@ -1,0 +1,8 @@
+{
+  "great_north_road":   {"name": "Great North Road",      "backdrop": "3b5a2e", "enemy_pool": ["man_at_arms", "crossbowman", "knight", "tax_collector"], "missions": ["robbery", "rescue"]},
+  "sherwood_edge":      {"name": "Edge of Sherwood",      "backdrop": "2f4a28", "enemy_pool": ["forester", "hound", "man_at_arms"],                       "missions": ["robbery", "rescue"]},
+  "locksley":           {"name": "Locksley Village",      "backdrop": "6b5a3a", "enemy_pool": ["man_at_arms", "crossbowman", "tax_collector"],            "missions": ["robbery", "rescue"]},
+  "nottingham_gate":    {"name": "Nottingham Town Gate",  "backdrop": "5a5148", "enemy_pool": ["man_at_arms", "crossbowman", "knight"],                  "missions": ["rescue"]},
+  "hanged_mans_crossing": {"name": "Hanged Man's Crossing", "backdrop": "4a4436", "enemy_pool": ["man_at_arms", "forester", "hound", "crossbowman"],      "missions": ["rescue"]},
+  "sheriffs_toll_bridge": {"name": "The Sheriff's Toll Bridge", "backdrop": "44505a", "enemy_pool": ["man_at_arms", "crossbowman", "tax_collector"],   "missions": ["robbery"]}
+}
