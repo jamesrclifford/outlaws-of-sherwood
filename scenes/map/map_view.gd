@@ -178,7 +178,7 @@ func _select(id: String) -> void:
 			lines.append("Job: %s. Reward %d gold%s." % [m["name"], m["rewards"]["gold"], expiry])
 	if not c.news.is_empty():
 		lines.append(c.news.back())
-	info_label.text = "\n".join(lines)
+	Style.fit_text(info_label, "\n".join(lines))
 
 	var opts := []
 	var days: int = c.route(id).size()
@@ -261,7 +261,7 @@ func _act(action: Callable) -> void:
 		campaign.save()
 		_select(campaign.location)
 	else:
-		info_label.text = "You can't afford that right now."
+		Style.fit_text(info_label, "You can't afford that right now.")
 
 
 func _show_giving() -> void:
@@ -269,7 +269,7 @@ func _show_giving() -> void:
 	for amount in campaign.econ["give_amounts"]:
 		opts.append(["Give %d gold" % amount, _act.bind(campaign.give_to_poor.bind(int(amount)))])
 	opts.append(["Back", func(): _select(selected)])
-	info_label.text = "Every 10 gold given raises reputation by 1, and the Sheriff's grip here loosens."
+	Style.fit_text(info_label, "Every 10 gold given raises reputation by 1, and the Sheriff's grip here loosens.")
 	_set_buttons(opts)
 
 
@@ -355,5 +355,5 @@ func _list_button(list: VBoxContainer, text: String, cb: Callable) -> Button:
 
 func _show_news() -> void:
 	var recent: Array = campaign.news.slice(max(0, campaign.news.size() - 6))
-	info_label.text = "\n".join(recent) if not recent.is_empty() else "No news yet."
+	Style.fit_text(info_label, "\n".join(recent) if not recent.is_empty() else "No news yet.", true)
 	_set_buttons([["Back", func(): _select(selected)]])

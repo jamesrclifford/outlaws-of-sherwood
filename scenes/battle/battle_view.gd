@@ -249,15 +249,15 @@ func _refresh() -> void:
 		b.modulate = Color(1, 1, 1, 0.4) if not u.is_active() else Color.WHITE
 		var art: TextureRect = b.get_node("Art")
 		art.modulate = Color("b8e8ff") if targets.has(u) and u != cur else Color.WHITE
-	var names: Array = battle.upcoming().map(func(x): return x.name.split(" ")[0])
-	timeline_label.text = "Round %d   Turn order: %s" % [battle.round_number, " > ".join(names)]
+	var names: Array = battle.upcoming().map(func(x): return x.name.trim_prefix("The ").split(" ")[0])
+	Style.fit_text(timeline_label, "Round %d   Turn order: %s" % [battle.round_number, " > ".join(names)])
 	_refresh_log()
 	_refresh_actions()
 
 
 func _refresh_log() -> void:
 	var lines: Array = battle.battle_log.slice(max(0, battle.battle_log.size() - 8))
-	log_label.text = "\n".join(lines)
+	Style.fit_text(log_label, "\n".join(lines), true)
 
 
 func _refresh_actions() -> void:
@@ -289,7 +289,8 @@ func _refresh_actions() -> void:
 	_add_button(commands_box, "Retreat", func():
 		battle.retreat(cur)
 		_after_hero_action())
-	timeline_label.text += "\n%s: %d AP" % [cur.name, cur.ap]
+	# The current hero's AP goes first so a long turn order is what gets cut short.
+	Style.fit_text(timeline_label, "%s: %d AP\n%s" % [cur.name, cur.ap, timeline_label.text])
 
 
 func _add_button(box: HBoxContainer, text: String, cb: Callable) -> Button:
