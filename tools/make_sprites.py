@@ -298,7 +298,46 @@ def guy():
     return s.save("guy")
 
 
-DRAWERS = [robin, little_john, will, tuck, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, guy]
+def alan():
+    s = Sprite()
+    top = humanoid(s, "#ecc0a0", "#3a5aa0", "#2a4278", "#e0c050", "#5a3a20", belt="#e0c050")
+    s.rect(13, top - 1, 19, top + 2, "#a0642a")         # auburn curls
+    s.rect(12, top + 1, 13, top + 6, "#a0642a")
+    s.rect(12, top - 3, 18, top - 1, "#e0c050")         # floppy yellow cap
+    s.rect(18, top - 2, 20, top - 2, "#e0c050")
+    s.line(14, top - 3, 10, top - 7, "#c0392b")         # long red feather
+    s.rect(16, top + 9, 18, top + 11, "#e0c050")       # motley diamond on the tunic
+    # lute held across the body
+    for y in range(15, 22):
+        w = 3 - abs(y - 18) // 2
+        s.rect(21 - w, y, 23 + w, y, "#b07a3a")
+    s.rect(22, 17, 22, 18, "#3a2614")                   # sound hole
+    s.line(24, 15, 28, 9, "#7a4a22")                    # neck
+    s.rect(27, 8, 29, 9, "#5a3418")                     # pegbox
+    return s.save("alan")
+
+
+def bishop():
+    s = Sprite()
+    top = humanoid(s, "#e8c0a0", "#e8e4dc", "#c8c2b8", "#7a3a8a", "#3a2a3a", belt="#c9a227", fat=2)
+    s.rect(12, 22, 20, 28, "#e8e4dc")                   # long white robe
+    s.rect(17, 22, 20, 28, "#c8c2b8")
+    s.rect(15, top + 8, 16, 28, "#7a3a8a")              # purple stole
+    s.px(15, 24, "#c9a227")
+    s.rect(14, top - 4, 18, top - 1, "#e8e4dc")         # mitre
+    s.rect(15, top - 6, 17, top - 4, "#e8e4dc")
+    s.rect(16, top - 6, 16, top - 1, "#c9a227")
+    s.rect(14, top - 1, 18, top - 1, "#c9a227")
+    s.line(24, 6, 24, 30, "#c9a227")                    # crozier
+    s.rect(24, 4, 26, 5, "#c9a227")
+    s.px(27, 6, "#c9a227")
+    s.px(26, 7, "#c9a227")
+    s.rect(18, 16, 21, 19, "#8a6a2a")                   # a fat purse
+    s.px(19, 15, "#c9a227")
+    return s.save("bishop")
+
+
+DRAWERS = [robin, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy]
 
 
 def contact_sheet(images, path, scale=5):

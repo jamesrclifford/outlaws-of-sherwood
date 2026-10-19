@@ -5,13 +5,15 @@ extends RefCounted
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 
-const STARTING_HEROES := ["robin", "little_john", "will", "tuck"]
+## The whole named band, for tests and sandbox play. A real campaign starts with data/stories.json's
+## start_band and wins the others over through story missions.
+const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
 const HEAL_AT_CAMP := 1.0          # fraction of max HP restored per day resting at camp
 const HEAL_ON_ROAD := 0.15
-const PARTY_SIZE := 4
+const PARTY_SIZE := 5
 const STAT_KEYS := ["hp", "atk", "def", "spd", "crit"]
 
 var db
@@ -27,16 +29,19 @@ var location := "camp"
 var control := {}                  # region -> Sheriff's control, 0-100
 var plots := {"sheriff": 0, "guy": 0}   # villain plot meters, 0-100
 var hunted_hero := ""
+var band: Array = []               # named heroes who have joined, in order of joining
 var heroes := {}                   # hero id -> Unit (HP persists)
 var captured := {}                 # hero id -> {"node": id, "since": day}
 var missions := {}                 # node id -> mission dictionary (with "expires")
 var news: Array = []               # what happened, newest last
 var merry_men := {}                # hired hero id -> name
 var equipment := {}                # hero id -> {slot: item id}
+var stories_done: Array = []       # story ids finished
 var econ: Dictionary
 
 
-func _init(game_data, seed_value: int) -> void:
+## band: the named heroes to start with; empty means the story start (data/stories.json).
+func _init(game_data, seed_value: int, start_band: Array = []) -> void:
 	db = game_data
 	map = db.map
 	econ = db.economy
@@ -45,10 +50,17 @@ func _init(game_data, seed_value: int) -> void:
 	supplies = int(econ["supplies"]["start"])
 	for r in map["regions"]:
 		control[r] = int(map["regions"][r]["start_control"])
-	for h in STARTING_HEROES:
-		heroes[h] = db.make_hero(h)
+	for h in (start_band if not start_band.is_empty() else db.stories["start_band"]):
+		_join(h)
+	_post_stories()
 	for _i in 3:
 		_spawn_mission()
+
+
+func _join(hero_id: String) -> void:
+	if not band.has(hero_id):
+		band.append(hero_id)
+		heroes[hero_id] = db.make_hero(hero_id)
 
 
 func _news(text: String) -> void:
@@ -88,11 +100,11 @@ func route(to: String) -> Array:
 
 ## Everyone in the band who isn't captured: the named heroes first, then hired Merry Men.
 func free_heroes() -> Array:
-	var ids: Array = STARTING_HEROES + merry_men.keys()
+	var ids: Array = band + merry_men.keys()
 	return ids.filter(func(h): return heroes.has(h) and not captured.has(h)).map(func(h): return heroes[h])
 
 
-## Who goes on the next job: the first four free members. Merry Men fill gaps left by captured heroes.
+## Who goes on the next job: the first five free members. Merry Men fill gaps left by captured heroes.
 func party() -> Array:
 	return free_heroes().slice(0, PARTY_SIZE)
 
@@ -134,6 +146,12 @@ func finish_mission(run) -> void:
 		"success":
 			gold += run.gold
 			reputation += run.reputation
+			if m["type"] == "story":
+				stories_done.append(m["story"])
+				_news("%s: the band's legend grows." % m["name"])
+				if run.recruited != "":
+					_join(run.recruited)
+					_news("%s joins the band!" % hero_name(run.recruited))
 			for h in m.get("rescue_heroes", []):
 				captured.erase(h)
 				_news("%s is free and back with the band!" % hero_name(h))
@@ -160,6 +178,7 @@ func finish_mission(run) -> void:
 		_remove_rescues()
 		location = "camp"
 		gold = gold / 2
+	_post_stories()
 
 
 # --- Spending gold -----------------------------------------------------------
@@ -329,11 +348,12 @@ func _end_day(resting: bool) -> void:
 		else:
 			h.hp = maxi(1, h.hp - int(ceil(h.max_hp * float(econ["supplies"]["hunger_damage"]))))
 	for id in missions.keys():
-		if not missions[id].has("rescue_heroes") and missions[id]["expires"] < day:
+		if not missions[id].has("rescue_heroes") and missions[id]["type"] != "story" and missions[id]["expires"] < day:
 			missions.erase(id)
 	_sheriff_acts()
 	_guy_acts()
 	_move_prisoners()
+	_post_stories()
 	if rng.randf() < 0.6 or missions.size() < 2:
 		_spawn_mission()
 
@@ -355,7 +375,7 @@ func _guy_acts() -> void:
 	plots["guy"] = mini(100, plots["guy"] + 5 + infamy / 8)
 	if plots["guy"] >= 100:
 		plots["guy"] = 0
-		var targets := free_heroes().filter(func(h): return STARTING_HEROES.has(h.id) and h.id != "robin")
+		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
 		if not targets.is_empty():
 			hunted_hero = targets[rng.randi_range(0, targets.size() - 1)].id
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
@@ -401,6 +421,32 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 		return
 
 
+## Puts each story whose requirements are met on the map at its place, taking over any ordinary
+## job there (but never a rescue). Story jobs never expire; one that fails comes back the next day.
+func _post_stories() -> void:
+	var gen = MissionGen.new(db)
+	for id in db.stories["stories"]:
+		var st: Dictionary = db.stories["stories"][id]
+		var held: Dictionary = missions.get(st["node"], {})
+		if stories_done.has(id) or held.has("rescue_heroes") or held.get("type", "") == "story" or not story_ready(id):
+			continue
+		var at: String = st["node"]
+		missions[at] = gen.story(id, threat(at), rng.randi())
+		missions[at]["expires"] = 0
+		_news("A tale is told of %s. (%s)" % [st["name"], node(at)["name"]])
+
+
+func story_ready(id: String) -> bool:
+	var st: Dictionary = db.stories["stories"][id]
+	if st["recruit"] != "" and band.has(st["recruit"]):
+		return false
+	var req: Dictionary = st["requires"]
+	for h in req.get("band", []):
+		if not band.has(h):
+			return false
+	return reputation >= int(req.get("reputation", 0))
+
+
 ## Posts (or extends) a rescue job where a hero is held. One job frees everyone held there.
 func _post_rescue(hero_id: String, at: String) -> void:
 	if missions.has(at) and missions[at].has("rescue_heroes"):
@@ -431,11 +477,14 @@ func to_dict() -> Dictionary:
 	return {"day": day, "gold": gold, "reputation": reputation, "infamy": infamy, "location": location,
 		"control": control, "plots": plots, "hunted_hero": hunted_hero, "hero_hp": hp, "captured": captured,
 		"missions": missions, "news": news, "rng_state": str(rng.state),
-		"supplies": supplies, "merry_men": merry_men, "equipment": equipment}
+		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
+		"band": band, "stories_done": stories_done}
 
 
 static func from_dict(game_data, data: Dictionary):
-	var c = load("res://core/campaign.gd").new(game_data, 0)
+	# Saves from before story missions had the whole band.
+	var c = load("res://core/campaign.gd").new(game_data, 0, data.get("band", FULL_BAND.slice(0, 4)))
+	c.stories_done = data.get("stories_done", [])
 	c.day = int(data["day"])
 	c.gold = int(data["gold"])
 	c.reputation = int(data["reputation"])

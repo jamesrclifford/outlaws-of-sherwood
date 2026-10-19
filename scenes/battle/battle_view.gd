@@ -209,7 +209,7 @@ static func backdrop_for(location: String) -> Texture2D:
 
 ## The unit's sprite: heroes and enemies by id, hired Merry Men share one look.
 static func sprite_for(u) -> Texture2D:
-	return sprite_by_id(u.id)
+	return sprite_by_id(u.sprite)
 
 
 static func sprite_by_id(id: String) -> Texture2D:

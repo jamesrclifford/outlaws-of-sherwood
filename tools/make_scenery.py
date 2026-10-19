@@ -485,6 +485,113 @@ def bd_sheriffs_toll_bridge():
     return c
 
 
+def bd_brook_bridge():
+    """Where Robin met Little John: a log over a woodland brook."""
+    rng = random.Random(17)
+    c = bd_sherwood_edge()
+    # a brook running across the ground, crossed by a single great log
+    for y in range(118, 168):
+        wob = round(math.sin(y / 5) * 2)
+        for x in range(BW):
+            edge = min(y - 118, 167 - y)
+            colour = "#4a7a9a" if edge > 3 else ("#6a9ab8" if edge > 1 else "#5a4a2e")
+            c.px(x + wob * 0, y, colour)
+    for _ in range(70):
+        x, y = rng.randint(0, BW), rng.randint(122, 164)
+        c.rect(x, y, x + rng.randint(2, 6), y, "#a8d0e4")
+    for _ in range(12):   # stones in the water
+        x, y = rng.randint(0, BW), rng.randint(124, 162)
+        c.ellipse(x, y, 3, 2, "#8a8478")
+        c.rect(x - 1, y - 1, x + 1, y - 1, "#aaa496")
+    # the log runs from bank to bank, bark lines along its length
+    c.rect(81, 108, 99, 178, "#6a4a2c")
+    c.rect(81, 108, 83, 178, "#8a6a40")
+    c.rect(97, 108, 99, 178, "#3e2a18")
+    for x in range(85, 97, 4):
+        for y in range(110, 177, 2):
+            if rng.random() < 0.6:
+                c.px(x, y, "#5a3d24")
+    c.ellipse(90, 108, 9, 3, "#a08050")   # cut end, showing the rings
+    c.ellipse(90, 108, 5, 1.5, "#c8a070")
+    c.ellipse(90, 178, 9, 3, "#3e2a18")
+    return c
+
+
+def bd_friars_ford():
+    """Fountain Dale: a wide shallow river with a gravel ford, willows on the banks."""
+    rng = random.Random(18)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#6a9ccc", "#9cc4e0", "#d0e4e4"])
+    clouds(c, rng, 4, 28)
+    hills(c, rng, HORIZON - 4, 16, "#6f9a5a", "#86ae6a")
+    for x in (14, 60, 148):
+        leafy_tree(c, rng, x, HORIZON + 2, 14, 10, ["#3a5a2a", "#5a8a3a", "#88b05a"])
+        for i in range(-8, 9, 3):   # willow fronds hanging down
+            c.line(x + i, HORIZON - 14, x + i + 1, HORIZON - 2 + abs(i) // 3, "#6a9a40")
+    c.rect(0, HORIZON + 3, BW, BH, "#7aa25a")
+    c.gradient(HORIZON + 3, 92, ["#86ae58", "#74a04c"])
+    c.gradient(93, 186, ["#5a8ab0", "#4a7aa4", "#3e6a94"])   # the river
+    for _ in range(90):
+        x, y = rng.randint(0, BW), rng.randint(95, 184)
+        c.rect(x, y, x + rng.randint(2, 7), y, rng.choice(["#8ab8d8", "#a8d0e4"]))
+    for y in range(93, 187):   # the gravel ford, angling across
+        cx = 100 + (y - 93) // 3
+        for x in range(cx - 14, cx + 15):
+            if rng.random() < 0.7:
+                c.px(x, y, rng.choice(["#b8a888", "#a09070", "#c8b898"]))
+    c.gradient(187, BH - 1, ["#8a7a52", "#7aa25a", "#6a9248"])
+    grass_tufts(c, rng, HORIZON + 6, 90, 30, ["#a2ca6c", "#4e7a34"])
+    grass_tufts(c, rng, 192, BH - 2, 20, ["#a2ca6c", "#4e7a34"])
+    for _ in range(10):   # reeds
+        x = rng.randint(0, BW)
+        y = rng.choice([92, 188])
+        c.line(x, y, x, y - 7, "#5a7a30")
+        c.rect(x, y - 9, x, y - 7, "#7a5a30")
+    return c
+
+
+def bd_archery_contest():
+    """The Sheriff's contest outside Nottingham: banners, a stand of nobles, straw targets."""
+    rng = random.Random(19)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#5a90c8", "#8ab8dc", "#cfe2e6"])
+    clouds(c, rng, 4, 20)
+    # Nottingham's walls on the skyline
+    c.rect(0, 26, BW, HORIZON - 14, "#9a9282")
+    for x in range(0, BW, 7):
+        c.rect(x, 22, x + 3, 25, "#9a9282")
+    c.rect(120, 4, 146, HORIZON - 14, "#aaa292")
+    for x in range(120, 147, 6):
+        c.rect(x, 0, x + 3, 3, "#aaa292")
+    banner(c, 130, 8)
+    # the noble stand, striped awning
+    c.rect(20, HORIZON - 16, 100, HORIZON + 2, "#6a4a2c")
+    for x in range(20, 101, 8):
+        c.rect(x, HORIZON - 24, x + 3, HORIZON - 16, "#a01e22")
+        c.rect(x + 4, HORIZON - 24, x + 7, HORIZON - 16, "#e0c050")
+    for i in range(10):   # spectators
+        x = 24 + i * 8
+        c.rect(x, HORIZON - 12, x + 4, HORIZON - 4, rng.choice(["#3a5aa0", "#7a3a8a", "#2a6a3a", "#a03a2a", "#c8a040"]))
+        c.rect(x + 1, HORIZON - 15, x + 3, HORIZON - 13, "#e0b090")
+    c.gradient(HORIZON + 3, BH - 1, ["#8cb45a", "#7aa44e", "#689246", "#5a823c"])
+    speckle(c, HORIZON + 3, BH - 1, ["#9ac464", "#5a8240"], rng, 0.05)
+    # straw targets on stands, far end of the field
+    for tx in (128, 152, 174):
+        c.line(tx - 4, HORIZON + 22, tx, HORIZON + 6, "#5a3d24")
+        c.line(tx + 4, HORIZON + 22, tx, HORIZON + 6, "#5a3d24")
+        for r, colour in ((7, "#e0c870"), (5, "#c03a2a"), (3, "#f0ece0"), (1, "#c03a2a")):
+            c.ellipse(tx, HORIZON + 8, r, r, colour)
+    # pennant line strung across the field
+    for x in range(0, BW, 6):
+        y = HORIZON + 30 + round(math.sin(x / 30) * 3)
+        c.px(x, y, "#3a2a1a")
+        c.rect(x + 1, y + 1, x + 3, y + 1, ["#a01e22", "#e0c050", "#3a5aa0"][(x // 6) % 3])
+        c.px(x + 2, y + 2, ["#a01e22", "#e0c050", "#3a5aa0"][(x // 6) % 3])
+    c.rect(0, 150, BW, 150, "#e8e4d8")   # the shooting line chalked on the grass
+    grass_tufts(c, rng, HORIZON + 6, BH - 2, 40, ["#a2ca6c", "#4e7a34"])
+    return c
+
+
 BACKDROPS = {
     "sherwood_edge": bd_sherwood_edge,
     "great_north_road": bd_great_north_road,
@@ -492,6 +599,9 @@ BACKDROPS = {
     "nottingham_gate": bd_nottingham_gate,
     "hanged_mans_crossing": bd_hanged_mans_crossing,
     "sheriffs_toll_bridge": bd_sheriffs_toll_bridge,
+    "brook_bridge": bd_brook_bridge,
+    "friars_ford": bd_friars_ford,
+    "archery_contest": bd_archery_contest,
 }
 
 
@@ -796,6 +906,14 @@ def node_objective(c):    # a treasure chest
     c.px(7, 7, "#c8904a")
 
 
+def node_duel(c):        # crossed quarterstaves: a friendly bout
+    for o in (0, 1):
+        c.line(5 + o, 4, 16 + o, 16, "#d8b070")
+        c.line(16 + o, 4, 5 + o, 16, "#b08a50")
+    for x, y in ((5, 4), (16, 16), (16, 4), (5, 16)):
+        c.px(x, y, "#5a3d24")
+
+
 def node_escape(c):       # the Major Oak, home
     rng = random.Random(3)
     leafy_tree(c, rng, 10, 16, 5, 5, ["#2a4422", "#4a7a34", "#78a84c"])
@@ -810,7 +928,7 @@ def trap_mark():
     return c
 
 
-NODE_ICONS = {"approach": node_approach, "combat": node_combat, "choice": node_choice,
+NODE_ICONS = {"approach": node_approach, "combat": node_combat, "choice": node_choice, "duel": node_duel,
               "hazard": node_hazard, "objective": node_objective, "escape": node_escape}
 
 
@@ -907,7 +1025,17 @@ def item_satchel(c):
     c.px(11, 5, "#5aa040")
 
 
+def item_lute(c, wood, strings):
+    c.ellipse(6, 10, 4, 4, wood)
+    c.ellipse(6, 10, 1, 1, "#3a2614")
+    c.line(8, 7, 13, 2, "#6a4a2a")
+    c.rect(13, 1, 14, 2, "#4a3020")
+    c.line(4, 12, 13, 3, strings)
+
+
 ITEM_ICONS = {
+    "ash_lute": lambda c: item_lute(c, "#c8904a", "#e8e0c8"),
+    "silver_harp": lambda c: item_lute(c, "#8a5a2a", "#d8dce4"),
     "yew_longbow": lambda c: item_bow(c, "#a0703a"),
     "hunters_recurve": lambda c: item_bow(c, "#6a4a2a"),
     "ironshod_staff": lambda c: item_staff(c, "#8a6a40", "#a8b0bc"),
@@ -966,6 +1094,12 @@ def make_fx():
     spark.px(6, 2, "#ffe080")
     spark.rect(3, 3, 5, 5, "#ffffff")
     spark.save("assets", "fx", "spark.png")
+    note = Canvas(8, 10)
+    note.rect(5, 0, 5, 7, "#f0d070")
+    note.rect(6, 1, 7, 2, "#f0d070")
+    note.ellipse(3.5, 7.5, 2, 1.5, "#f0d070")
+    note.outline("#3a2a1a")
+    note.save("assets", "fx", "note.png")
 
 
 # ---------------------------------------------------------------- title screen
