@@ -14,6 +14,24 @@ static func frame(name: String, margin := 4) -> StyleBoxTexture:
 	return sb
 
 
+## Sets a wrapped label's text without spilling past the box it was laid out in (anything below it,
+## like buttons, would cover the overflow). keep_end shows the newest lines of a log; otherwise the
+## first lines show and the rest are dropped.
+static func fit_text(l: Label, text: String, keep_end := false) -> void:
+	if not l.has_meta("box_height"):
+		l.set_meta("box_height", l.size.y)
+	var box: float = l.get_meta("box_height")
+	l.text = text
+	l.lines_skipped = 0
+	l.max_lines_visible = -1
+	var step: float = l.get_line_height() + l.get_theme_constant("line_spacing")
+	var fits := maxi(1, int((box + l.get_theme_constant("line_spacing")) / step))
+	var lines := l.get_line_count()
+	l.max_lines_visible = fits
+	l.lines_skipped = maxi(0, lines - fits) if keep_end else 0
+	l.size.y = box
+
+
 ## A theme for a whole screen; children pick it up automatically.
 static func theme() -> Theme:
 	var t := Theme.new()

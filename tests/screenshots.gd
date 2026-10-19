@@ -46,6 +46,14 @@ func _init() -> void:
 		await process_frame
 		await process_frame
 	await _snap(dir, "story_choice")
+	# A long log must stop above the choice buttons rather than run under them.
+	var keep: Array = run.mission_log.duplicate()
+	for i in 12:
+		run.mission_log.append("Line %d of a long story, long enough to wrap onto a second line of the briefing panel." % i)
+	story._refresh()
+	await _snap(dir, "story_long_log")
+	run.mission_log = keep
+	story._refresh()
 	story.buttons.get_child(0).pressed.emit()
 	await process_frame
 	await process_frame

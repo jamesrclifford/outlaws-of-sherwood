@@ -117,7 +117,7 @@ func _refresh() -> void:
 		path_box.add_child(_path_medallion(m["nodes"][i], i))
 	_refresh_party()
 	party_label.text = "Gold carried: %d" % run.gold
-	log_label.text = "\n".join(run.mission_log.slice(max(0, run.mission_log.size() - 15)))
+	Style.fit_text(log_label, "\n".join(run.mission_log.slice(max(0, run.mission_log.size() - 15))), true)
 
 
 ## One step of the path: done steps fade, the current one glows, a known trap gets a red net.
