@@ -7,6 +7,7 @@ const BACK_ROW_ABILITY := "bow_shot"
 var id: String
 var sprite: String        # art to draw; rivals in story duels borrow a hero's look
 var name: String
+var short: String         # a one-word name for the battle screen; empty to derive it
 var cls: String           # hero class, e.g. "Archer"; enemies have none
 var side: String          # "heroes" or "enemies"
 var max_hp: int
@@ -24,11 +25,17 @@ var statuses := {}        # status id -> turns remaining
 var fled := false
 
 
+## One word for tight spots on screen: the data's "short", else the first word of the name.
+func short_name() -> String:
+	return short if short != "" else name.trim_prefix("The ").split(" ")[0]
+
+
 static func from_data(unit_id: String, data: Dictionary, unit_side: String):
 	var u = load("res://core/unit.gd").new()
 	u.id = unit_id
 	u.sprite = data.get("sprite", unit_id)
 	u.name = data.get("name", unit_id)
+	u.short = data.get("short", "")
 	u.cls = data.get("class", "")
 	u.side = unit_side
 	u.max_hp = int(data["hp"])

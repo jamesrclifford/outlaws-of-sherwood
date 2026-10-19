@@ -4,6 +4,20 @@ extends RefCounted
 
 const UI := "res://assets/ui/%s.png"
 const TEXT := Color("f0e6cc")
+## Body text size everywhere: the 8px pixel font at 2x, readable on a phone.
+const BODY := 16
+## Body lines sit this far apart; the first line is a little taller (see lines()).
+const LINE := 18
+
+
+## Height of a label that shows n lines of body text.
+static func lines(n: int) -> float:
+	return LINE * n + 4
+
+
+## The screen's height: 640 or more, as the game is always 360 wide and fills the phone's height.
+static func screen_height(c: Control) -> float:
+	return maxf(640.0, c.get_viewport_rect().size.y)
 
 
 static func frame(name: String, margin := 4) -> StyleBoxTexture:
@@ -49,6 +63,9 @@ static func theme() -> Theme:
 	t.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.7))
 	t.set_constant("shadow_offset_x", "Label", 1)
 	t.set_constant("shadow_offset_y", "Label", 1)
+	# Text is 16 (the 8px pixel font at 2x); lines of 22 drawn 18 apart, so descenders just clear.
+	t.default_font_size = BODY
+	t.set_constant("line_spacing", "Label", -4)
 	t.set_stylebox("panel", "Panel", frame("panel"))
 	return t
 

@@ -40,8 +40,11 @@ var backdrop: TextureRect
 var timeline_label: Label
 var field: Control
 var log_label: Label
-var actions_box: HBoxContainer
+var hint_label: Label
+var actions_box: GridContainer
 var commands_box: HBoxContainer
+## What a tap on a unit last asked about, shown in the hint line until the next action.
+var _inspected = null
 
 
 func _ready() -> void:
@@ -78,7 +81,11 @@ func _begin() -> void:
 	_advance()
 
 
+## The field keeps the backdrop's height on tall phones; on short ones the panel takes room from it.
+## Bottom up, the panel holds the commands, two rows of abilities, a two-line hint and the log.
 func _build_layout() -> void:
+	var h := Style.screen_height(self)
+	var panel_top: float = minf(436.0, h - 344.0)
 	var bg := ColorRect.new()
 	bg.color = Color("1a140e")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -97,24 +104,26 @@ func _build_layout() -> void:
 	shade.size = Vector2(360, 52)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
-	add_child(Style.panel(Vector2(0, 436), Vector2(360, 204)))
-
-	timeline_label = _label(Vector2(8, 6), Vector2(344, 40))
 	field = Control.new()
 	field.position = Vector2(0, 56)
-	field.size = Vector2(360, 380)
+	field.size = Vector2(360, panel_top - 56)
 	add_child(field)
-	log_label = _label(Vector2(10, 442), Vector2(340, 110))
-	log_label.add_theme_color_override("font_color", Color("e0d4ac"))
+	add_child(Style.panel(Vector2(0, panel_top), Vector2(360, h - panel_top)))
 
-	actions_box = HBoxContainer.new()
-	actions_box.position = Vector2(8, 556)
-	actions_box.size = Vector2(344, 36)
-	add_child(actions_box)
+	timeline_label = _label(Vector2(8, 6), Vector2(344, Style.lines(2)))
 	commands_box = HBoxContainer.new()
-	commands_box.position = Vector2(8, 598)
-	commands_box.size = Vector2(344, 36)
+	commands_box.position = Vector2(8, h - 44)
+	commands_box.size = Vector2(344, 38)
 	add_child(commands_box)
+	actions_box = GridContainer.new()
+	actions_box.columns = 2
+	actions_box.position = Vector2(8, h - 128)
+	actions_box.size = Vector2(344, 80)
+	add_child(actions_box)
+	hint_label = _label(Vector2(10, h - 168), Vector2(340, Style.lines(2)))
+	hint_label.add_theme_color_override("font_color", Color("f0d070"))
+	log_label = _label(Vector2(10, panel_top + 6), Vector2(340, h - 172 - panel_top - 6))
+	log_label.add_theme_color_override("font_color", Color("e0d4ac"))
 
 
 func _label(pos: Vector2, sz: Vector2) -> Label:
@@ -122,7 +131,6 @@ func _label(pos: Vector2, sz: Vector2) -> Label:
 	l.position = pos
 	l.size = sz
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_font_size_override("font_size", 10)
 	add_child(l)
 	return l
 
@@ -144,11 +152,12 @@ func _rebuild_units() -> void:
 		var counts := {"front": 0, "back": 0}
 		var side_units: Array = battle.units.filter(func(x): return x.side == side)
 		var biggest_column: int = max(side_units.filter(func(x): return x.row == "front").size(), side_units.filter(func(x): return x.row == "back").size())
-		var step: float = min(92.0, 368.0 / max(1, biggest_column))
+		var ground: float = field.size.y - 12
+		var step: float = min(112.0, ground / max(1, biggest_column))
 		# Small groups stand in the middle of the ground rather than up against the horizon.
-		var top: float = 4 + (368.0 - step * biggest_column) / 2
+		var top: float = 4 + (ground - step * biggest_column) / 2
 		for u in side_units:
-			var card_h: float = min(88.0, step - 4)
+			var card_h: float = min(108.0, step - 4)
 			var b := Button.new()
 			Style.flat(b)
 			b.size = Vector2(80, card_h)
@@ -156,7 +165,8 @@ func _rebuild_units() -> void:
 			counts[u.row] += 1
 			b.pressed.connect(_on_unit_pressed.bind(u))
 			# Sprites are 32x32 drawn facing right; shown at 2x, or 1x when a column is crowded.
-			var zoom: int = 2 if card_h >= 84.0 else 1
+			# Below the sprite, a plate holds two lines: a short name and health.
+			var zoom: int = 2 if card_h >= 32 * 2 + Style.lines(2) else 1
 			# A shadow under the feet, swapped for a coloured ring on the unit whose turn it is or a target.
 			var ring := TextureRect.new()
 			ring.name = "Ring"
@@ -192,11 +202,9 @@ func _rebuild_units() -> void:
 			var info := Label.new()
 			info.name = "Info"
 			info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			info.add_theme_font_size_override("font_size", 8)
-			info.add_theme_constant_override("line_spacing", -2)
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			info.position = Vector2(0, 32 * zoom + 3)
-			info.size = Vector2(80, card_h - 32 * zoom - 3)
+			info.position = Vector2(-2, 32 * zoom + 3)
+			info.size = Vector2(84, card_h - 32 * zoom - 3)
 			b.add_child(info)
 			field.add_child(b)
 			unit_buttons[u] = b
@@ -237,12 +245,13 @@ func _refresh() -> void:
 		targets = battle.legal_targets(cur, selected_ability)
 	for u in unit_buttons:
 		var b: Button = unit_buttons[u]
+		# One capital per status (S for stunned...); tapping the unit spells them out.
 		var marks := ""
 		for s in u.statuses:
-			marks += s.substr(0, 3) + " "
+			marks += s.substr(0, 1).to_upper()
 		var state := "OUT" if u.is_down() else ("FLED" if u.fled else "%d/%d" % [u.hp, u.max_hp])
 		var info: Label = b.get_node("Info")
-		info.text = "%s\n%s %s" % [u.name, state, marks.strip_edges()]
+		info.text = "%s\n%s" % [u.short_name(), (state + " " + marks.substr(0, 2)).strip_edges()]
 		var bar: ColorRect = b.get_node("Bar")
 		var frac: float = clamp(float(u.hp) / max(1, u.max_hp), 0.0, 1.0)
 		bar.size.x = 68 * frac
@@ -252,9 +261,13 @@ func _refresh() -> void:
 		b.modulate = Color(1, 1, 1, 0.4) if not u.is_active() else Color.WHITE
 		var art: TextureRect = b.get_node("Art")
 		art.modulate = Color("b8e8ff") if targets.has(u) and u != cur else Color.WHITE
-	var names: Array = battle.upcoming().map(func(x): return x.name.trim_prefix("The ").split(" ")[0])
-	Style.fit_text(timeline_label, "Round %d   Turn order: %s" % [battle.round_number, " > ".join(names)])
+	var names: Array = battle.upcoming().map(func(x): return x.short_name())
+	var turn := "Round %d" % battle.round_number
+	if cur != null and cur.side == "heroes" and not battle.is_over():
+		turn = "%s: %d AP   %s" % [cur.short_name(), cur.ap, turn]
+	Style.fit_text(timeline_label, "%s\nNext: %s" % [turn, " > ".join(names)])
 	_refresh_log()
+	_refresh_hint()
 	_refresh_actions()
 
 
@@ -281,7 +294,7 @@ func _refresh_actions() -> void:
 		return
 	for a in cur.available_abilities():
 		var ab: Dictionary = db.abilities[a]
-		var btn := _add_button(actions_box, "%s (%d)" % [ab["name"], ab["ap"]], _on_ability_pressed.bind(a))
+		var btn := _add_button(actions_box, "%s %d" % [ab["name"], ab["ap"]], _on_ability_pressed.bind(a))
 		btn.disabled = not battle.usable_abilities(cur).has(a)
 		if a == selected_ability:
 			btn.modulate = Color("9fe0ff")
@@ -292,14 +305,34 @@ func _refresh_actions() -> void:
 	_add_button(commands_box, "Retreat", func():
 		battle.retreat(cur)
 		_after_hero_action())
-	# The current hero's AP goes first so a long turn order is what gets cut short.
-	Style.fit_text(timeline_label, "%s: %d AP\n%s" % [cur.name, cur.ap, timeline_label.text])
 
 
-func _add_button(box: HBoxContainer, text: String, cb: Callable) -> Button:
+## The line above the abilities explains the chosen ability, or the unit last tapped.
+func _refresh_hint() -> void:
+	var cur = battle.current()
+	var text := ""
+	if selected_ability != "" and cur != null:
+		var ab: Dictionary = db.abilities[selected_ability]
+		var how := "Tap it again to use it." if _acts_at_once(selected_ability) else "Tap a glowing target."
+		text = "%s %s" % [ab.get("desc", ab["name"]), how]
+	elif _inspected != null:
+		var u = _inspected
+		var words: Array = u.statuses.keys().map(func(s): return s.capitalize())
+		text = "%s  %d/%d HP%s" % [u.name, u.hp, u.max_hp, ("\n" + ", ".join(words)) if not words.is_empty() else ""]
+	elif cur != null and cur.side == "heroes" and not battle.is_over():
+		text = "Pick an ability to see what it does."
+	Style.fit_text(hint_label, text)
+
+
+## Abilities on yourself or the whole band need no target, so a second tap uses them.
+func _acts_at_once(ability_id: String) -> bool:
+	return db.abilities[ability_id]["target"] in ["self", "all_allies"]
+
+
+func _add_button(box: Container, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.add_theme_font_size_override("font_size", 9)
+	b.custom_minimum_size = Vector2(0, 38)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.pressed.connect(cb)
 	box.add_child(b)
@@ -310,12 +343,13 @@ func _on_ability_pressed(ability_id: String) -> void:
 	if animating:
 		return
 	var cur = battle.current()
-	var target_type: String = db.abilities[ability_id]["target"]
-	if target_type == "self" or target_type == "all_allies":
+	_inspected = null
+	if ability_id == selected_ability and _acts_at_once(ability_id):
 		battle.perform(cur, ability_id, cur)
 		_after_hero_action()
 		return
-	selected_ability = ability_id
+	# The first tap explains; a second tap on a targeted ability puts it away again.
+	selected_ability = "" if ability_id == selected_ability else ability_id
 	_refresh()
 
 
@@ -323,10 +357,17 @@ func _on_unit_pressed(u) -> void:
 	var cur = battle.current()
 	if cur == null or cur.side != "heroes" or battle.is_over() or animating:
 		return
-	if selected_ability == "" and u.has_status("netted"):
+	if selected_ability == "" and u.has_status("netted") and u.side == "heroes" and u != cur:
 		battle.free_ally(cur, u)
-	elif selected_ability != "":
+	elif selected_ability != "" and battle.legal_targets(cur, selected_ability).has(u):
 		battle.perform(cur, selected_ability, u)
+	else:
+		# Not a target: say who this is and what is wrong with them.
+		_inspected = u
+		selected_ability = ""
+		_refresh()
+		return
+	_inspected = null
 	_after_hero_action()
 
 
@@ -389,7 +430,7 @@ func _play_animations() -> void:
 					await get_tree().create_timer(0.15).timeout
 			"status":
 				if STATUS_WORDS.has(a[2]):
-					_float_number(a[1], STATUS_WORDS[a[2]], Color("f0d060"), 8, Vector2(14, 26))
+					_float_number(a[1], STATUS_WORDS[a[2]], Color("f0d060"), 16, Vector2(-4, 30))
 					await get_tree().create_timer(0.15).timeout
 	animating = false
 

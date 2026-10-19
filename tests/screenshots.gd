@@ -2,6 +2,7 @@
 ## xvfb-run godot --path . --rendering-driver opengl3 -s tests/screenshots.gd -- out_dir
 extends SceneTree
 
+const MapView = preload("res://scenes/map/map_view.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const GameData = preload("res://core/game_data.gd")
@@ -25,6 +26,13 @@ func _init() -> void:
 	var dir: String = OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "user://"
 	root.add_child(load("res://scenes/menu/main_menu.tscn").instantiate())
 	await _snap(dir, "menu")
+	await _clear()
+
+	var map := MapView.new()
+	root.add_child(map)
+	await _snap(dir, "map")
+	map._show_armory("robin")
+	await _snap(dir, "armory")
 	await _clear()
 
 	var mission := MissionView.new()
@@ -76,4 +84,9 @@ func _init() -> void:
 	battle._on_unit_pressed(battle.battle.legal_targets(cur, ability)[0])
 	await create_timer(0.2).timeout
 	await _snap(dir, "battle_hit")
+	while battle.battle.current().side != "heroes" or battle.animating:
+		await process_frame
+	var hero = battle.battle.current()
+	battle._on_ability_pressed(battle.db.heroes[hero.id]["abilities"][2] if battle.db.heroes.has(hero.id) else "strike")
+	await _snap(dir, "battle_hint")
 	quit()
