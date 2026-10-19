@@ -39,7 +39,7 @@ func _init() -> void:
 	await _snap("camp")
 
 	_press(view.buttons, "Armory")
-	await process_frame
+	await _snap("armory_band")
 	var armory: Node = view.get_node("Armory")
 	_press(armory, "Robin Hood")
 	await process_frame

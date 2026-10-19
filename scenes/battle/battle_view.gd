@@ -9,9 +9,6 @@ const GameData = preload("res://core/game_data.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const COLUMN_X := {"heroes": {"back": 8, "front": 92}, "enemies": {"front": 188, "back": 272}}
-const HERO_COLOR := Color("3f7d3a")
-const ENEMY_COLOR := Color("8c2f2f")
-const BOSS_COLOR := Color("4a2a5e")
 
 var db
 var battle
@@ -107,20 +104,41 @@ func _rebuild_units() -> void:
 		var biggest_column: int = max(side_units.filter(func(x): return x.row == "front").size(), side_units.filter(func(x): return x.row == "back").size())
 		var step: float = min(92.0, 368.0 / max(1, biggest_column))
 		for u in side_units:
+			var card_h: float = min(88.0, step - 4)
 			var b := Button.new()
-			b.size = Vector2(80, min(84.0, step - 4))
-			b.position = Vector2(COLUMN_X[side][u.row], 8 + counts[u.row] * step)
+			b.size = Vector2(80, card_h)
+			b.position = Vector2(COLUMN_X[side][u.row], 4 + counts[u.row] * step)
 			counts[u.row] += 1
-			b.add_theme_font_size_override("font_size", 9)
 			b.pressed.connect(_on_unit_pressed.bind(u))
-			var block := ColorRect.new()
-			block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			block.size = Vector2(32, 32)
-			block.position = Vector2(24, 6)
-			block.color = HERO_COLOR if side == "heroes" else (BOSS_COLOR if u.tags.has("boss") else ENEMY_COLOR)
-			b.add_child(block)
+			# Sprites are 32x32 drawn facing right; shown at 2x, or 1x when a column is crowded.
+			var zoom: int = 2 if card_h >= 84.0 else 1
+			var art := TextureRect.new()
+			art.texture = sprite_for(u)
+			art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			art.stretch_mode = TextureRect.STRETCH_SCALE
+			art.size = Vector2(32 * zoom, 32 * zoom)
+			art.position = Vector2((80 - 32 * zoom) / 2, 0)
+			art.flip_h = side == "enemies"
+			b.add_child(art)
+			var info := Label.new()
+			info.name = "Info"
+			info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			info.add_theme_font_size_override("font_size", 8)
+			info.add_theme_constant_override("line_spacing", -3)
+			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			info.position = Vector2(0, 32 * zoom - 4)
+			info.size = Vector2(80, card_h - 32 * zoom + 4)
+			b.add_child(info)
 			field.add_child(b)
 			unit_buttons[u] = b
+
+
+## The unit's sprite: heroes and enemies by id, hired Merry Men share one look.
+static func sprite_for(u) -> Texture2D:
+	var key: String = "merry_man" if u.id.begins_with("merry_man") else u.id
+	var path := "res://assets/sprites/%s.png" % key
+	return load(path) if ResourceLoader.exists(path) else null
 
 
 func _refresh() -> void:
@@ -143,7 +161,8 @@ func _refresh() -> void:
 		for s in u.statuses:
 			marks += s.substr(0, 3) + " "
 		var state := "OUT" if u.is_down() else ("FLED" if u.fled else "%d/%d" % [u.hp, u.max_hp])
-		b.text = "\n\n\n%s\n%s\n%s" % [u.name, state, marks]
+		var info: Label = b.get_node("Info")
+		info.text = "%s\n%s %s" % [u.name, state, marks.strip_edges()]
 		b.modulate = Color(1, 1, 1, 0.35) if not u.is_active() else Color.WHITE
 		if u == cur:
 			b.modulate = Color("ffe08a")

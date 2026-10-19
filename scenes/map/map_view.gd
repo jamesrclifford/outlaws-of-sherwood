@@ -5,6 +5,7 @@ extends Control
 const GameData = preload("res://core/game_data.gd")
 const Campaign = preload("res://core/campaign.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
+const BattleView = preload("res://scenes/battle/battle_view.gd")
 
 const MAP_TOP := 64
 const KIND_COLORS := {"camp": Color("3f7d3a"), "village": Color("a07a45"), "forest": Color("2f5a2a"), "road": Color("7a6a55"), "town": Color("6a5a7a")}
@@ -286,7 +287,8 @@ func _show_armory(hero_id := "") -> void:
 		title.text = "Armory    Gold %d\nChoose who to equip." % c.gold
 		for h in c.free_heroes():
 			var gear: Array = c.equipment.get(h.id, {}).values().map(func(i): return db.items[i]["name"])
-			_list_button(list, "%s (%s)  ATK %d DEF %d SPD %d HP %d\n%s" % [h.name, h.cls, h.atk, h.def, h.spd, h.max_hp, ", ".join(gear) if not gear.is_empty() else "No gear"], reopen.bind(h.id))
+			var row := _list_button(list, "%s (%s)  ATK %d DEF %d SPD %d HP %d\n%s" % [h.name, h.cls, h.atk, h.def, h.spd, h.max_hp, ", ".join(gear) if not gear.is_empty() else "No gear"], reopen.bind(h.id))
+			row.icon = BattleView.sprite_for(h)
 	else:
 		var h = c.heroes[hero_id]
 		title.text = "%s    Gold %d\nATK %d  DEF %d  SPD %d  HP %d  CRIT %d%%" % [h.name, c.gold, h.atk, h.def, h.spd, h.max_hp, int(h.crit * 100)]
@@ -306,13 +308,14 @@ func _show_armory(hero_id := "") -> void:
 	_list_button(list, "Leave the armory", close)
 
 
-func _list_button(list: VBoxContainer, text: String, cb: Callable) -> void:
+func _list_button(list: VBoxContainer, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(330, 38)
 	b.add_theme_font_size_override("font_size", 9)
 	b.pressed.connect(cb)
 	list.add_child(b)
+	return b
 
 
 func _show_news() -> void:

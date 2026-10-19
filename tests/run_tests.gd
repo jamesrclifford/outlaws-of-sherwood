@@ -551,3 +551,8 @@ func test_bribing_the_jailer_frees_prisoners() -> void:
 	c.travel("nottingham")
 	c.captured["tuck"] = {"node": "nottingham", "since": c.day}
 	check(c.jailer_cost() == 140, "the dungeon jailer wants twice as much")
+
+
+func test_every_unit_has_a_sprite() -> void:
+	for id in db.heroes.keys() + db.enemies.keys():
+		check(ResourceLoader.exists("res://assets/sprites/%s.png" % id), "%s has a sprite" % id)
