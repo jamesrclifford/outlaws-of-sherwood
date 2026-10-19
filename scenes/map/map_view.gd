@@ -110,7 +110,7 @@ func _add_node_button(id: String) -> void:
 	var b := Button.new()
 	b.name = id
 	b.add_theme_font_size_override("font_size", 8)
-	b.add_theme_constant_override("line_spacing", -3)
+	b.add_theme_constant_override("line_spacing", -1)
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		b.add_theme_color_override(state, INK)
 	b.pressed.connect(func(): _select(id))
@@ -268,9 +268,10 @@ func _show_armory(hero_id := "") -> void:
 	var c = campaign
 	var panel := ColorRect.new()
 	panel.name = "Armory"
-	panel.color = Color("241a12")
+	panel.color = Color("1a140e")
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(panel)
+	panel.add_child(Style.panel(Vector2(0, 0), Vector2(360, 640)))
 	var title := Label.new()
 	title.position = Vector2(8, 8)
 	title.size = Vector2(344, 40)
@@ -310,18 +311,32 @@ func _show_armory(hero_id := "") -> void:
 				bonus.append("%s%s %s" % ["+" if v > 0 else "", str(int(v * 100)) + "%" if k == "crit" else str(int(v)), k.to_upper()])
 			var worn: bool = c.equipment.get(hero_id, {}).get(it["slot"], "") == item_id
 			var label := "%s  [%s]  %s\n%s" % [it["name"], it["slot"], "EQUIPPED" if worn else "%d gold" % it["price"], ", ".join(bonus)]
-			_list_button(list, label, func():
+			var row := _list_button(list, label, func():
 				if c.buy_item(hero_id, item_id):
 					c.save()
 				reopen.call(hero_id))
+			row.icon = _item_icon(item_id)
+			if worn:
+				row.add_theme_color_override("font_color", Color("f0d070"))
 		_list_button(list, "Back to the band", reopen.bind(""))
 	_list_button(list, "Leave the armory", close)
+
+
+## Gear icons are 16x16; shown at 2x in the armory rows.
+func _item_icon(item_id: String) -> Texture2D:
+	var path := "res://assets/items/%s.png" % item_id
+	if not ResourceLoader.exists(path):
+		return null
+	var img: Image = load(path).get_image()
+	img.resize(32, 32, Image.INTERPOLATE_NEAREST)
+	return ImageTexture.create_from_image(img)
 
 
 func _list_button(list: VBoxContainer, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(330, 38)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.custom_minimum_size = Vector2(330, 40)
 	b.add_theme_font_size_override("font_size", 9)
 	b.pressed.connect(cb)
 	list.add_child(b)

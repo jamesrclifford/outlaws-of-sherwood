@@ -5,7 +5,10 @@ generator, so re-running it gives the same pixels.
 
   assets/backdrops/<location>.png  180x220, shown at 2x behind the battle field
   assets/map/map.png               176x196, shown at 2x; roads and places come from data/map.json
-  assets/ui/*.png                  9-slice frames for buttons and panels, unit shadows and rings
+  assets/ui/*.png                  9-slice frames for buttons and panels, unit shadows and rings,
+                                   mission path medallions, the title screen
+  assets/items/<item>.png          16x16 gear icons for the armory
+  assets/fx/*.png                  arrows, bolts and nets that fly across the battle field
 
 Usage: python3 tools/make_scenery.py
 """
@@ -13,7 +16,10 @@ import json
 import math
 import os
 import random
+import sys
 from PIL import Image
+
+sys.path.insert(0, os.path.dirname(__file__))   # for make_font's glyphs
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 BW, BH = 180, 220   # battle backdrop size; the top 440px of the screen at 2x
@@ -739,11 +745,305 @@ def make_ui():
         ring.save("assets", "ui", name + ".png")
 
 
+# ---------------------------------------------------------------- mission path medallions
+
+def medallion(fill="#5a4430", rim="#c8a860", dark="#2a1e14"):
+    c = Canvas(22, 22)
+    c.ellipse(10.5, 10.5, 10.5, 10.5, dark)
+    c.ellipse(10.5, 10.5, 9.5, 9.5, rim)
+    c.ellipse(10.5, 10.5, 8, 8, fill)
+    c.ellipse(9, 8.5, 5, 4, mix(fill, "#ffffff", 0.08))
+    return c
+
+
+def node_approach(c):     # footprints along a trail
+    for x, y in ((6, 13), (9, 9), (12, 13), (15, 8)):
+        c.rect(x, y, x + 1, y + 2, "#e8dcc0")
+        c.px(x, y + 3, "#e8dcc0")
+
+
+def node_combat(c):       # crossed swords
+    for d in (1, -1):
+        x0 = 5 if d == 1 else 16
+        c.line(x0, 5, x0 + 10 * d, 15, "#e8ecf2")
+        c.line(x0 + d, 5, x0 + 10 * d + d, 15, "#a8b0bc")
+        c.line(x0 + 7 * d, 15, x0 + 10 * d, 12, "#c8a040")
+        c.px(x0 + 11 * d, 16, "#6a4a2c")
+
+
+def node_choice(c):       # a fork in the road with a question mark
+    for y, row in enumerate((".###.", "#...#", "...#.", "..#..", "..#..", ".....", "..#..")):
+        for x, bit in enumerate(row):
+            if bit == "#":
+                c.rect(8 + x, 5 + y * 2, 8 + x, 6 + y * 2, "#f0d070")
+
+
+def node_hazard(c):       # brambles and a rock
+    c.ellipse(11, 13, 5, 3, "#8a8478")
+    c.rect(8, 11, 12, 11, "#aaa496")
+    for x0, y0, x1, y1 in ((4, 15, 9, 6), (9, 6, 13, 10), (12, 15, 17, 6), (6, 9, 10, 12)):
+        c.line(x0, y0, x1, y1, "#5a8a3a")
+    for x, y in ((6, 10), (10, 7), (15, 9), (13, 13), (8, 13)):
+        c.px(x, y, "#c84040")
+
+
+def node_objective(c):    # a treasure chest
+    c.rect(5, 9, 16, 15, "#8a5a2c")
+    c.rect(5, 7, 16, 9, "#a8703a")
+    c.rect(5, 9, 16, 9, "#3a2414")
+    c.rect(10, 9, 11, 11, "#f0d070")
+    c.rect(5, 12, 16, 12, "#6a4420")
+    c.px(7, 7, "#c8904a")
+
+
+def node_escape(c):       # the Major Oak, home
+    rng = random.Random(3)
+    leafy_tree(c, rng, 10, 16, 5, 5, ["#2a4422", "#4a7a34", "#78a84c"])
+
+
+def trap_mark():
+    c = Canvas(10, 10)
+    for i in range(0, 10, 3):
+        c.line(i, 0, i, 9, "#d04030")
+        c.line(0, i, 9, i, "#d04030")
+    c.outline("#2a0e0a")
+    return c
+
+
+NODE_ICONS = {"approach": node_approach, "combat": node_combat, "choice": node_choice,
+              "hazard": node_hazard, "objective": node_objective, "escape": node_escape}
+
+
+def make_nodes():
+    for kind, fn in NODE_ICONS.items():
+        c = medallion()
+        fn(c)
+        c.save("assets", "ui", "node_%s.png" % kind)
+    trap_mark().save("assets", "ui", "trap_mark.png")
+
+
+# ---------------------------------------------------------------- armory item icons
+
+def item_bow(c, wood, string="#e8e0c8"):
+    pts = [(3, 2), (6, 2), (9, 4), (11, 7), (13, 10), (13, 13)]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        c.line(x0, y0, x1, y1, wood)
+        c.line(x0, y0 + 1, x1, y1 + 1, wood)
+    c.line(3, 3, 13, 13, string)
+    c.rect(9, 5, 10, 6, "#6a3a1a")
+
+
+def item_staff(c, wood, cap):
+    c.line(2, 14, 13, 3, wood)
+    c.line(3, 14, 14, 3, mix(wood, "#000000", 0.3))
+    c.rect(12, 2, 14, 4, cap)
+    c.rect(2, 13, 3, 15, cap)
+
+
+def item_sword(c, blade, hilt):
+    c.line(4, 12, 13, 3, blade)
+    c.line(5, 12, 14, 3, mix(blade, "#000000", 0.25))
+    c.line(2, 10, 6, 14, hilt)
+    c.line(2, 14, 4, 12, "#5a3a20")
+    c.px(14, 2, blade)
+
+
+def item_cudgel(c):
+    c.line(3, 14, 10, 7, "#5a3a20")
+    c.line(4, 14, 11, 7, "#3e2814")
+    c.ellipse(11.5, 5.5, 3, 3, "#4a3020")
+    c.px(10, 4, "#6a4a30")
+    c.px(14, 3, "#2a1a10")
+    c.px(9, 6, "#2a1a10")
+
+
+def item_spear(c):
+    c.line(2, 14, 11, 5, "#7a5a34")
+    c.line(3, 14, 12, 5, "#5a3d24")
+    c.rect(11, 3, 13, 5, "#d8dce4")
+    c.rect(13, 1, 14, 2, "#d8dce4")
+    c.px(12, 2, "#e8ecf2")
+
+
+def item_torso(c, cloth, trim, studs=None, mail=False):
+    c.rect(4, 3, 11, 13, cloth)
+    c.rect(2, 3, 3, 8, cloth)
+    c.rect(12, 3, 13, 8, cloth)
+    c.rect(6, 2, 9, 3, (0, 0, 0, 0))
+    c.rect(6, 3, 9, 3, trim)
+    c.rect(4, 13, 11, 13, trim)
+    if studs:
+        for y in range(5, 12, 3):
+            for x in range(5, 11, 3):
+                c.px(x, y, studs)
+    if mail:
+        for y in range(4, 13):
+            for x in range(4 + y % 2, 12, 2):
+                c.px(x, y, "#7a8088")
+
+
+def item_charm(c):
+    for dx, dy in ((-2, -2), (2, -2), (-2, 2), (2, 2)):
+        c.ellipse(8 + dx, 7 + dy, 2, 2, "#4a9a3a")
+    c.px(7, 6, "#7ac85a")
+    c.line(8, 9, 10, 14, "#3a6a2a")
+
+
+def item_boots(c):
+    for x0 in (2, 8):
+        c.rect(x0, 3, x0 + 3, 11, "#7a5a3a")
+        c.rect(x0, 11, x0 + 5, 13, "#5a3d24")
+        c.rect(x0, 3, x0 + 3, 4, "#9a7a50")
+
+
+def item_satchel(c):
+    c.rect(3, 6, 12, 13, "#8a6a40")
+    c.rect(3, 6, 12, 8, "#a4804e")
+    c.line(4, 6, 7, 2, "#5a3d24")
+    c.line(11, 6, 8, 2, "#5a3d24")
+    c.rect(7, 8, 8, 9, "#c8a040")
+    c.px(5, 5, "#5aa040")
+    c.px(10, 4, "#7ac85a")
+    c.px(11, 5, "#5aa040")
+
+
+ITEM_ICONS = {
+    "yew_longbow": lambda c: item_bow(c, "#a0703a"),
+    "hunters_recurve": lambda c: item_bow(c, "#6a4a2a"),
+    "ironshod_staff": lambda c: item_staff(c, "#8a6a40", "#a8b0bc"),
+    "great_oak_staff": lambda c: item_staff(c, "#6a4a2a", "#4a7a34"),
+    "friars_staff": lambda c: item_staff(c, "#a08050", "#e8e0c8"),
+    "duelling_sword": lambda c: item_sword(c, "#e8ecf2", "#c8a040"),
+    "fine_arming_sword": lambda c: item_sword(c, "#d0d6e0", "#a03a2a"),
+    "blackthorn_cudgel": item_cudgel,
+    "outlaw_spear": item_spear,
+    "padded_jerkin": lambda c: item_torso(c, "#8a7a5a", "#5a4a30"),
+    "leather_brigandine": lambda c: item_torso(c, "#7a4a2a", "#4a2a14", studs="#d8c070"),
+    "mail_shirt": lambda c: item_torso(c, "#a8b0bc", "#6a7078", mail=True),
+    "lucky_charm": item_charm,
+    "hunters_boots": item_boots,
+    "herb_satchel": item_satchel,
+}
+
+
+def make_items():
+    for item_id, fn in ITEM_ICONS.items():
+        c = Canvas(16, 16)
+        fn(c)
+        c.outline("#1e140c")
+        c.save("assets", "items", item_id + ".png")
+
+
+# ---------------------------------------------------------------- battle effects
+
+def make_fx():
+    arrow = Canvas(14, 5)
+    arrow.rect(2, 2, 10, 2, "#8a6a40")
+    arrow.rect(11, 1, 12, 3, "#c8ccd4")
+    arrow.px(13, 2, "#c8ccd4")
+    arrow.rect(0, 1, 2, 1, "#e8e0c8")
+    arrow.rect(0, 3, 2, 3, "#e8e0c8")
+    arrow.save("assets", "fx", "arrow.png")
+    bolt = Canvas(10, 5)
+    bolt.rect(1, 2, 7, 2, "#5a3d24")
+    bolt.rect(7, 1, 9, 3, "#9aa0aa")
+    bolt.rect(0, 1, 1, 3, "#a03a2a")
+    bolt.save("assets", "fx", "bolt.png")
+    net = Canvas(14, 14)
+    for i in range(1, 14, 3):
+        net.line(i, 1, i, 12, "#d8c8a0")
+        net.line(1, i, 12, i, "#d8c8a0")
+    for x, y in ((1, 1), (12, 1), (1, 12), (12, 12)):
+        net.rect(x - 1, y - 1, x, y, "#7a7468")
+    net.save("assets", "fx", "net.png")
+    spark = Canvas(9, 9)
+    for i in range(9):
+        spark.px(i, 4, "#fff4c0")
+        spark.px(4, i, "#fff4c0")
+    spark.px(2, 2, "#ffe080")
+    spark.px(6, 6, "#ffe080")
+    spark.px(2, 6, "#ffe080")
+    spark.px(6, 2, "#ffe080")
+    spark.rect(3, 3, 5, 5, "#ffffff")
+    spark.save("assets", "fx", "spark.png")
+
+
+# ---------------------------------------------------------------- title screen
+
+def big_text(c, text, x, y, scale, fill_top, fill_bottom, edge="#1a0e06"):
+    """Writes text with the game font's glyphs, scaled up, with a gradient fill and a thick outline."""
+    import make_font
+    layer = Canvas(c.w, c.h)
+    cx = x
+    for ch in text:
+        if ch == " ":
+            cx += (make_font.SPACE_WIDTH + 1) * scale
+            continue
+        rows = make_font.glyph_rows(ch)
+        for gy, row in enumerate(rows):
+            for gx, bit in enumerate(row):
+                if bit == "#":
+                    for sy in range(scale):
+                        t = (gy * scale + sy) / (7 * scale)
+                        layer.rect(cx + gx * scale, y + gy * scale + sy, cx + gx * scale + scale - 1, y + gy * scale + sy, mix(fill_top, fill_bottom, min(1, t)))
+        cx += (len(rows[0]) + 1) * scale
+    layer.outline(edge)
+    layer.outline(edge)
+    c.paste(layer, 0, 0)
+    return cx - x
+
+
+def text_width(text, scale):
+    import make_font
+    return sum(((make_font.SPACE_WIDTH if ch == " " else len(make_font.glyph_rows(ch)[0])) + 1) * scale for ch in text) - scale
+
+
+def make_title():
+    rng = random.Random(31)
+    w, h = 180, 320
+    c = Canvas(w, h, "#000000")
+    c.gradient(0, 200, ["#1a1838", "#2e2450", "#5a3460", "#a04a50", "#e07848", "#f4b060"])
+    for _ in range(50):
+        c.px(rng.randint(0, w), rng.randint(0, 80), rng.choice(["#f4f0d8", "#a8a8c8", "#ffffff"]))
+    for y in range(78, 100):   # crescent moon: the part of one disc not covered by another
+        for x in range(136, 160):
+            if math.hypot(x - 148, y - 89) <= 8 and math.hypot(x - 151, y - 87) > 7:
+                c.px(x, y, "#f4ecc8")
+    for base, height, colour in ((170, 36, "#3a2a48"), (190, 30, "#2a2038"), (214, 24, "#1c1628")):
+        phase = rng.random() * 9
+        for x in range(w):
+            top = int(base - height * (0.6 + 0.25 * math.sin(x / 7 + phase) + 0.15 * math.sin(x / 3.1 + phase)))
+            for y in range(top, h):
+                c.px(x, y, colour)
+    # the Major Oak, a dark giant against the sky
+    oak = "#120e1a"
+    c.rect(80, 150, 98, 262, oak)
+    for x0, y0, x1, y1 in ((84, 170, 50, 120), (94, 165, 130, 115), (88, 150, 90, 96), (70, 140, 40, 140), (98, 150, 140, 150)):
+        c.line(x0, y0, x1, y1, oak, 4)
+    for _ in range(60):
+        c.ellipse(rng.randint(28, 152), rng.randint(70, 150), rng.randint(8, 18), rng.randint(6, 12), oak)
+    c.rect(0, 262, w, h, "#16121c")
+    # campfire glow on the clearing
+    for r, a in ((60, 30), (42, 40), (26, 60)):
+        c.ellipse(90, 286, r, r * 0.45, (240, 140, 60, a))
+    c.rect(84, 288, 96, 290, "#4a2a18")
+    c.line(83, 291, 97, 285, "#3a2014", 2)
+    for i, colour in enumerate(("#c83a1a", "#f08a2a", "#f8d050", "#fff4c0")):
+        c.ellipse(90, 284 - i, 5 - i, 6 - i * 1.4, colour)
+    big_text(c, "OUTLAWS", (w - text_width("OUTLAWS", 3)) // 2, 18, 3, "#fff0a0", "#d08a20")
+    big_text(c, "of Sherwood", (w - text_width("of Sherwood", 2)) // 2, 46, 2, "#f0e6cc", "#b8a070")
+    c.save("assets", "ui", "title.png")
+
+
 def make_all():
     for name, fn in BACKDROPS.items():
         fn().save("assets", "backdrops", name + ".png")
     make_map().save("assets", "map", "map.png")
     make_ui()
+    make_nodes()
+    make_items()
+    make_fx()
+    make_title()
 
 
 if __name__ == "__main__":

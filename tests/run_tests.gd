@@ -564,3 +564,27 @@ func test_every_battle_place_has_a_backdrop() -> void:
 	for id in db.encounters:
 		check(db.locations.has(db.encounters[id].get("location", "")), "encounter %s names a real location" % id)
 	check(ResourceLoader.exists("res://assets/map/map.png"), "the strategic map is painted")
+
+
+func test_every_item_and_path_step_has_art() -> void:
+	for id in db.items:
+		check(ResourceLoader.exists("res://assets/items/%s.png" % id), "%s has an icon" % id)
+	for kind in ["approach", "combat", "choice", "hazard", "objective", "escape"]:
+		check(ResourceLoader.exists("res://assets/ui/node_%s.png" % kind), "path step %s has a medallion" % kind)
+	for id in db.abilities:
+		var fx: String = db.abilities[id].get("fx", "")
+		check(fx in ["", "dash"] or ResourceLoader.exists("res://assets/fx/%s.png" % fx), "%s's effect has art" % id)
+
+
+func test_battle_reports_hits_for_animation() -> void:
+	var b = db.make_battle(["robin"], "forest_patrol", 5)
+	var seen := []
+	b.acted.connect(func(u, a, _t): seen.append(a))
+	b.damaged.connect(func(_u, amount, _c): seen.append(amount))
+	var robin = b.next_turn()
+	while robin != null and robin.side != "heroes":
+		b.run_ai_turn()
+		robin = b.next_turn()
+	seen.clear()
+	b.perform(robin, "bow_shot", b.legal_targets(robin, "bow_shot")[0])
+	check(seen.size() == 2 and seen[0] == "bow_shot" and seen[1] is int, "a bow shot reports the action, then the damage")

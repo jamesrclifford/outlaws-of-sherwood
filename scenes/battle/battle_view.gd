@@ -14,6 +14,13 @@ const DEFAULT_BACKDROP := "sherwood_edge"
 const SHADOW := preload("res://assets/ui/shadow.png")
 const RING_TURN := preload("res://assets/ui/ring_turn.png")
 const RING_TARGET := preload("res://assets/ui/ring_target.png")
+## Things that fly across the field, by an ability's "fx" in data/abilities.json.
+const PROJECTILES := {
+	"arrow": preload("res://assets/fx/arrow.png"),
+	"bolt": preload("res://assets/fx/bolt.png"),
+	"net": preload("res://assets/fx/net.png"),
+}
+const SPARK := preload("res://assets/fx/spark.png")
 
 var db
 var battle
@@ -23,7 +30,9 @@ var fight_number := 0
 var selected_ability := ""
 var unit_buttons := {}
 var backdrop_id := ""
+var animating := false
 var _external := false
+var _anims: Array = []
 
 var backdrop: TextureRect
 var timeline_label: Label
@@ -59,6 +68,9 @@ func run_battle(game_data, b, title: String, location := "") -> void:
 func _begin() -> void:
 	backdrop.texture = backdrop_for(backdrop_id)
 	battle.event.connect(func(_t): _refresh_log())
+	battle.acted.connect(func(u, ability_id, targets): _anims.append(["act", u, ability_id, targets]))
+	battle.damaged.connect(func(u, amount, crit): _anims.append(["hit", u, amount, crit]))
+	battle.healed.connect(func(u, amount): _anims.append(["heal", u, amount]))
 	_rebuild_units()
 	_advance()
 
@@ -165,23 +177,23 @@ func _rebuild_units() -> void:
 			var plate := ColorRect.new()
 			plate.color = Color(0.08, 0.06, 0.04, 0.72)
 			plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			plate.position = Vector2(2, 32 * zoom + 1)
-			plate.size = Vector2(76, card_h - 32 * zoom - 1)
+			plate.position = Vector2(2, 32 * zoom)
+			plate.size = Vector2(76, card_h - 32 * zoom)
 			b.add_child(plate)
 			var bar := ColorRect.new()
 			bar.name = "Bar"
 			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			bar.position = Vector2(6, 32 * zoom + 2)
+			bar.position = Vector2(6, 32 * zoom + 1)
 			bar.size = Vector2(68, 2)
 			b.add_child(bar)
 			var info := Label.new()
 			info.name = "Info"
 			info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			info.add_theme_font_size_override("font_size", 8)
-			info.add_theme_constant_override("line_spacing", -3)
+			info.add_theme_constant_override("line_spacing", -2)
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			info.position = Vector2(0, 32 * zoom - 1)
-			info.size = Vector2(80, card_h - 32 * zoom + 1)
+			info.position = Vector2(0, 32 * zoom + 3)
+			info.size = Vector2(80, card_h - 32 * zoom - 3)
 			b.add_child(info)
 			field.add_child(b)
 			unit_buttons[u] = b
@@ -197,7 +209,11 @@ static func backdrop_for(location: String) -> Texture2D:
 
 ## The unit's sprite: heroes and enemies by id, hired Merry Men share one look.
 static func sprite_for(u) -> Texture2D:
-	var key: String = "merry_man" if u.id.begins_with("merry_man") else u.id
+	return sprite_by_id(u.id)
+
+
+static func sprite_by_id(id: String) -> Texture2D:
+	var key: String = "merry_man" if id.begins_with("merry_man") else id
 	var path := "res://assets/sprites/%s.png" % key
 	return load(path) if ResourceLoader.exists(path) else null
 
@@ -287,6 +303,8 @@ func _add_button(box: HBoxContainer, text: String, cb: Callable) -> Button:
 
 
 func _on_ability_pressed(ability_id: String) -> void:
+	if animating:
+		return
 	var cur = battle.current()
 	var target_type: String = db.abilities[ability_id]["target"]
 	if target_type == "self" or target_type == "all_allies":
@@ -299,7 +317,7 @@ func _on_ability_pressed(ability_id: String) -> void:
 
 func _on_unit_pressed(u) -> void:
 	var cur = battle.current()
-	if cur == null or cur.side != "heroes" or battle.is_over():
+	if cur == null or cur.side != "heroes" or battle.is_over() or animating:
 		return
 	if selected_ability == "" and u.has_status("netted"):
 		battle.free_ally(cur, u)
@@ -310,6 +328,7 @@ func _on_unit_pressed(u) -> void:
 
 func _after_hero_action() -> void:
 	selected_ability = ""
+	await _play_animations()
 	var cur = battle.current()
 	if battle.is_over():
 		_refresh()
@@ -320,6 +339,8 @@ func _after_hero_action() -> void:
 
 
 func _end_hero_turn() -> void:
+	if animating:
+		return
 	selected_ability = ""
 	battle.end_turn()
 	_advance()
@@ -336,4 +357,102 @@ func _advance() -> void:
 		_refresh()
 		await get_tree().create_timer(0.5).timeout
 		battle.run_ai_turn()
+		await _play_animations()
 	_refresh()
+
+
+# --- Animations ----------------------------------------------------------------
+
+## Plays the queued attack, hit and heal animations in order. Taps are ignored meanwhile.
+func _play_animations() -> void:
+	if _anims.is_empty():
+		return
+	animating = true
+	for c in actions_box.get_children() + commands_box.get_children():
+		c.queue_free()
+	while not _anims.is_empty():
+		var a: Array = _anims.pop_front()
+		if not unit_buttons.has(a[1]):
+			continue
+		match a[0]:
+			"act":
+				await _animate_act(a[1], a[2], a[3])
+			"hit":
+				await _animate_hit(a[1], a[2], a[3])
+			"heal":
+				_float_number(a[1], "+%d" % a[2], Color("8af07a"))
+				await get_tree().create_timer(0.15).timeout
+	animating = false
+
+
+func _animate_act(u, ability_id: String, targets: Array) -> void:
+	var b: Button = unit_buttons[u]
+	var ab: Dictionary = db.abilities[ability_id]
+	var fx: String = ab.get("fx", "")
+	var home := b.position
+	var tween := create_tween()
+	if ab["target"] in ["self", "ally", "all_allies"]:
+		tween.tween_property(b, "position:y", home.y - 8, 0.1)
+		tween.tween_property(b, "position:y", home.y, 0.1)
+		await tween.finished
+		return
+	var toward: float = 1.0 if u.side == "heroes" else -1.0
+	if PROJECTILES.has(fx) and not targets.is_empty() and unit_buttons.has(targets[0]):
+		tween.tween_property(b, "position:x", home.x - 4 * toward, 0.08)
+		tween.tween_property(b, "position:x", home.x, 0.08)
+		var shot := TextureRect.new()
+		shot.texture = PROJECTILES[fx]
+		shot.flip_h = toward < 0
+		shot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shot.scale = Vector2(2, 2)
+		var from := b.position + Vector2(40, 30)
+		var to: Vector2 = unit_buttons[targets[0]].position + Vector2(40, 30)
+		shot.position = from
+		field.add_child(shot)
+		var flight := create_tween()
+		flight.tween_property(shot, "position", to, 0.22)
+		await flight.finished
+		shot.queue_free()
+		return
+	# Melee: lunge at the enemy (a long dash for a charge), then step back.
+	var reach: float = 44.0 if fx == "dash" else 18.0
+	tween.tween_property(b, "position:x", home.x + reach * toward, 0.1)
+	tween.tween_property(b, "position:x", home.x, 0.14)
+	await get_tree().create_timer(0.1).timeout
+
+
+func _animate_hit(u, amount: int, crit: bool) -> void:
+	var b: Button = unit_buttons[u]
+	var art: TextureRect = b.get_node("Art")
+	var home := b.position
+	art.modulate = Color("ff7060")
+	_float_number(u, str(amount) + ("!" if crit else ""), Color("ffe060") if crit else Color.WHITE)
+	if crit:
+		var spark := TextureRect.new()
+		spark.texture = SPARK
+		spark.scale = Vector2(3, 3)
+		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spark.position = b.position + Vector2(26, 18)
+		field.add_child(spark)
+		get_tree().create_timer(0.25).timeout.connect(spark.queue_free)
+	var tween := create_tween()
+	for dx in [3.0, -3.0, 2.0, 0.0]:
+		tween.tween_property(b, "position:x", home.x + dx, 0.04)
+	await tween.finished
+	art.modulate = Color.WHITE
+
+
+## A number that rises from a unit and fades: damage taken or health restored.
+func _float_number(u, text: String, colour: Color) -> void:
+	var b: Button = unit_buttons[u]
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", colour)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.position = b.position + Vector2(30, 6)
+	field.add_child(l)
+	var tween := create_tween()
+	tween.tween_property(l, "position:y", l.position.y - 20, 0.6)
+	tween.parallel().tween_property(l, "modulate:a", 0.0, 0.6).set_delay(0.25)
+	tween.tween_callback(l.queue_free)

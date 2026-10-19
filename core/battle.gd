@@ -5,6 +5,10 @@ extends RefCounted
 const Unit = preload("res://core/unit.gd")
 
 signal event(text: String)
+## For the battle screen's animations: who used what on whom, and what each target took.
+signal acted(unit, ability_id: String, targets: Array)
+signal damaged(unit, amount: int, is_crit: bool)
+signal healed(unit, amount: int)
 
 var abilities: Dictionary
 var enemy_defs: Dictionary
@@ -156,14 +160,16 @@ func perform(u, ability_id: String, target) -> bool:
 		targets = active(u.side)
 
 	_emit("%s uses %s." % [u.name, ab["name"]])
+	acted.emit(u, ability_id, targets)
 	for t in targets:
 		if ab.has("power"):
 			for _i in int(ab.get("hits", 1)):
 				if t.is_active():
 					_deal_damage(u, t, ab)
 		if ab.has("heal"):
-			var healed: int = t.heal(int(round(u.atk * float(ab["heal"]))))
-			_emit("%s recovers %d HP." % [t.name, healed])
+			var amount_healed: int = t.heal(int(round(u.atk * float(ab["heal"]))))
+			_emit("%s recovers %d HP." % [t.name, amount_healed])
+			healed.emit(t, amount_healed)
 		for eff in ab.get("effects", []):
 			if t.is_active() and rng.randf() < float(eff.get("chance", 1.0)):
 				t.add_status(eff["status"], int(eff["turns"]))
@@ -191,6 +197,7 @@ func _deal_damage(attacker, target, ab: Dictionary) -> void:
 	var amount: int = max(1, int(round(dmg)))
 	target.hp = max(0, target.hp - amount)
 	_emit("%s takes %d%s." % [target.name, amount, " (critical!)" if is_crit else ""])
+	damaged.emit(target, amount, is_crit)
 	if target.is_down():
 		_on_down(target)
 
