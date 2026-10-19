@@ -1169,6 +1169,31 @@ def make_title():
     c.save("assets", "ui", "title.png")
 
 
+def make_icon():
+    """The app icon: Robin's sprite on a round greenwood badge, 192x192 (Android's largest launcher size)."""
+    small = Canvas(48, 48)
+    small.ellipse(23.5, 23.5, 23.5, 23.5, "#2a1e14")
+    small.ellipse(23.5, 23.5, 22, 22, "#c8a860")
+    small.gradient(0, 47, ["#f4c070", "#e07848", "#8a3a50"])
+    for y in range(48):   # keep the gradient inside the badge only
+        for x in range(48):
+            if math.hypot(x - 23.5, y - 23.5) > 20.5:
+                small.d[x, y] = (0, 0, 0, 0)
+    ring = Canvas(48, 48)
+    ring.ellipse(23.5, 23.5, 23.5, 23.5, "#2a1e14")
+    ring.ellipse(23.5, 23.5, 22.5, 22.5, "#e0c070")
+    ring.ellipse(23.5, 23.5, 21, 21, (0, 0, 0, 0))
+    for y in range(48):
+        for x in range(48):
+            if math.hypot(x - 23.5, y - 23.5) <= 20.5:
+                ring.d[x, y] = (0, 0, 0, 0)
+    small.paste(ring, 0, 0)
+    robin = Image.open(os.path.join(ROOT, "assets", "sprites", "robin.png"))
+    small.img.alpha_composite(robin, (8, 6))
+    icon = small.img.resize((192, 192), Image.NEAREST)
+    icon.save(os.path.join(ROOT, "assets", "icon.png"))
+
+
 def make_all():
     for name, fn in BACKDROPS.items():
         fn().save("assets", "backdrops", name + ".png")
@@ -1178,6 +1203,7 @@ def make_all():
     make_items()
     make_fx()
     make_title()
+    make_icon()
 
 
 if __name__ == "__main__":
