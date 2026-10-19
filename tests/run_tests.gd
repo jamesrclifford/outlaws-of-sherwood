@@ -596,6 +596,39 @@ func test_battle_reports_hits_for_animation() -> void:
 	check(seen.size() == 2 and seen[0] == "bow_shot" and seen[1] is int, "a bow shot reports the action, then the damage")
 
 
+## Alan's songs must do something you can see: the ballad heals and inspires everyone, the lullaby
+## usually puts its target to sleep, and both report the change for the battle screen.
+func test_alan_songs_heal_inspire_and_stun() -> void:
+	var stuns := 0
+	for s in 40:
+		var b = db.make_battle(["alan", "robin", "little_john"], "forest_patrol", 300 + s)
+		var added := []
+		b.status_added.connect(func(u, st): added.append([u, st]))
+		var alan = b.next_turn()
+		while alan != null and alan.id != "alan":
+			if alan.side == "heroes":
+				b.end_turn()
+			else:
+				b.run_ai_turn()
+			alan = b.next_turn()
+		if alan == null:
+			continue
+		if s == 0:
+			var john = b.units.filter(func(u): return u.id == "little_john")[0]
+			john.hp = 10
+			added.clear()
+			b.perform(alan, "rousing_ballad", alan)
+			check(john.hp >= 10 + 5, "Rousing Ballad heals a hurt friend by at least 5 (%d)" % john.hp)
+			var heroes: Array = b.units.filter(func(u): return u.side == "heroes" and u.is_active())
+			check(heroes.all(func(u): return u.has_status("inspired")), "Rousing Ballad inspires the whole band")
+			check(added.size() == heroes.size(), "each inspired hero is reported to the battle screen")
+		else:
+			var target = b.legal_targets(alan, "lullaby")[0]
+			b.perform(alan, "lullaby", target)
+			stuns += 1 if target.has_status("stunned") else 0
+	check(stuns >= 20, "Lullaby puts its target to sleep most of the time (%d of 39)" % stuns)
+
+
 # --- Story missions --------------------------------------------------------------
 
 func test_story_data_is_valid() -> void:

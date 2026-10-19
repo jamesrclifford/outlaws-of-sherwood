@@ -17,6 +17,6 @@
   "throw_net":     {"fx": "net", "name": "Throw Net",       "ap": 2, "target": "enemy",       "range": "any",   "power": 0.2, "effects": [{"status": "netted", "turns": 2}]},
   "gisborne_duel": {"name": "Gisborne's Blade", "ap": 2, "target": "enemy",      "range": "melee", "power": 1.5, "bonus_crit": 0.2},
   "call_guards":   {"name": "Call the Guards", "ap": 2, "target": "self",        "summon": "man_at_arms"},
-  "rousing_ballad": {"name": "Rousing Ballad", "ap": 2, "target": "all_allies",  "heal": 0.4, "effects": [{"status": "inspired", "turns": 2}]},
-  "lullaby":       {"name": "Lullaby",         "ap": 1, "target": "enemy",       "range": "any",   "power": 0.3, "fx": "note", "effects": [{"status": "stunned", "turns": 1, "chance": 0.5}]}
+  "rousing_ballad": {"name": "Rousing Ballad", "ap": 2, "target": "all_allies",  "heal": 0.8, "effects": [{"status": "inspired", "turns": 2}]},
+  "lullaby":       {"name": "Lullaby",         "ap": 1, "target": "enemy",       "range": "any",   "power": 0.3, "fx": "note", "effects": [{"status": "stunned", "turns": 1, "chance": 0.75}]}
 }

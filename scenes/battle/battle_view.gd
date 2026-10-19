@@ -15,6 +15,8 @@ const SHADOW := preload("res://assets/ui/shadow.png")
 const RING_TURN := preload("res://assets/ui/ring_turn.png")
 const RING_TARGET := preload("res://assets/ui/ring_target.png")
 ## Things that fly across the field, by an ability's "fx" in data/abilities.json.
+## Words that pop up over a unit when a song, net or blow changes it, so the effect is visible.
+const STATUS_WORDS := {"inspired": "Inspired!", "stunned": "Stunned!", "netted": "Netted!", "pinned": "Pinned!"}
 const PROJECTILES := {
 	"arrow": preload("res://assets/fx/arrow.png"),
 	"bolt": preload("res://assets/fx/bolt.png"),
@@ -71,6 +73,7 @@ func _begin() -> void:
 	battle.acted.connect(func(u, ability_id, targets): _anims.append(["act", u, ability_id, targets]))
 	battle.damaged.connect(func(u, amount, crit): _anims.append(["hit", u, amount, crit]))
 	battle.healed.connect(func(u, amount): _anims.append(["heal", u, amount]))
+	battle.status_added.connect(func(u, status): _anims.append(["status", u, status]))
 	_rebuild_units()
 	_advance()
 
@@ -381,8 +384,13 @@ func _play_animations() -> void:
 			"hit":
 				await _animate_hit(a[1], a[2], a[3])
 			"heal":
-				_float_number(a[1], "+%d" % a[2], Color("8af07a"))
-				await get_tree().create_timer(0.15).timeout
+				if a[2] > 0:
+					_float_number(a[1], "+%d" % a[2], Color("8af07a"))
+					await get_tree().create_timer(0.15).timeout
+			"status":
+				if STATUS_WORDS.has(a[2]):
+					_float_number(a[1], STATUS_WORDS[a[2]], Color("f0d060"), 8, Vector2(14, 26))
+					await get_tree().create_timer(0.15).timeout
 	animating = false
 
 
@@ -444,14 +452,14 @@ func _animate_hit(u, amount: int, crit: bool) -> void:
 
 
 ## A number that rises from a unit and fades: damage taken or health restored.
-func _float_number(u, text: String, colour: Color) -> void:
+func _float_number(u, text: String, colour: Color, size := 16, offset := Vector2(30, 6)) -> void:
 	var b: Button = unit_buttons[u]
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", colour)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.position = b.position + Vector2(30, 6)
+	l.position = b.position + offset
 	field.add_child(l)
 	var tween := create_tween()
 	tween.tween_property(l, "position:y", l.position.y - 20, 0.6)
