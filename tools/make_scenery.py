@@ -486,44 +486,79 @@ def bd_sheriffs_toll_bridge():
 
 
 def bd_brook_bridge():
-    """Where Robin met Little John: a single great log over a woodland brook, seen from the side.
-    The duellists stand on the log; its top is where the battle screen puts their feet."""
+    """Where Robin met Little John: a brook winds out of the forest towards us, widening as it
+    comes, and a single great log lies across it. The duellists stand on the log; its top is
+    where the battle screen puts their feet."""
     rng = random.Random(17)
     c = bd_sherwood_edge()
     top = 124                 # the log's upper surface, under the fighters' feet
-    left, right = 34, 148     # where the banks fall away to the water
-    # the brook fills the gap between the banks, from just below the far bank to the bottom
-    for y in range(HORIZON + 30, BH):
-        for x in range(left, right):
-            depth = y - (HORIZON + 30)
-            colour = "#6a9ab8" if depth < 3 else ("#4a7a9a" if depth < 40 else "#3e6a8a")
+
+    def banks(y):
+        # the stream narrows into the distance and wanders a little from side to side
+        t = (y - HORIZON) / (BH - HORIZON)
+        mid = 90 + math.sin(y / 17) * 6 * (1 - t) + math.sin(y / 9) * 2
+        # ...and spreads into a wide pool where the log crosses, so both fighters stand over water
+        half = 5 + 38 * t + 32 * math.exp(-((y - top - 6) / 26) ** 2)
+        return mid - half, mid + half
+
+    for y in range(HORIZON + 2, BH):
+        l, r = banks(y)
+        for x in range(int(l), int(r) + 1):
+            depth = min(x - l, r - x)
+            if depth < 1:
+                colour = "#4a3a24"                      # wet mud at the water's edge
+            elif depth < 2.5:
+                colour = "#7ab0cc"                      # shallows
+            else:
+                colour = "#4f86a8" if y < top + 30 else "#43779a"
             c.px(x, y, colour)
-    for _ in range(90):   # ripples
-        x, y = rng.randint(left, right - 6), rng.randint(HORIZON + 34, BH - 2)
-        c.rect(x, y, x + rng.randint(2, 6), y, "#a8d0e4")
-    for _ in range(10):   # stones in the water
-        x, y = rng.randint(left + 4, right - 4), rng.randint(top + 20, BH - 6)
-        c.ellipse(x, y, 3, 2, "#8a8478")
-        c.rect(x - 1, y - 1, x + 1, y - 1, "#aaa496")
-    # earth banks dropping into the water on both sides
-    for y in range(HORIZON + 26, BH):
-        drop = (y - HORIZON - 26) // 6
-        c.rect(left - 6 + drop, y, left + 1 + drop // 2, y, "#5a4a2e")
-        c.rect(right - 1 - drop // 2, y, right + 6 - drop, y, "#5a4a2e")
-    # the log, bank to bank: bark on top, shadowed underside, rings showing at each cut end
-    c.rect(left - 14, top, right + 14, top + 8, "#6a4a2c")
-    c.rect(left - 14, top, right + 14, top + 1, "#8a6a40")
-    c.rect(left - 14, top + 7, right + 14, top + 8, "#3e2a18")
-    for x in range(left - 12, right + 12, 3):
-        for y in range(top + 2, top + 7, 2):
-            if rng.random() < 0.5:
-                c.px(x, y, "#5a3d24")
-    for end in (left - 14, right + 14):
-        c.ellipse(end, top + 4, 3, 5, "#a08050")
-        c.ellipse(end, top + 4, 1.5, 3, "#c8a070")
-    # its reflection, broken by the current
-    for x in range(left, right, 2):
-        c.px(x, top + 12 + (x // 4) % 2, "#2e5a7a")
+        c.px(l - 1, y, "#6a5a36")                       # the bank's dry lip
+        c.px(r + 1, y, "#6a5a36")
+    for _ in range(110):   # ripples, shorter in the distance
+        y = rng.randint(HORIZON + 6, BH - 2)
+        l, r = banks(y)
+        n = 1 + int(4 * (y - HORIZON) / (BH - HORIZON))
+        x = rng.uniform(l + 2, max(l + 2, r - 2 - n))
+        c.rect(x, y, x + n, y, "#a8d0e4")
+    for _ in range(9):     # stones breaking the surface
+        y = rng.randint(top + 18, BH - 6)
+        l, r = banks(y)
+        x = rng.uniform(l + 4, r - 4)
+        c.ellipse(x, y, 3, 2, "#7a766c")
+        c.rect(x - 1, y - 2, x + 1, y - 2, "#a8a294")
+        c.rect(x - 3, y + 2, x + 3, y + 2, "#a8d0e4")   # water curling round it
+    for side in (0, 1):    # reeds along both banks
+        for _ in range(9):
+            y = rng.randint(HORIZON + 20, BH - 4)
+            x = banks(y)[side] + (-2 if side == 0 else 2)
+            h = 3 + (y - HORIZON) // 30
+            for k in range(-1, 2):
+                c.line(x + k, y, x + k * 2, y - h - abs(k), rng.choice(["#4f7a32", "#6a9a3c"]))
+
+    # the log, lying from bank to bank with a little to spare on the grass
+    l, r = banks(top + 4)
+    x0, x1 = int(l) - 16, int(r) + 16
+    for x in range(x0 + 2, x1 - 1):                     # its shadow, on the grass and the water
+        over_water = l <= x <= r
+        c.px(x, top + 9, "#2e5a7a" if over_water else "#2f4a22")
+        c.px(x, top + 10, "#36668a" if over_water else "#3a5a2a")
+    c.rect(x0, top, x1, top + 8, "#6a4a2c")
+    c.rect(x0, top, x1, top, "#9a7a4a")                  # sunlit top
+    c.rect(x0, top + 1, x1, top + 1, "#82603a")
+    c.rect(x0, top + 7, x1, top + 8, "#3e2a18")          # underside in shadow
+    for x in range(x0 + 2, x1 - 1, 3):                    # bark grain
+        for y in range(top + 2, top + 7):
+            if rng.random() < 0.35:
+                c.px(x + (y % 2), y, "#523822")
+    for kx in (x0 + 22, x1 - 30):                        # knots
+        c.ellipse(kx, top + 4, 2, 1.5, "#3e2a18")
+    for end in (x0, x1):                                 # sawn ends showing the rings
+        c.ellipse(end, top + 4, 2.5, 4.5, "#b08a58")
+        c.ellipse(end, top + 4, 1.2, 2.5, "#d0a870")
+        c.px(end, top + 4, "#8a6a40")
+    for x in range(int(l) + 1, int(r)):                  # foam where the current meets the log
+        if rng.random() < 0.6:
+            c.px(x, top + 11 + rng.randint(0, 1), "#d8ecf4")
     return c
 
 
