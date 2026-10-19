@@ -1,6 +1,9 @@
 ## Prototype mission screen: the linear path of nodes, the party, and what to do at the current node.
 extends Control
 
+## Emitted when a mission started with play() ends and the player heads back to the map.
+signal done(run)
+
 const GameData = preload("res://core/game_data.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
@@ -23,11 +26,19 @@ var buttons: VBoxContainer
 var bg: ColorRect
 
 
+## Plays a mission prepared elsewhere (by the campaign). Call before adding to the tree.
+func play(game_data, mission_run) -> void:
+	db = game_data
+	run = mission_run
+
+
 func _ready() -> void:
-	db = GameData.new()
-	var gen = MissionGen.new(db)
-	var mission: Dictionary = gen.generate(mission_type, threat, int(Time.get_ticks_usec()), "", "little_john")
-	run = MissionRun.new(db, mission, PARTY.map(func(h): return db.make_hero(h)))
+	if run == null:
+		db = GameData.new()
+		var gen = MissionGen.new(db)
+		var generated: Dictionary = gen.generate(mission_type, threat, int(Time.get_ticks_usec()), "", "little_john")
+		run = MissionRun.new(db, generated, PARTY.map(func(h): return db.make_hero(h)))
+	var mission: Dictionary = run.mission
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_layout()
 	bg.color = Color(db.locations[mission["location"]]["backdrop"]).darkened(0.45)
@@ -180,4 +191,7 @@ func _next() -> void:
 
 func _finish() -> void:
 	_refresh()
-	_set_buttons([["Back to camp", func(): get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")]])
+	if done.get_connections().is_empty():
+		_set_buttons([["Back to camp", func(): get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")]])
+	else:
+		_set_buttons([["Back to the map", func(): done.emit(run)]])

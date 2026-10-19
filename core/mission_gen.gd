@@ -49,6 +49,14 @@ func generate(type: String, threat: int, seed_value: int, location_id := "", hun
 	}
 
 
+## Turns any generated robbery into bait set by the given villain (used when a villain's plot comes due).
+func make_bait(mission: Dictionary, by: String, hunted_hero: String) -> void:
+	for n in mission["nodes"]:
+		n.erase("trap")
+	mission["bait"] = {"by": by, "revealed": false}
+	_set_bait(mission["nodes"], by, hunted_hero)
+
+
 ## Chance that a robbery is really a trap. Grows with the Sheriff's grip on the region.
 static func bait_chance(threat: int) -> float:
 	return 0.15 + threat / 250.0

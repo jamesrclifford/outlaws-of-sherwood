@@ -1,0 +1,18 @@
+{
+  "regions": {
+    "sherwood":   {"name": "Sherwood",         "start_control": 25},
+    "north_road": {"name": "Great North Road", "start_control": 45},
+    "nottingham": {"name": "Nottingham",       "start_control": 70}
+  },
+  "nodes": {
+    "camp":                 {"name": "Major Oak Camp",           "kind": "camp",    "region": "sherwood",   "x": 150, "y": 190, "links": ["edwinstowe", "sherwood_edge", "blidworth"]},
+    "edwinstowe":           {"name": "Edwinstowe",               "kind": "village", "region": "sherwood",   "x": 245, "y": 135, "links": ["camp", "great_north_road", "locksley"], "location": "locksley"},
+    "sherwood_edge":        {"name": "Edge of Sherwood",         "kind": "forest",  "region": "sherwood",   "x": 70,  "y": 120, "links": ["camp", "locksley"], "location": "sherwood_edge"},
+    "locksley":             {"name": "Locksley",                 "kind": "village", "region": "north_road", "x": 130, "y": 45,  "links": ["sherwood_edge", "edwinstowe", "great_north_road"], "location": "locksley"},
+    "great_north_road":     {"name": "Great North Road",         "kind": "road",    "region": "north_road", "x": 290, "y": 55,  "links": ["locksley", "edwinstowe", "sheriffs_toll_bridge"], "location": "great_north_road"},
+    "sheriffs_toll_bridge": {"name": "The Sheriff's Toll Bridge","kind": "road",    "region": "north_road", "x": 285, "y": 250, "links": ["great_north_road", "nottingham"], "location": "sheriffs_toll_bridge"},
+    "blidworth":            {"name": "Blidworth",                "kind": "village", "region": "sherwood",   "x": 110, "y": 285, "links": ["camp", "hanged_mans_crossing"], "location": "locksley"},
+    "hanged_mans_crossing": {"name": "Hanged Man's Crossing",    "kind": "road",    "region": "nottingham", "x": 175, "y": 335, "links": ["blidworth", "nottingham"], "location": "hanged_mans_crossing"},
+    "nottingham":           {"name": "Nottingham",               "kind": "town",    "region": "nottingham", "x": 280, "y": 355, "links": ["hanged_mans_crossing", "sheriffs_toll_bridge"], "location": "nottingham_gate"}
+  }
+}

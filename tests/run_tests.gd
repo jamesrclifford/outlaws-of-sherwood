@@ -5,6 +5,7 @@ const GameData = preload("res://core/game_data.gd")
 const Unit = preload("res://core/unit.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
+const Campaign = preload("res://core/campaign.gd")
 
 var failures := 0
 var passed := 0
@@ -320,3 +321,124 @@ func test_missions_finish_and_failures_capture_not_kill() -> void:
 			check(run.gold == 0, "a failed mission pays nothing")
 	print("mission success rate at threat 40 with simple autoplay: %d/40" % wins)
 	check(wins >= 20, "a full party should succeed at most threat-40 missions (got %d/40)" % wins)
+
+
+# --- Campaign / strategic map ------------------------------------------------
+
+func test_map_data_is_consistent() -> void:
+	for n in db.map["nodes"]:
+		var nd: Dictionary = db.map["nodes"][n]
+		check(db.map["regions"].has(nd["region"]), "%s is in a known region" % n)
+		if nd.has("location"):
+			check(db.locations.has(nd["location"]), "%s maps to a known mission location" % n)
+		for l in nd["links"]:
+			check(db.map["nodes"].has(l) and db.map["nodes"][l]["links"].has(n), "road %s-%s goes both ways" % [n, l])
+	check(db.map["nodes"].has(Campaign.DUNGEON), "the dungeon is on the map")
+
+
+func test_travel_takes_a_day_per_road_and_follows_shortest_route() -> void:
+	var c = Campaign.new(db, 1)
+	var path: Array = c.route("nottingham")
+	check(path == ["blidworth", "hanged_mans_crossing", "nottingham"], "shortest road from camp to Nottingham, got %s" % [path])
+	c.travel("nottingham")
+	check(c.day == 4 and c.location == "nottingham", "three roads take three days")
+
+
+func test_resting_at_camp_heals() -> void:
+	var c = Campaign.new(db, 2)
+	c.heroes["robin"].hp = 5
+	c.rest()
+	check(c.heroes["robin"].hp == c.heroes["robin"].max_hp, "a day at camp heals fully")
+	c.travel("edwinstowe")
+	var before: int = c.day
+	c.rest()
+	check(c.day == before, "you can only rest at camp")
+
+
+func test_villains_plot_and_set_bait() -> void:
+	var c = Campaign.new(db, 3)
+	for _i in 40:
+		c.rest()
+	var baits: Array = c.missions.values().filter(func(m): return not m["bait"].is_empty())
+	check(c.news.any(func(n): return "Gisborne is hunting" in n), "Guy picks someone to hunt")
+	check(c.news.any(func(n): return "Too rich" in n), "the Sheriff dangles a wagon")
+	check(c.hunted_hero != "" and c.hunted_hero != "robin", "Guy hunts one of Robin's companions")
+	check(c.control.values().all(func(v): return v >= 0 and v <= 100), "control stays within 0-100")
+	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes")), "old jobs expire")
+
+
+func _fake_run(c, result: String, captured_ids: Array):
+	var run = c.start_mission()
+	run.result = result
+	run.captured = captured_ids
+	run.gold = 50 if result == "success" else 0
+	return run
+
+
+func test_capture_creates_rescue_and_rescue_frees() -> void:
+	var c = Campaign.new(db, 4)
+	var target: String = c.missions.keys()[0]
+	c.travel(target)
+	c.finish_mission(_fake_run(c, "failed", ["will", "tuck"]))
+	check(c.captured.has("will") and c.captured.has("tuck"), "heroes left behind are captured")
+	check(c.missions[target].get("rescue_heroes", []) == ["will", "tuck"], "one rescue job for both prisoners")
+	check(c.free_heroes().size() == 2, "only two heroes left to send")
+	c.finish_mission(_fake_run(c, "success", []))
+	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_prisoners_moved_to_dungeon_after_deadline() -> void:
+	var c = Campaign.new(db, 5)
+	var target: String = c.missions.keys()[0]
+	if target == Campaign.DUNGEON:
+		target = c.missions.keys()[1]
+	c.travel(target)
+	c.finish_mission(_fake_run(c, "failed", ["little_john"]))
+	c.travel("camp")
+	for _i in Campaign.RESCUE_DEADLINE:
+		c.rest()
+	check(c.captured["little_john"]["node"] == Campaign.DUNGEON, "unrescued prisoner ends up in Nottingham's dungeon")
+	check(c.missions[Campaign.DUNGEON].get("rescue_heroes", []).has("little_john"), "the rescue job moves with them")
+	check(not c.missions.has(target) or not c.missions[target].has("rescue_heroes"), "the old rescue job is gone")
+
+
+func test_whole_band_captured_is_not_game_over() -> void:
+	var c = Campaign.new(db, 6)
+	c.travel(c.missions.keys()[0])
+	c.finish_mission(_fake_run(c, "failed", ["robin", "little_john", "will", "tuck"]))
+	check(c.captured.is_empty() and c.location == "camp", "friends break the band out; the campaign goes on")
+
+
+func test_save_and_load_round_trip() -> void:
+	var c = Campaign.new(db, 7)
+	for _i in 5:
+		c.rest()
+	c.heroes["will"].hp = 9
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(JSON.stringify(copy.to_dict()) == JSON.stringify(c.to_dict()), "saved campaign loads back identically")
+	c.rest()
+	copy.rest()
+	check(JSON.stringify(copy.to_dict()) == JSON.stringify(c.to_dict()), "and carries on identically")
+
+
+func test_long_campaign_with_autoplay_stays_sane() -> void:
+	var c = Campaign.new(db, 8)
+	var played := 0
+	for _i in 30:
+		if c.missions.is_empty():
+			c.rest()
+			continue
+		var targets: Array = c.missions.keys()
+		c.travel(targets[0])
+		var run = c.start_mission()
+		if run == null:
+			c.travel("camp")
+			continue
+		autoplay_mission(run, true)
+		c.finish_mission(run)
+		played += 1
+		c.travel("camp")
+		c.rest()
+	print("30-turn campaign: day %d, %d missions, %d gold, infamy %d, control %s" % [c.day, played, c.gold, c.infamy, c.control])
+	check(played > 10, "the band finds plenty to do")
+	check(c.gold >= 0 and c.day > 30, "campaign advanced sensibly")
