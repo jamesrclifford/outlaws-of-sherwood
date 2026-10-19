@@ -17,7 +17,7 @@
             {"label": "Cut a staff and settle it", "result": "next", "log": "Robin cuts a stout oak staff. The giant grins and twirls his own."},
             {"label": "Bow and let him pass", "result": "next", "log": "'Polite!' booms the giant. 'But I'll still have a bout with you, for the fun of it.'"}
           ]},
-        {"kind": "duel", "text": "Quarterstaves on the bridge! Whoever lands in the brook loses.", "party": ["robin"], "enemies": ["rival_little_john"], "friendly": true,
+        {"kind": "duel", "text": "Quarterstaves on the bridge! Whoever lands in the brook loses.", "abilities": ["strike", "staff_sweep", "defend"], "sprites": {"robin": "robin_staff"}, "party": ["robin"], "enemies": ["rival_little_john"], "friendly": true,
           "win": "Robin's staff sweeps the giant off the log. SPLASH! He comes up roaring with laughter.",
           "lose": "SPLASH! Robin lands in the brook. The giant hauls him out by the collar, laughing."},
         {"kind": "objective", "text": "'John Little's my name,' says the giant, wringing out his hood. 'You fight fair. Will you have me in your band?' The outlaws name him Little John.", "recruit": true}
