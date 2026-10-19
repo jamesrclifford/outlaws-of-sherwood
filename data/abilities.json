@@ -1,0 +1,20 @@
+{
+  "strike":        {"name": "Strike",          "ap": 1, "target": "enemy",       "range": "melee", "power": 1.0},
+  "shoot":         {"name": "Shoot",           "ap": 1, "target": "enemy",       "range": "any",   "power": 0.9},
+  "defend":        {"name": "Defend",          "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}]},
+  "split_arrow":   {"name": "Split the Arrow", "ap": 2, "target": "enemy",       "range": "any",   "power": 1.7, "bonus_crit": 0.35},
+  "pinning_shot":  {"name": "Pinning Shot",    "ap": 1, "target": "enemy",       "range": "any",   "power": 0.6, "effects": [{"status": "pinned", "turns": 2}]},
+  "bridge_hold":   {"name": "Bridge Hold",     "ap": 2, "target": "self",        "effects": [{"status": "taunt", "turns": 2}, {"status": "defending", "turns": 1}]},
+  "staff_sweep":   {"name": "Staff Sweep",     "ap": 2, "target": "all_enemies", "range": "melee", "power": 0.6},
+  "flourish":      {"name": "Flourish",        "ap": 2, "target": "enemy",       "range": "melee", "power": 0.55, "hits": 3, "bonus_vs_tag": {"knight": 1.5}},
+  "blessing":      {"name": "Blessing",        "ap": 2, "target": "ally",        "heal": 1.2},
+  "tavern_brawl":  {"name": "Tavern Brawl",    "ap": 2, "target": "enemy",       "range": "melee", "power": 0.7, "effects": [{"status": "stunned", "turns": 1, "chance": 0.6}]},
+  "rally":         {"name": "Rally",           "ap": 2, "target": "all_allies",  "effects": [{"status": "inspired", "turns": 2}]},
+  "shield_wall":   {"name": "Shield Wall",     "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}]},
+  "crossbow_bolt": {"name": "Crossbow Bolt",   "ap": 2, "target": "enemy",       "range": "any",   "power": 1.1, "effects": [{"status": "pinned", "turns": 1, "chance": 0.5}]},
+  "charge":        {"name": "Lance Charge",    "ap": 2, "target": "enemy",       "range": "any",   "power": 1.4},
+  "bite":          {"name": "Bite",            "ap": 1, "target": "enemy",       "range": "melee", "power": 0.8},
+  "throw_net":     {"name": "Throw Net",       "ap": 2, "target": "enemy",       "range": "any",   "power": 0.2, "effects": [{"status": "netted", "turns": 2}]},
+  "gisborne_duel": {"name": "Gisborne's Blade", "ap": 2, "target": "enemy",      "range": "melee", "power": 1.5, "bonus_crit": 0.2},
+  "call_guards":   {"name": "Call the Guards", "ap": 2, "target": "self",        "summon": "man_at_arms"}
+}
