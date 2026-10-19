@@ -592,6 +592,200 @@ def bd_archery_contest():
     return c
 
 
+def bd_major_oak():
+    """The band's home under the Major Oak: the great tree, a cooking fire and a long feasting board."""
+    rng = random.Random(20)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#e8c070", "#c8a860", "#7a8a48", "#4f6a36"])
+    for x in range(-4, BW, 11):   # far trunks in the evening haze
+        tx = x + rng.randint(0, 5)
+        c.rect(tx, 14, tx + 2, HORIZON, "#5a6a3a")
+    for _ in range(50):
+        c.ellipse(rng.randint(0, BW), rng.randint(-4, 20), rng.randint(6, 14), rng.randint(4, 8), rng.choice(["#3a5a2c", "#34522a", "#42642f"]))
+    # the Major Oak itself: a huge squat trunk with spreading boughs
+    c.rect(54, 6, 86, HORIZON + 8, "#4a3322")
+    c.rect(76, 6, 86, HORIZON + 8, "#33231a")
+    c.rect(54, 6, 56, HORIZON + 8, "#6a4a30")
+    for y in range(10, HORIZON + 4, 6):
+        c.line(58 + y % 7, y, 64 + y % 5, y + 2, "#33231a")
+    c.ellipse(68, 34, 4, 6, "#1e140c")                 # the hollow in the trunk
+    for bx, by, ex, ey in ((56, 14, 10, 0), (84, 12, 150, 2), (60, 22, 24, 10), (84, 20, 128, 14)):
+        c.line(bx, by, ex, ey, "#4a3322", 4)
+    for _ in range(40):
+        c.ellipse(rng.randint(0, BW), rng.randint(-6, 12), rng.randint(8, 16), rng.randint(4, 8), rng.choice(["#2a4a24", "#30552a", "#3a6030"]))
+    c.line(64, HORIZON + 8, 46, HORIZON + 14, "#4a3322", 3)   # roots
+    c.line(82, HORIZON + 8, 100, HORIZON + 14, "#33231a", 3)
+    c.gradient(HORIZON, BH - 1, ["#6a8a3e", "#5a7a34", "#4a6a2e", "#3e5a28"])
+    speckle(c, HORIZON, BH - 1, ["#7a9a46", "#3a5426", "#8a7a4a"], rng, 0.07)
+    c.rect(54, HORIZON, 86, HORIZON + 8, "#4a3322")
+    c.rect(76, HORIZON, 86, HORIZON + 8, "#33231a")
+    # the feasting board on trestles, laden
+    c.rect(104, HORIZON + 10, 172, HORIZON + 13, "#8a6a40")
+    c.rect(104, HORIZON + 14, 172, HORIZON + 14, "#5a3d24")
+    for tx in (108, 166):
+        c.rect(tx, HORIZON + 15, tx + 1, HORIZON + 22, "#5a3d24")
+    for x, col in ((110, "#c8a060"), (122, "#a8603a"), (134, "#e8e0c8"), (146, "#c8a060"), (158, "#7a3a2a")):
+        c.ellipse(x, HORIZON + 8, 4, 2, col)            # loaves, a roast, cheese, pies
+    for x in (116, 140, 164):
+        c.rect(x, HORIZON + 5, x + 1, HORIZON + 9, "#9a9a92")   # tankards
+    # cooking fire with a spit
+    fx, fy = 30, HORIZON + 30
+    for i in range(-6, 7, 3):
+        c.line(fx + i, fy + 3, fx - i // 2, fy - 2, "#5a3d24", 2)
+    for r, col in ((6, "#c0302a"), (4, "#e87a2a"), (2, "#f8d860")):
+        c.ellipse(fx, fy - 3, r - 2, r, col)
+    c.line(fx - 10, fy - 12, fx + 10, fy - 12, "#3a2a1a")
+    c.rect(fx - 10, fy - 12, fx - 10, fy + 2, "#3a2a1a")
+    c.rect(fx + 10, fy - 12, fx + 10, fy + 2, "#3a2a1a")
+    c.ellipse(fx, fy - 12, 5, 2, "#a8603a")
+    for y in range(fy - 30, fy - 14, 3):                # smoke
+        c.px(fx + (y % 5) - 2, y, (220, 220, 210, 90))
+    for x in range(0, BW, 23):   # lanterns strung from the boughs
+        c.px(x + 4, 30 + (x % 3), "#3a2a1a")
+        c.rect(x + 3, 31 + (x % 3), x + 5, 33 + (x % 3), "#f0c050")
+    grass_tufts(c, rng, HORIZON + 6, BH - 2, 50, ["#7aa046", "#8ab24e"])
+    return c
+
+
+def bd_nottingham_market():
+    """Nottingham's market square: timbered houses, striped stalls and the castle on its rock."""
+    rng = random.Random(21)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#5a90c8", "#8ab8dc", "#cfe2e6"])
+    clouds(c, rng, 3, 16)
+    c.rect(116, 2, 160, 30, "#8a8272")                 # castle on the skyline
+    for x in range(116, 161, 6):
+        c.rect(x, 0, x + 3, 1, "#8a8272")
+    c.rect(150, 0, 160, 30, "#7a7262")
+    banner(c, 134, 6)
+    for i, x in enumerate(range(-6, BW, 30)):          # a row of jettied town houses
+        h = 34 + (i * 7) % 12
+        wall = ["#e2d3a8", "#d8c49a", "#e8dcc0"][i % 3]
+        c.rect(x, HORIZON - h, x + 28, HORIZON + 4, wall)
+        for bx in (x, x + 9, x + 19, x + 28):
+            c.rect(bx, HORIZON - h, bx, HORIZON + 4, "#4a3220")
+        c.rect(x, HORIZON - h // 2, x + 28, HORIZON - h // 2, "#4a3220")
+        c.line(x, HORIZON - h // 2, x + 9, HORIZON - h, "#4a3220")
+        c.rect(x + 3, HORIZON - h + 4, x + 6, HORIZON - h + 8, "#3a4a5a")
+        c.rect(x + 21, HORIZON - h + 4, x + 24, HORIZON - h + 8, "#3a4a5a")
+        c.rect(x + 12, HORIZON - 6, x + 16, HORIZON + 4, "#5a3a22")
+        for k in range(8):
+            y = HORIZON - h - 1 - k
+            c.rect(x - 2 + k * 2, y, x + 30 - k * 2, y, "#8a4a34" if k % 2 else "#a85a3e")
+    c.gradient(HORIZON + 4, BH - 1, ["#a8a090", "#9a9282", "#8a8272"])
+    for y in range(HORIZON + 6, BH, 5):                # cobbles
+        for x in range((y // 5) % 2 * 4, BW, 8):
+            c.rect(x, y, x + 6, y + 3, rng.choice(["#b4ac9a", "#a49c8a", "#bcb4a2"]))
+            c.rect(x, y + 3, x + 6, y + 3, "#7a7262")
+    for sx, col in ((10, "#a01e22"), (66, "#3a5aa0"), (128, "#2a6a3a")):   # market stalls
+        c.rect(sx, HORIZON + 6, sx + 40, HORIZON + 22, "#8a6a40")
+        c.rect(sx, HORIZON + 6, sx + 40, HORIZON + 7, "#5a3d24")
+        for x in range(sx - 2, sx + 43, 6):
+            c.rect(x, HORIZON - 6, x + 2, HORIZON, col)
+            c.rect(x + 3, HORIZON - 6, x + 5, HORIZON, "#e8e4d8")
+        c.rect(sx, HORIZON, sx, HORIZON + 6, "#5a3d24")
+        c.rect(sx + 40, HORIZON, sx + 40, HORIZON + 6, "#5a3d24")
+        for k in range(5):
+            c.ellipse(sx + 5 + k * 8, HORIZON + 4, 3, 2, rng.choice(["#c03a2a", "#e0c050", "#7aa040", "#c8a060", "#a8603a"]))
+    for x, y in ((30, 120), (150, 190), (60, 200)):   # dropped cabbages and straw
+        c.ellipse(x, y, 3, 2, "#7aa040")
+        c.px(x - 1, y - 1, "#a0c060")
+    speckle(c, HORIZON + 24, BH - 1, ["#d8c070", "#c8b060"], rng, 0.01)
+    return c
+
+
+def bd_abbey():
+    """St Mary's Abbey: grey cloister arches, a rose window and a herb garden."""
+    rng = random.Random(22)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#7a9ac0", "#a8c0d8", "#d8e0e0"])
+    clouds(c, rng, 3, 14)
+    c.rect(40, 0, 140, HORIZON + 4, "#a8a090")          # the great west front
+    c.rect(110, 0, 140, HORIZON + 4, "#8a8272")
+    for x in range(40, 141, 10):
+        c.rect(x, 0, x, HORIZON + 4, "#8a8272")
+    c.ellipse(90, 22, 14, 14, "#6a6458")                # rose window
+    c.ellipse(90, 22, 12, 12, "#3a4a7a")
+    for a in range(8):
+        ang = a * math.pi / 4
+        c.line(90, 22, 90 + round(math.cos(ang) * 11), 22 + round(math.sin(ang) * 11), "#c8a040")
+    c.ellipse(90, 22, 3, 3, "#a01e22")
+    c.rect(82, HORIZON - 22, 98, HORIZON + 4, "#3a2a1a")   # great door
+    c.ellipse(90, HORIZON - 22, 8, 6, "#3a2a1a")
+    c.rect(89, HORIZON - 26, 90, HORIZON + 4, "#5a4430")
+    for tx in (0, 150):                                   # bell towers
+        c.rect(tx, -2, tx + 30, HORIZON + 4, "#9a9282")
+        c.rect(tx + 10, 10, tx + 18, 22, "#3a3a44")
+        c.ellipse(tx + 14, 10, 4, 4, "#3a3a44")
+    c.gradient(HORIZON + 4, BH - 1, ["#8cb45a", "#78a24e", "#668e44"])
+    for x in range(0, BW, 20):                            # cloister arcade along the garth
+        c.rect(x, HORIZON + 4, x + 3, HORIZON + 30, "#b4ac9a")
+        c.ellipse(x + 11, HORIZON + 10, 8, 6, "#b4ac9a")
+        c.ellipse(x + 11, HORIZON + 12, 6, 6, "#4a4a42")
+        c.rect(x + 5, HORIZON + 12, x + 17, HORIZON + 30, "#4a4a42")
+    c.rect(0, HORIZON + 31, BW, HORIZON + 33, "#9a9282")
+    c.rect(70, HORIZON + 34, 110, BH - 1, "#c8c0a8")    # gravel path through the garth
+    for y in range(HORIZON + 44, BH - 6, 40):            # herb beds either side
+        for x in (8, 128):
+            c.rect(x, y, x + 26, y + 8, "#5a4a2e")
+            for _ in range(10):
+                c.px(rng.randint(x + 1, x + 25), rng.randint(y + 1, y + 7), rng.choice(["#7aa040", "#a0c060", "#c8a0d0", "#f0e080"]))
+    stones(c, rng, HORIZON + 36, BH - 2, 30, "#d8d0c0", "#9a9282")
+    return c
+
+
+def bd_harbour():
+    """Scarborough harbour: grey sea, a quay of stone and a fishing boat with a patched sail."""
+    rng = random.Random(23)
+    c = new_backdrop()
+    c.gradient(0, HORIZON - 8, ["#7a9ab0", "#a8c0cc", "#d0dcd8"])
+    clouds(c, rng, 5, 24, "#e8ecec", "#b8c4cc")
+    for x in range(BW):                                  # a cliff with the castle ruin on the left
+        top = 14 + round(abs(math.sin(x / 13)) * 6) + max(0, x - 36) * 2 if x < 50 else 99
+        if top < HORIZON:
+            c.rect(x, top, x, HORIZON, "#8a826a")
+            c.rect(x, top, x, top + 1, "#6a8a48")       # grassy clifftop
+            if x % 5 == 0:
+                c.line(x, top + 4, x + 2, HORIZON, "#6a6252")
+    c.rect(10, 4, 24, 15, "#7a7262")                    # the castle ruin
+    for x in range(10, 25, 4):
+        c.rect(x, 2, x + 1, 3, "#7a7262")
+    c.rect(15, 8, 17, 11, "#3a3a44")
+    c.gradient(HORIZON - 8, BH - 1, ["#5a7a90", "#4a6a80", "#3e5a70", "#344e62"], x0=50)
+    c.gradient(HORIZON, BH - 1, ["#5a7a90", "#4a6a80", "#3e5a70", "#344e62"], x1=49)
+    for _ in range(120):                                 # wave glints
+        x, y = rng.randint(0, BW), rng.randint(HORIZON - 6, BH)
+        c.rect(x, y, x + rng.randint(1, 4), y, rng.choice(["#8aaabc", "#c8dce4", "#2e4658"]))
+    # the fishing boat, sail up, in the middle distance
+    bx, by = 112, HORIZON + 4
+    for i in range(10):
+        c.rect(bx - 22 + i, by + i, bx + 22 - i, by + i, "#6a4a2c" if i % 3 else "#4a3220")
+    c.rect(bx - 22, by, bx + 22, by, "#8a6a40")
+    c.rect(bx, by - 36, bx + 1, by, "#4a3220")
+    for y in range(by - 34, by - 4):
+        w = (y - (by - 34)) * 16 // 30
+        c.rect(bx + 2, y, bx + 2 + w, y, "#d8ccb0")
+    c.rect(bx + 6, by - 20, bx + 11, by - 15, "#b4a888")   # patch
+    c.line(bx, by - 36, bx + 6, by - 40, "#a01e22")         # pennant
+    # the stone quay in the foreground
+    c.rect(0, 150, BW, BH - 1, "#8a8272")
+    for y in range(150, BH, 7):
+        for x in range((y // 7) % 2 * 6, BW, 12):
+            c.rect(x, y, x + 10, y + 5, rng.choice(["#9a9282", "#8a8272", "#a49c8a"]))
+            c.rect(x, y + 6, x + 10, y + 6, "#6a6458")
+    c.rect(0, 148, BW, 149, "#a8a090")
+    for x in (24, 132):                                  # bollards with rope
+        c.rect(x, 140, x + 5, 150, "#4a4a42")
+        c.rect(x - 1, 139, x + 6, 140, "#5a5a52")
+    c.line(29, 144, 70, 120, "#c8b48a")
+    for x in (60, 70, 150):                              # creels of fish
+        c.rect(x, 156, x + 10, 164, "#9a7a4a")
+        c.rect(x + 1, 155, x + 9, 155, "#c8d0d8")
+    for x, y in ((40, 30), (150, 18), (90, 12)):
+        crow(c, x, y, "#e8ecec")                        # gulls
+    return c
+
+
 BACKDROPS = {
     "sherwood_edge": bd_sherwood_edge,
     "great_north_road": bd_great_north_road,
@@ -602,6 +796,10 @@ BACKDROPS = {
     "brook_bridge": bd_brook_bridge,
     "friars_ford": bd_friars_ford,
     "archery_contest": bd_archery_contest,
+    "major_oak": bd_major_oak,
+    "nottingham_market": bd_nottingham_market,
+    "abbey": bd_abbey,
+    "harbour": bd_harbour,
 }
 
 

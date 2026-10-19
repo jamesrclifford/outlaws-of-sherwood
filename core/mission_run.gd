@@ -99,6 +99,8 @@ func choose(option_index: int) -> Dictionary:
 	var opt: Dictionary = current_node()["options"][option_index]
 	if opt.has("log"):
 		_log(opt["log"])
+	gold += int(opt.get("gold", 0))
+	reputation += int(opt.get("reputation", 0))
 	if opt["result"] == "sneak":
 		if rng.randf() < 0.7:
 			_log("The band slips past unseen.")
@@ -141,8 +143,9 @@ func battle_finished(battle) -> void:
 	if battle.friendly:
 		# A sporting bout: win or lose, the story goes on.
 		_log(node["win"] if battle.result == "victory" else node["lose"])
+		# Nobody limps out of a friendly bout: fighters get back up to at least half strength.
 		for h in fighters():
-			h.hp = maxi(1, h.hp)
+			h.hp = maxi(h.hp, h.max_hp / 2)
 		return
 	if battle.result == "victory":
 		gold += battle.gold_won

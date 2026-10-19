@@ -52,6 +52,16 @@ func generate(type: String, threat: int, seed_value: int, location_id := "", hun
 ## Builds a hand-written story mission from data/stories.json. Story missions have no traps or bait.
 func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 	var st: Dictionary = db.stories["stories"][story_id]
+	# JSON numbers load as floats; keep counts as ints so a saved mission reloads identically.
+	var rewards := {}
+	for k in st["rewards"]:
+		rewards[k] = int(st["rewards"][k])
+	var nodes: Array = st["nodes"].duplicate(true)
+	for n in nodes:
+		for opt in n.get("options", []):
+			for k in ["gold", "reputation"]:
+				if opt.has(k):
+					opt[k] = int(opt[k])
 	return {
 		"bait": {},
 		"seed": seed_value,
@@ -63,8 +73,8 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 		"location": st["backdrop"],
 		"location_name": st["place"],
 		"threat": threat,
-		"nodes": st["nodes"].duplicate(true),
-		"rewards": st["rewards"].duplicate(),
+		"nodes": nodes,
+		"rewards": rewards,
 	}
 
 

@@ -367,7 +367,7 @@ func test_villains_plot_and_set_bait() -> void:
 	check(c.news.any(func(n): return "Too rich" in n), "the Sheriff dangles a wagon")
 	check(c.hunted_hero != "" and c.hunted_hero != "robin", "Guy hunts one of Robin's companions")
 	check(c.control.values().all(func(v): return v >= 0 and v <= 100), "control stays within 0-100")
-	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes")), "old jobs expire")
+	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes") or m["type"] == "story"), "old jobs expire")
 
 
 func _fake_run(c, result: String, captured_ids: Array):
@@ -618,6 +618,93 @@ func test_story_data_is_valid() -> void:
 			if n.get("friendly", false):
 				check(n.has("win") and n.has("lose") and n.has("party"), "story %s duel says who fights and how it ends" % id)
 		check(st["recruit"] == "" or st["nodes"].any(func(n): return n.get("recruit", false)), "story %s has a node where the companion joins" % id)
+		for s in st["requires"].get("stories", []):
+			check(db.stories["stories"].has(s) and s != id, "story %s follows a real earlier story %s" % [id, s])
+		for n in st["nodes"]:
+			for h in n.get("party", []):
+				check(db.heroes.has(h), "story %s names a real hero %s to fight" % [id, h])
+			for t in [n.get("text", ""), n.get("win", ""), n.get("lose", "")] + n.get("options", []).map(func(o): return o.get("log", "")):
+				for word in ["kill", "dead", "die", "blood", "murder", "hanged"]:
+					check(not (" %s " % t.to_lower()).contains(" %s" % word), "story %s keeps the family tone (no '%s')" % [id, word])
+
+
+func test_there_are_forty_tales() -> void:
+	var tales: Array = db.stories["stories"].keys().filter(func(id): return db.stories["stories"][id]["recruit"] == "" and id != "silver_arrow")
+	check(tales.size() >= 40, "at least 40 tales from the legends (%d)" % tales.size())
+	# Every tale can eventually be reached: requirements only point at stories that can be posted.
+	var reachable := {}
+	for _pass in 50:
+		for id in db.stories["stories"]:
+			if db.stories["stories"][id]["requires"].get("stories", []).all(func(s): return reachable.has(s)):
+				reachable[id] = true
+	check(reachable.size() == db.stories["stories"].size(), "no tale waits on a story that can never happen")
+	var used := {}
+	for id in tales:
+		used[db.stories["stories"][id]["node"]] = true
+	check(used.size() >= 7, "tales are spread across the map (%d places)" % used.size())
+
+
+## Tales wait their turn: only a couple are posted at once, so the map still has ordinary jobs.
+func test_tales_are_capped_and_chained() -> void:
+	var c = Campaign.new(db, 44)
+	c.reputation = 100
+	c.stories_done = []
+	for id in db.stories["stories"]:
+		if db.stories["stories"][id]["recruit"] != "":
+			c.stories_done.append(id)
+	for h in Campaign.FULL_BAND:
+		if not c.band.has(h):
+			c._join(h)
+	c.missions.clear()
+	c._post_stories()
+	var posted: Array = c.missions.values().filter(func(m): return m["type"] == "story")
+	check(posted.size() == Campaign.MAX_TALES, "only %d tales on the map at once (%d)" % [Campaign.MAX_TALES, posted.size()])
+	check(not c.story_ready("cellarer"), "a tale that follows another waits for it")
+	c.stories_done.append_array(["poor_knight", "knight_pays_abbot"])
+	check(c.story_ready("cellarer"), "the next tale in a chain opens once the earlier ones are done")
+	# A companion's origin story bumps a waiting tale off its spot.
+	c = Campaign.new(db, 45, ["robin", "will", "little_john"])
+	c.reputation = 20
+	c.missions.clear()
+	c.missions["blidworth"] = MissionGen.new(db).story("much_miller", 10, 1)
+	c.missions["blidworth"]["expires"] = 0
+	c._post_stories()
+	check(c.missions["blidworth"]["story"] == "tuck_ford", "Tuck's ford takes the place of a waiting tale")
+
+
+## The band a player would have when a tale first appears: who it names, plus who its chain needed.
+func band_for_story(id: String) -> Array:
+	var st: Dictionary = db.stories["stories"][id]
+	var need: Array = st["requires"].get("band", []).duplicate()
+	for s in st["requires"].get("stories", []):
+		need.append_array(band_for_story(s))
+	var order := ["robin", "will", "little_john", "tuck", "alan"]
+	var deepest := -1
+	for h in need:
+		deepest = maxi(deepest, order.find(h))
+	return order.slice(0, maxi(2, deepest + 1))
+
+
+## Each tale should be winnable most of the time by the band you'd have when it first appears.
+func test_every_tale_is_winnable_by_its_band() -> void:
+	var weak: Array = []
+	for id in db.stories["stories"]:
+		var wins := 0
+		var tries := 12
+		for s in tries:
+			var c = Campaign.new(db, 500 + s, band_for_story(id))
+			c.missions.clear()
+			var at: String = db.stories["stories"][id]["node"]
+			c.missions[at] = MissionGen.new(db).story(id, 10, 900 + s)
+			c.missions[at]["expires"] = 0
+			c.location = at
+			var run = c.start_mission()
+			autoplay_mission(run)
+			wins += 1 if run.result == "success" else 0
+		if wins < tries / 2:
+			weak.append("%s %d/%d" % [id, wins, tries])
+		print("tale %s with %s: %d/%d" % [id, band_for_story(id), wins, tries])
+	check(weak.is_empty(), "every tale is won at least half the time by its band (%s)" % [weak])
 
 
 func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
@@ -659,9 +746,9 @@ func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
 
 func test_every_legend_can_be_played_through() -> void:
 	var c = Campaign.new(db, 41)
-	c.reputation = 30
+	c.reputation = 60
 	var guard := 0
-	while c.stories_done.size() < db.stories["stories"].size() and guard < 40:
+	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
 		var at := ""
 		for n in c.missions:
@@ -677,6 +764,7 @@ func test_every_legend_can_be_played_through() -> void:
 		autoplay_mission(run)
 		c.finish_mission(run)
 		c.captured.clear()
+		c._remove_rescues()
 		c.travel("camp")
 	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
 	for h in Campaign.FULL_BAND:

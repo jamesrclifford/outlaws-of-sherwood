@@ -337,7 +337,99 @@ def bishop():
     return s.save("bishop")
 
 
-DRAWERS = [robin, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy]
+def sheriff():
+    s = Sprite()
+    top = humanoid(s, "#ecc4a4", "#8a1f1f", "#661616", "#2a2a2e", "#111111", belt="#c9a227", fat=2)
+    s.rect(12, top - 1, 19, top + 1, "#3a2a1a")         # oiled hair
+    s.rect(15, top + 6, 19, top + 6, "#3a2a1a")         # pointed beard
+    s.px(19, top + 7, "#3a2a1a")
+    s.rect(11, top - 3, 20, top - 1, "#1a1a1e")         # black velvet hat
+    s.rect(18, top - 4, 22, top - 3, "#1a1a1e")
+    s.line(13, top - 3, 10, top - 7, "#e8ecf2")         # white plume
+    s.rect(12, top + 8, 20, top + 9, "#c9a227")         # chain of office
+    s.px(16, top + 10, "#c9a227")
+    s.px(16, top + 11, "#e8d070")
+    s.rect(8, top + 9, 10, 26, "#1a1a1e")               # black cloak behind
+    s.line(23, 18, 23, 28, "#c9a227")                   # staff of office
+    s.rect(22, 17, 24, 17, "#e8d070")
+    return s.save("sheriff")
+
+
+def monk():
+    s = Sprite()
+    top = humanoid(s, "#ecc4a4", "#3a3a40", "#26262c", "#3a3a40", "#1a1414", belt="#d8c99a", fat=1)
+    s.rect(12, top - 1, 19, top + 1, "#3a3a40")         # black cowl up
+    s.rect(11, top, 13, top + 7, "#26262c")
+    s.rect(12, 22, 20, 28, "#3a3a40")                   # habit to the ankles
+    s.rect(17, 22, 20, 28, "#26262c")
+    s.px(14, 20, "#d8c99a")
+    s.px(14, 21, "#d8c99a")
+    s.rect(21, 18, 25, 23, "#8a6a2a")                   # a heavy purse he swears is empty
+    s.rect(22, 17, 24, 17, "#6a4a1a")
+    s.px(23, 20, "#c9a227")
+    return s.save("monk")
+
+
+def tradesman():
+    s = Sprite()
+    top = humanoid(s, "#d9a07a", "#8a6a3a", "#6a5028", "#4a3a2a", "#2e2216", belt="#3a2614", wide=1)
+    s.rect(13, top - 1, 19, top, "#8a4a2a")             # ginger hair
+    s.rect(14, top + 5, 19, top + 7, "#8a4a2a")         # bushy beard
+    s.rect(13, top + 10, 19, 24, "#a8805a")             # leather apron
+    s.rect(13, top + 10, 19, top + 10, "#6a4a2a")
+    s.rect(11, top - 2, 19, top - 1, "#5a6a3a")         # flat cap
+    s.rect(24, 4, 24, 30, "#7a5028")                    # crab-tree staff
+    s.rect(23, 4, 25, 6, "#5a3418")
+    return s.save("tradesman")
+
+
+def beggar():
+    s = Sprite()
+    top = humanoid(s, "#d6a07a", "#8a8070", "#6a6252", "#6a6252", "#4a3a2a", belt="#5a4a3a")
+    s.rect(12, top - 1, 19, top + 1, "#9a9a92")         # grey straggly hair
+    s.rect(14, top + 5, 19, top + 8, "#b4b4aa")         # long grey beard
+    for x, y in ((13, 14), (18, 17), (14, 20), (19, 12)):
+        s.rect(x, y, x + 1, y + 1, "#a08a6a")           # patches
+    s.rect(8, 13, 11, 20, "#7a6a4a")                    # meal-bag over the shoulder
+    s.line(11, 12, 18, top + 8, "#5a4a3a")
+    s.rect(24, 3, 24, 31, "#6a4a2a")                    # long pikestaff
+    s.px(24, 2, "#8a8a8a")
+    return s.save("beggar")
+
+
+def pirate():
+    s = Sprite()
+    top = humanoid(s, "#d8a47c", "#e8e4dc", "#c8c2b8", "#3a4a8a", "#2a1a10", belt="#a01e22")
+    for y in range(top + 9, 21, 2):                     # striped shirt
+        s.rect(12, y, 20, y, "#3a4a8a")
+    s.rect(12, top - 2, 19, top, "#a01e22")             # red headscarf
+    s.rect(10, top, 12, top + 2, "#a01e22")
+    s.rect(14, top + 5, 19, top + 6, "#2a1a10")         # black moustache
+    s.px(18, top + 3, "#1a1410")
+    s.rect(17, top + 2, 19, top + 2, "#1a1410")         # eyepatch band
+    s.line(21, 18, 27, 12, "#d8dde3")                   # curved cutlass
+    s.px(28, 12, "#d8dde3")
+    s.rect(20, 17, 21, 18, "#c9a227")
+    return s.save("pirate")
+
+
+def king():
+    s = Sprite()
+    top = humanoid(s, "#e8bc98", "#e8e4dc", "#c8c2b8", "#6a6a74", "#2a2a2a", belt="#c9a227", tall=2, wide=1)
+    s.rect(14, top + 10, 18, top + 11, "#a01e22")       # crusader cross on the surcoat
+    s.rect(15, top + 9, 17, 18, "#a01e22")
+    s.rect(13, top - 1, 19, top + 1, "#c87a3a")         # the Lionheart's red-gold hair
+    s.rect(14, top + 5, 19, top + 7, "#c87a3a")         # and beard
+    s.rect(13, top - 3, 19, top - 2, "#e0c050")         # crown
+    for x in (13, 16, 19):
+        s.px(x, top - 4, "#e0c050")
+    s.px(16, top - 3, "#a01e22")
+    s.rect(8, top + 8, 10, 27, "#6a2a8a")               # purple cloak
+    sword(s, hx=22, hy=16, blade="#e8ecf2")
+    return s.save("king")
+
+
+DRAWERS = [robin, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king]
 
 
 def contact_sheet(images, path, scale=5):
