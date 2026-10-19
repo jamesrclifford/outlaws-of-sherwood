@@ -15,6 +15,7 @@ var baits: Dictionary
 var map: Dictionary
 var items: Dictionary
 var economy: Dictionary
+var stories: Dictionary
 
 
 func _init() -> void:
@@ -29,6 +30,7 @@ func _init() -> void:
 	map = _load("res://data/map.json")
 	items = _load("res://data/items.json")
 	economy = _load("res://data/economy.json")
+	stories = _load("res://data/stories.json")
 
 
 static func _load(path: String) -> Dictionary:

@@ -5,6 +5,7 @@ const AP_PER_TURN := 2
 const BACK_ROW_ABILITY := "bow_shot"
 
 var id: String
+var sprite: String        # art to draw; rivals in story duels borrow a hero's look
 var name: String
 var cls: String           # hero class, e.g. "Archer"; enemies have none
 var side: String          # "heroes" or "enemies"
@@ -26,6 +27,7 @@ var fled := false
 static func from_data(unit_id: String, data: Dictionary, unit_side: String):
 	var u = load("res://core/unit.gd").new()
 	u.id = unit_id
+	u.sprite = data.get("sprite", unit_id)
 	u.name = data.get("name", unit_id)
 	u.cls = data.get("class", "")
 	u.side = unit_side
