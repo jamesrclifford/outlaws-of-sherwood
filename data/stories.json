@@ -1,0 +1,90 @@
+{
+  "start_band": ["robin", "will"],
+  "stories": {
+    "little_john_bridge": {
+      "name": "The Stranger on the Bridge",
+      "node": "sherwood_edge",
+      "backdrop": "brook_bridge",
+      "place": "A log bridge in Sherwood",
+      "requires": {},
+      "recruit": "little_john",
+      "rewards": {"gold": 0, "reputation": 5},
+      "intro": "Robin goes walking alone in the greenwood, looking for adventure. Will says he'll keep the fire warm.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin follows the brook to a narrow log bridge, just wide enough for one."},
+        {"kind": "choice", "text": "A giant of a man steps onto the far end. 'Back you go, little fellow. I was here first!'",
+          "options": [
+            {"label": "Cut a staff and settle it", "result": "next", "log": "Robin cuts a stout oak staff. The giant grins and twirls his own."},
+            {"label": "Bow and let him pass", "result": "next", "log": "'Polite!' booms the giant. 'But I'll still have a bout with you, for the fun of it.'"}
+          ]},
+        {"kind": "duel", "text": "Quarterstaves on the bridge! Whoever lands in the brook loses.", "party": ["robin"], "enemies": ["rival_little_john"], "friendly": true,
+          "win": "Robin's staff sweeps the giant off the log. SPLASH! He comes up roaring with laughter.",
+          "lose": "SPLASH! Robin lands in the brook. The giant hauls him out by the collar, laughing."},
+        {"kind": "objective", "text": "'John Little's my name,' says the giant, wringing out his hood. 'You fight fair. Will you have me in your band?' The outlaws name him Little John.", "recruit": true}
+      ]
+    },
+    "tuck_ford": {
+      "name": "The Friar of Fountain Dale",
+      "node": "blidworth",
+      "backdrop": "friars_ford",
+      "place": "The ford at Fountain Dale",
+      "requires": {"band": ["little_john"]},
+      "recruit": "tuck",
+      "rewards": {"gold": 0, "reputation": 5},
+      "intro": "Villagers tell of a jolly friar at Fountain Dale who can swing a staff better than any soldier.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin and Little John find a stout friar fishing at the ford, humming a hymn."},
+        {"kind": "choice", "text": "The river is cold and deep. The friar is big and dry.",
+          "options": [
+            {"label": "Ask him to carry Robin across", "result": "next", "log": "The friar carries Robin across... then halfway back, tips him into the river! 'Your turn to carry me, friend!'"},
+            {"label": "Offer to carry him across", "result": "next", "log": "Robin carries the friar across, puffing. On the far bank the friar chuckles and pushes him in. 'For the exercise!'"}
+          ]},
+        {"kind": "duel", "text": "Wet and laughing, Robin draws his sword. The friar whistles, and his hounds come bounding!", "party": ["robin", "little_john"], "enemies": ["rival_tuck", "hound", "hound"], "friendly": true,
+          "win": "The hounds roll over for a belly rub, and the friar sits down puffing. 'Enough! Enough!'",
+          "lose": "The friar plants his staff on Robin's chest. 'Do you yield, wet one?' Everyone falls about laughing."},
+        {"kind": "objective", "text": "'Friar Tuck,' says he, shaking Robin's hand. 'An outlaw band needs someone to say grace and patch up bruises. I'll come.'", "recruit": true}
+      ]
+    },
+    "alan_wedding": {
+      "name": "The Wedding at Edwinstowe",
+      "node": "edwinstowe",
+      "backdrop": "locksley",
+      "place": "Edwinstowe church",
+      "requires": {"band": ["tuck"], "reputation": 8},
+      "recruit": "alan",
+      "rewards": {"gold": 60, "reputation": 10},
+      "intro": "A minstrel sits weeping by the road. His sweetheart Ellen is to be married today, against her will, to a rich old knight.",
+      "nodes": [
+        {"kind": "approach", "text": "'I am Alan-a-Dale,' says the minstrel. 'Ellen loves me, but her father wants the knight's gold.' Robin has a plan."},
+        {"kind": "choice", "text": "The Bishop of Hereford leads the procession to the church.",
+          "options": [
+            {"label": "Robin goes in dressed as a harper", "result": "next", "log": "Robin strolls in with a harp. 'A song for the bride? First, a question: does she want this wedding?' Ellen shakes her head."},
+            {"label": "Blow the horn at once", "result": "next", "log": "Robin's horn rings out and the Merry Men pour from the trees!"}
+          ]},
+        {"kind": "combat", "text": "'Seize those outlaws!' cries the Bishop. His guards step forward.", "enemies": ["man_at_arms", "man_at_arms", "bishop", "knight"]},
+        {"kind": "objective", "text": "Friar Tuck marries Alan and Ellen on the spot. The whole village cheers, and Alan picks up his lute: 'My songs are yours, Robin.'", "recruit": true},
+        {"kind": "escape", "text": "The happy couple ride for Sherwood with the band.", "is_escape": true}
+      ]
+    },
+    "silver_arrow": {
+      "name": "The Silver Arrow",
+      "node": "nottingham",
+      "backdrop": "archery_contest",
+      "place": "The Sheriff's archery contest",
+      "requires": {"band": ["alan"], "reputation": 20},
+      "recruit": "",
+      "rewards": {"gold": 120, "reputation": 15},
+      "intro": "The Sheriff announces an archery contest. The prize is an arrow of pure silver. Everyone knows it's a trap to catch Robin, and Robin goes anyway.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin pulls a patched brown hood low and joins the crowd of archers. The rest of the band hides among the townsfolk."},
+        {"kind": "choice", "text": "The target is set at a hundred paces. The Sheriff's own champion shoots first: a fine shot, dead centre.",
+          "options": [
+            {"label": "Split his arrow", "result": "next", "log": "Robin's arrow splits the champion's arrow clean in two! The crowd roars."},
+            {"label": "Shoot through the ring of the prize", "result": "next", "log": "Robin's arrow flies through the silver arrow's own ring and pins it to the target. The crowd goes wild."}
+          ]},
+        {"kind": "combat", "text": "The Sheriff hands over the silver arrow, peers under the hood, and shouts: 'It's him! Seize Robin Hood!'", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "crossbowman", "knight"]},
+        {"kind": "combat", "text": "Over the town wall and away! Riders give chase.", "enemies": ["knight", "man_at_arms"], "is_escape": true}
+      ]
+    }
+  }
+}

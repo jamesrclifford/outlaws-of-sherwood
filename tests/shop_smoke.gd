@@ -30,7 +30,7 @@ func _snap(tag: String) -> void:
 func _init() -> void:
 	shot = OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else ""
 	var db = GameData.new()
-	var c = Campaign.new(db, 99)
+	var c = Campaign.new(db, 99, ["robin", "little_john", "will", "tuck"])
 	c.gold = 600
 	c.reputation = 12
 	var view := MapView.new()
@@ -39,7 +39,7 @@ func _init() -> void:
 	await _snap("camp")
 
 	_press(view.buttons, "Armory")
-	await process_frame
+	await _snap("armory_band")
 	var armory: Node = view.get_node("Armory")
 	_press(armory, "Robin Hood")
 	await process_frame

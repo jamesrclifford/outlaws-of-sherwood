@@ -13,6 +13,7 @@ var gold := 0
 var reputation := 0
 var prisoner_freed := false
 var loot_taken := false
+var recruited := ""           # a story mission's new companion, once won over
 var captured: Array = []
 var result := ""              # "", "success", "failed", "called_off"
 var mission_log: Array = []
@@ -96,6 +97,8 @@ func decide_trap(avoid: bool) -> Dictionary:
 
 func choose(option_index: int) -> Dictionary:
 	var opt: Dictionary = current_node()["options"][option_index]
+	if opt.has("log"):
+		_log(opt["log"])
 	if opt["result"] == "sneak":
 		if rng.randf() < 0.7:
 			_log("The band slips past unseen.")
@@ -115,22 +118,38 @@ func _battle_or_continue(enemy_ids: Array) -> Dictionary:
 
 
 func make_battle(enemy_ids: Array):
-	return db.make_custom_battle(active_heroes(), enemy_ids, rng.randi())
+	var node := current_node()
+	var b = db.make_custom_battle(fighters(), enemy_ids, rng.randi())
+	b.friendly = node.get("friendly", false)
+	return b
 
 
 func active_heroes() -> Array:
 	return heroes.filter(func(h): return not captured.has(h.id))
 
 
+## Who fights at the current node: a story duel names its fighters, otherwise the whole band.
+func fighters() -> Array:
+	var named: Array = current_node().get("party", [])
+	var picked := active_heroes().filter(func(h): return named.has(h.id))
+	return picked if not picked.is_empty() else active_heroes()
+
+
 func battle_finished(battle) -> void:
 	_sprung.clear()
+	var node := current_node()
+	if battle.friendly:
+		# A sporting bout: win or lose, the story goes on.
+		_log(node["win"] if battle.result == "victory" else node["lose"])
+		for h in fighters():
+			h.hp = maxi(1, h.hp)
+		return
 	if battle.result == "victory":
 		gold += battle.gold_won
 		_apply_objective(current_node())
 		return
 	for h in battle.captured:
 		captured.append(h)
-	var node := current_node()
 	if battle.result == "retreated" and node.get("is_escape", false) and _objective_met():
 		_log("The band shakes off the pursuit, but leaves friends behind.")
 		return
@@ -158,12 +177,19 @@ func advance() -> void:
 			reputation += int(mission["rewards"]["reputation"])
 			result = "success"
 			_log("Success! The band returns with %d gold." % gold)
+			if recruited != "":
+				_log("%s joins the band!" % db.heroes[recruited]["name"])
 		else:
 			_fail("The objective was not achieved.")
 
 
 func _objective_met() -> bool:
-	return loot_taken if mission["type"] == "robbery" else prisoner_freed
+	match mission["type"]:
+		"robbery":
+			return loot_taken
+		"story":
+			return true
+	return prisoner_freed
 
 
 func _apply_objective(node: Dictionary) -> void:
@@ -175,6 +201,8 @@ func _apply_objective(node: Dictionary) -> void:
 	if node.get("prisoner", false):
 		prisoner_freed = true
 		_log("The prisoner is free!")
+	if node.get("recruit", false):
+		recruited = mission["recruit"]
 
 
 func _fail(text: String) -> void:
