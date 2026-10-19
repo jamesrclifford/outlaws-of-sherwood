@@ -182,7 +182,8 @@ func _fail(text: String) -> void:
 	gold = 0
 	_log(text)
 	if not captured.is_empty():
-		_log("Captured: %s. A rescue mission will be needed." % ", ".join(captured.map(func(id): return db.heroes[id]["name"])))
+		var names: Array = heroes.filter(func(h): return captured.has(h.id)).map(func(h): return h.name)
+		_log("Captured: %s. A rescue mission will be needed." % ", ".join(names))
 
 
 func _spring_trap(node: Dictionary) -> void:

@@ -114,6 +114,17 @@ func _set_buttons(options: Array) -> void:
 
 func _show_briefing() -> void:
 	run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [run.mission["type"].capitalize(), run.mission["location_name"], run.mission["rewards"]["gold"]])
+	if run.is_bait() and run.mission["bait"]["revealed"]:
+		run.mission_log.append("You already know this job is %s's trap." % db.baits[run.mission["bait"]["by"]]["name"])
+		_refresh()
+		_set_buttons([
+			["Call it off", func():
+				run.call_off()
+				_finish()],
+			["Send scouts ahead", _scout],
+			["Go anyway", _set_out],
+		])
+		return
 	_refresh()
 	_set_buttons([
 		["Send scouts ahead", _scout],

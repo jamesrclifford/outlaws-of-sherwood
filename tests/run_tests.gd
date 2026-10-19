@@ -438,7 +438,116 @@ func test_long_campaign_with_autoplay_stays_sane() -> void:
 		c.finish_mission(run)
 		played += 1
 		c.travel("camp")
+		while c.supply_days() < 8 and c.buy_supplies():
+			pass
 		c.rest()
-	print("30-turn campaign: day %d, %d missions, %d gold, infamy %d, control %s" % [c.day, played, c.gold, c.infamy, c.control])
+	print("30-turn campaign: day %d, %d missions, %d gold, %d supplies, infamy %d, control %s" % [c.day, played, c.gold, c.supplies, c.infamy, c.control])
 	check(played > 10, "the band finds plenty to do")
 	check(c.gold >= 0 and c.day > 30, "campaign advanced sensibly")
+
+
+# --- Spending gold -------------------------------------------------------------
+
+func test_item_data_is_valid() -> void:
+	var classes := {}
+	for h in db.heroes:
+		classes[db.heroes[h]["class"]] = true
+	for i in db.items:
+		var it: Dictionary = db.items[i]
+		check(it["slot"] in ["weapon", "armor", "trinket"], "%s has a known slot" % i)
+		check(it["classes"].all(func(c): return classes.has(c)), "%s is for real classes" % i)
+		check(it["bonus"].keys().all(func(k): return k in Campaign.STAT_KEYS), "%s only boosts known stats" % i)
+	for h in db.heroes:
+		check(db.items.values().any(func(it): return it["slot"] == "weapon" and it["classes"].has(db.heroes[h]["class"])), "%s can buy a weapon" % h)
+
+
+func test_giving_to_the_poor() -> void:
+	var c = Campaign.new(db, 20)
+	c.gold = 200
+	check(not c.give_to_poor(50), "nobody to give to at camp")
+	c.travel("edwinstowe")
+	var before: int = c.control["sherwood"]
+	check(c.give_to_poor(50), "can give in a village")
+	check(c.gold == 150 and c.reputation == 5, "50 gold buys 5 reputation")
+	check(c.control["sherwood"] == before - 2, "and loosens the Sheriff's grip")
+	check(not c.give_to_poor(500), "can't give gold you don't have")
+
+
+func test_supplies_run_down_and_hunger_hurts() -> void:
+	var c = Campaign.new(db, 21)
+	var start: int = c.supplies
+	c.rest()
+	check(c.supplies == start - 4, "four heroes eat four supplies a day")
+	c.supplies = 0
+	var robin = c.heroes["robin"]
+	c.rest()
+	check(robin.hp < robin.max_hp, "a hungry band gets weaker instead of healing")
+	check(robin.hp >= 1, "hunger never knocks anyone out")
+	c.gold = 15
+	check(c.buy_supplies() and c.supplies == 10 and c.gold == 0, "buy a bundle of supplies at camp")
+
+
+func test_buying_gear_boosts_stats_and_respects_class() -> void:
+	var c = Campaign.new(db, 22)
+	c.gold = 500
+	var robin = c.heroes["robin"]
+	var atk: int = robin.atk
+	check(not c.buy_item("robin", "ironshod_staff"), "Robin can't buy Little John's staff")
+	check(c.buy_item("robin", "yew_longbow") and robin.atk == atk + 2, "a longbow adds 2 attack")
+	check(c.buy_item("robin", "hunters_recurve") and robin.atk == atk + 3, "a better bow replaces the old one")
+	robin.hp = robin.max_hp - 5
+	check(c.buy_item("robin", "mail_shirt") and robin.max_hp == 38 and robin.hp == 33, "armor raises max HP but keeps the wound")
+	check(not c.buy_item("robin", "mail_shirt"), "can't buy what you're already wearing")
+	c.travel("edwinstowe")
+	check(not c.buy_item("will", "lucky_charm"), "the armory is at camp")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.heroes["robin"].atk == robin.atk and copy.heroes["robin"].max_hp == robin.max_hp, "gear survives save and load")
+
+
+func test_merry_men_fill_gaps() -> void:
+	var c = Campaign.new(db, 23)
+	c.gold = 500
+	check(not c.hire_merry_man(), "nobody joins a band with no reputation")
+	c.reputation = 10
+	check(c.hire_merry_man(), "hire a Merry Man at camp")
+	var mm_id: String = c.merry_men.keys()[0]
+	check(c.party().size() == 4 and not c.party().has(c.heroes[mm_id]), "with everyone free, the named heroes go")
+	c.captured["will"] = {"node": "locksley", "since": c.day}
+	check(c.party().has(c.heroes[mm_id]), "a Merry Man steps in when Will is captured")
+	check(c.buy_item(mm_id, "outlaw_spear"), "Merry Men can be equipped too")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.hero_name(mm_id) == c.hero_name(mm_id) and copy.heroes[mm_id].atk == c.heroes[mm_id].atk, "Merry Men survive save and load")
+	for _i in 5:
+		c.hire_merry_man()
+	check(c.merry_men.size() == int(db.economy["merry_men"]["max"]), "the camp only feeds so many")
+
+
+func test_informant_reveals_bait() -> void:
+	var c = Campaign.new(db, 24)
+	c.gold = 500
+	c.missions.clear()
+	var gen = MissionGen.new(db)
+	var m: Dictionary = gen.generate("robbery", 50, 3, "locksley")
+	gen.make_bait(m, "guy", "")
+	m["expires"] = 99
+	c.missions["edwinstowe"] = m
+	c.travel("edwinstowe")
+	var cost: int = c.informant_cost()
+	check(c.pay_informant() and c.gold == 500 - cost, "pay the informant")
+	check(m["bait"]["revealed"], "the informant exposes Guy's bait")
+	check(not c.pay_informant(), "no need to pay twice")
+
+
+func test_bribing_the_jailer_frees_prisoners() -> void:
+	var c = Campaign.new(db, 25)
+	c.gold = 1000
+	c.travel("locksley")
+	c.missions.erase("locksley")
+	c.captured["will"] = {"node": "locksley", "since": c.day}
+	c._post_rescue("will", "locksley")
+	var cost: int = c.jailer_cost()
+	check(cost == 70, "one prisoner in a village costs 70")
+	check(c.bribe_jailer() and c.captured.is_empty() and not c.missions.has("locksley"), "the bribe frees Will and clears the rescue job")
+	c.travel("nottingham")
+	c.captured["tuck"] = {"node": "nottingham", "since": c.day}
+	check(c.jailer_cost() == 140, "the dungeon jailer wants twice as much")

@@ -19,7 +19,7 @@ var status_label: Label
 var map_layer: Control
 var band_token: ColorRect
 var info_label: Label
-var buttons: VBoxContainer
+var buttons: GridContainer
 var news_label: Label
 
 
@@ -64,10 +64,11 @@ func _build_layout() -> void:
 	map_layer.add_child(band_token)
 	_place_token(campaign.location)
 
-	info_label = _label(Vector2(8, 462), Vector2(344, 70), 10)
-	buttons = VBoxContainer.new()
-	buttons.position = Vector2(8, 536)
-	buttons.size = Vector2(344, 100)
+	info_label = _label(Vector2(8, 460), Vector2(344, 64), 9)
+	buttons = GridContainer.new()
+	buttons.columns = 2
+	buttons.position = Vector2(8, 528)
+	buttons.size = Vector2(344, 108)
 	add_child(buttons)
 	news_label = _label(Vector2(8, 462), Vector2(344, 0), 9)
 	news_label.visible = false
@@ -124,9 +125,9 @@ func _place_token(id: String) -> void:
 
 func _refresh() -> void:
 	var c = campaign
-	status_label.text = "Day %d    Gold %d    Reputation %d    Infamy %d\nSheriff's plot %d%%    Gisborne's plot %d%%%s" % [
-		c.day, c.gold, c.reputation, c.infamy, c.plots["sheriff"], c.plots["guy"],
-		("\nGuy is hunting %s" % db.heroes[c.hunted_hero]["name"]) if c.hunted_hero != "" else ""]
+	status_label.text = "Day %d   Gold %d   Supplies %d (%d days)\nReputation %d   Infamy %d   Sheriff's plot %d%%   Guy's plot %d%%%s" % [
+		c.day, c.gold, c.supplies, c.supply_days(), c.reputation, c.infamy, c.plots["sheriff"], c.plots["guy"],
+		("\nGuy is hunting %s" % c.hero_name(c.hunted_hero)) if c.hunted_hero != "" else ""]
 	for id in c.map["nodes"]:
 		var b: Button = map_layer.get_node(id)
 		var tag := ""
@@ -148,7 +149,7 @@ func _select(id: String) -> void:
 	for h in c.free_heroes():
 		heroes_line.append("%s %d/%d" % [h.name.split(" ")[0], h.hp, h.max_hp])
 	for h in c.captured:
-		heroes_line.append("%s CAPTURED" % db.heroes[h]["name"].split(" ")[0])
+		heroes_line.append("%s CAPTURED" % c.hero_name(h).split(" ")[0])
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
@@ -163,10 +164,25 @@ func _select(id: String) -> void:
 	if id == c.location:
 		if c.missions.has(id):
 			opts.append(["Start the job", _start_job])
+		if c.can_pay_informant():
+			opts.append(["Ask an informant (%dg)" % c.informant_cost(), _act.bind(c.pay_informant)])
+		if not c.prisoners_here().is_empty():
+			opts.append(["Bribe the jailer (%dg)" % c.jailer_cost(), _act.bind(c.bribe_jailer)])
+		if c.can_give():
+			opts.append(["Give to the poor...", _show_giving])
+		if c.can_buy_supplies():
+			var sup: Dictionary = c.econ["supplies"]
+			opts.append(["Buy %d supplies (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
 		if id == "camp":
-			opts.append(["Rest a day (heal everyone)", func():
+			opts.append(["Rest a day", func():
 				c.rest()
 				_after_day()])
+			opts.append(["Armory", _show_armory])
+			var mm: Dictionary = c.econ["merry_men"]
+			if c.can_hire():
+				opts.append(["Hire a Merry Man (%dg)" % mm["price"], _act.bind(c.hire_merry_man)])
+			elif c.merry_men.size() < int(mm["max"]):
+				opts.append(["Merry Men join at %d rep" % mm["min_reputation"], func(): pass])
 	else:
 		opts.append(["Travel here (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
 	opts.append(["News", _show_news])
@@ -179,8 +195,9 @@ func _set_buttons(options: Array) -> void:
 	for o in options:
 		var b := Button.new()
 		b.text = o[0]
-		b.custom_minimum_size = Vector2(0, 30)
-		b.add_theme_font_size_override("font_size", 10)
+		b.custom_minimum_size = Vector2(168, 24)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", 9)
 		b.pressed.connect(o[1])
 		buttons.add_child(b)
 
@@ -215,6 +232,87 @@ func _start_job() -> void:
 		_place_token(campaign.location)
 		_select(campaign.location))
 	add_child(view)
+
+
+## Runs a spending action; on failure (usually too little gold) says so.
+func _act(action: Callable) -> void:
+	if action.call():
+		campaign.save()
+		_select(campaign.location)
+	else:
+		info_label.text = "You can't afford that right now."
+
+
+func _show_giving() -> void:
+	var opts := []
+	for amount in campaign.econ["give_amounts"]:
+		opts.append(["Give %d gold" % amount, _act.bind(campaign.give_to_poor.bind(int(amount)))])
+	opts.append(["Back", func(): _select(selected)])
+	info_label.text = "Every 10 gold given raises reputation by 1, and the Sheriff's grip here loosens."
+	_set_buttons(opts)
+
+
+## Full-screen armory: pick a hero, then buy gear for them.
+func _show_armory(hero_id := "") -> void:
+	var c = campaign
+	var panel := ColorRect.new()
+	panel.name = "Armory"
+	panel.color = Color("241a12")
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(panel)
+	var title := Label.new()
+	title.position = Vector2(8, 8)
+	title.size = Vector2(344, 40)
+	title.add_theme_font_size_override("font_size", 11)
+	panel.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(8, 56)
+	scroll.size = Vector2(344, 530)
+	panel.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+	# Detach before freeing so the next panel can take the name "Armory" straight away.
+	var close := func():
+		remove_child(panel)
+		panel.queue_free()
+		_select(c.location)
+	var reopen := func(h: String):
+		remove_child(panel)
+		panel.queue_free()
+		_show_armory(h)
+
+	if hero_id == "":
+		title.text = "Armory    Gold %d\nChoose who to equip." % c.gold
+		for h in c.free_heroes():
+			var gear: Array = c.equipment.get(h.id, {}).values().map(func(i): return db.items[i]["name"])
+			_list_button(list, "%s (%s)  ATK %d DEF %d SPD %d HP %d\n%s" % [h.name, h.cls, h.atk, h.def, h.spd, h.max_hp, ", ".join(gear) if not gear.is_empty() else "No gear"], reopen.bind(h.id))
+	else:
+		var h = c.heroes[hero_id]
+		title.text = "%s    Gold %d\nATK %d  DEF %d  SPD %d  HP %d  CRIT %d%%" % [h.name, c.gold, h.atk, h.def, h.spd, h.max_hp, int(h.crit * 100)]
+		for item_id in c.items_for(hero_id):
+			var it: Dictionary = db.items[item_id]
+			var bonus := []
+			for k in it["bonus"]:
+				var v = it["bonus"][k]
+				bonus.append("%s%s %s" % ["+" if v > 0 else "", str(int(v * 100)) + "%" if k == "crit" else str(int(v)), k.to_upper()])
+			var worn: bool = c.equipment.get(hero_id, {}).get(it["slot"], "") == item_id
+			var label := "%s  [%s]  %s\n%s" % [it["name"], it["slot"], "EQUIPPED" if worn else "%d gold" % it["price"], ", ".join(bonus)]
+			_list_button(list, label, func():
+				if c.buy_item(hero_id, item_id):
+					c.save()
+				reopen.call(hero_id))
+		_list_button(list, "Back to the band", reopen.bind(""))
+	_list_button(list, "Leave the armory", close)
+
+
+func _list_button(list: VBoxContainer, text: String, cb: Callable) -> void:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(330, 38)
+	b.add_theme_font_size_override("font_size", 9)
+	b.pressed.connect(cb)
+	list.add_child(b)
 
 
 func _show_news() -> void:

@@ -16,6 +16,6 @@ The full design and roadmap are in [docs/design-plan.md](docs/design-plan.md).
 | Folder | What lives there |
 |---|---|
 | `core/` | Game rules with no UI: combat, units, mission generation and play, the campaign (map, days, villains, saves), data loading. Deterministic for a given seed. |
-| `data/` | Heroes, enemies, abilities, encounters, locations, mission templates and traps as JSON. New content goes here, not in code. |
+| `data/` | Heroes, enemies, abilities, encounters, locations, mission templates, traps, the map, items and economy numbers as JSON. New content goes here, not in code. |
 | `scenes/` | Screens: menu, strategic map, mission path, battle. |
-| `tests/` | Headless tests: `GODOT=/path/to/godot tests/run.sh`. `tests/mission_smoke.gd` and `tests/map_smoke.gd` play through the real UI. |
+| `tests/` | Headless tests: `GODOT=/path/to/godot tests/run.sh`. `tests/mission_smoke.gd`, `tests/map_smoke.gd` and `tests/shop_smoke.gd` play through the real UI. |

@@ -3,7 +3,7 @@
   "crossbowman":   {"name": "Crossbowman",    "hp": 14, "atk": 8,  "def": 2, "spd": 6, "crit": 0.10, "row": "back",  "tags": ["soldier"],            "abilities": ["crossbow_bolt"]},
   "knight":        {"name": "Mounted Knight", "hp": 34, "atk": 9,  "def": 6, "spd": 3, "crit": 0.08, "row": "front", "tags": ["knight", "leader"],  "abilities": ["strike", "charge"]},
   "forester":      {"name": "Forester",       "hp": 16, "atk": 6,  "def": 3, "spd": 7, "crit": 0.08, "row": "back",  "tags": ["tracker"],            "abilities": ["bow_shot", "throw_net"]},
-  "tax_collector": {"name": "Tax Collector",  "hp": 10, "atk": 3,  "def": 1, "spd": 9, "crit": 0.00, "row": "back",  "tags": ["coward"],             "abilities": ["strike"], "carries_gold": 40},
+  "tax_collector": {"name": "Tax Collector",  "hp": 10, "atk": 3,  "def": 1, "spd": 9, "crit": 0.00, "row": "back",  "tags": ["coward"],             "abilities": ["strike"], "carries_gold": 20},
   "hound":         {"name": "Hound",          "hp": 12, "atk": 6,  "def": 1, "spd": 10,"crit": 0.10, "row": "front", "tags": ["beast"],              "abilities": ["bite"]},
   "guy":           {"name": "Sir Guy of Gisborne", "hp": 70, "atk": 11, "def": 6, "spd": 7, "crit": 0.12, "row": "front", "tags": ["boss", "knight", "leader"], "abilities": ["gisborne_duel", "throw_net", "call_guards"]}
 }
