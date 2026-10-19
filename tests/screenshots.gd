@@ -10,6 +10,7 @@ const BattleView = preload("res://scenes/battle/battle_view.gd")
 const GameData = preload("res://core/game_data.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
+const Campaign = preload("res://core/campaign.gd")
 
 
 func _snap(dir: String, tag: String) -> void:
@@ -124,4 +125,39 @@ func _init() -> void:
 			game._flash = ""
 		await _snap(dir, "move_" + kind)
 		await _clear()
+
+	# The Sheriff hits back: a wanted poster, a bounty hunters' ambush, the castle and the victory.
+	var cdb = GameData.new()
+	var camp = Campaign.new(cdb, 12, Campaign.FULL_BAND)
+	camp.infamy = 55
+	camp._update_wanted()
+	var wanted_map := MapView.new()
+	wanted_map.start(cdb, camp)
+	root.add_child(wanted_map)
+	await _snap(dir, "wanted_poster")
+	wanted_map.get_child(wanted_map.get_child_count() - 1).queue_free()
+	wanted_map.busy = false
+	camp.location = "great_north_road"
+	camp.ambush = MissionGen.new(cdb).ambush(cdb.economy["wanted"]["hunters"][2], "Great North Road", "great_north_road", camp.bounty(), 5)
+	wanted_map._select("great_north_road")
+	await _snap(dir, "wanted_map")
+	wanted_map._play(camp.start_ambush())
+	await _snap(dir, "ambush")
+	await _clear()
+	var finale_run = MissionRun.new(cdb, MissionGen.new(cdb).story("storm_castle", 60, 3), camp.party())
+	finale_run.node_index = 4
+	var castle := BattleView.new()
+	castle.run_battle(cdb, finale_run.make_battle(finale_run.current_node()["enemies"]), finale_run.current_node()["text"], "castle_courtyard")
+	root.add_child(castle)
+	for i in 10:
+		await process_frame
+	await _snap(dir, "castle")
+	await _clear()
+	var won_map := MapView.new()
+	won_map.start(cdb, camp)
+	root.add_child(won_map)
+	await process_frame
+	won_map._show_finale()
+	await _snap(dir, "finale")
+	await _clear()
 	quit()

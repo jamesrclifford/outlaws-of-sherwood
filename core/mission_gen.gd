@@ -67,6 +67,7 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 		"name": st["name"],
 		"intro": st["intro"],
 		"recruit": st["recruit"],
+		"arc": st.get("arc", false),
 		"location": st["backdrop"],
 		"location_name": st["place"],
 		"threat": threat,
@@ -196,6 +197,24 @@ func contest(contest_id: String, place_name: String, seed_value: int) -> Diction
 			},
 		],
 		"rewards": {"gold": 0, "reputation": 0},
+	}
+
+
+## Bounty hunters waylay the band on the road. One fight; running away counts as getting away.
+func ambush(hunters: Array, place_name: String, backdrop: String, bounty: int, seed_value: int) -> Dictionary:
+	return {
+		"bait": {},
+		"seed": seed_value,
+		"type": "ambush",
+		"name": "Bounty hunters!",
+		"intro": "Bounty hunters burst from the bushes near %s, waving a wanted poster. 'There's %d gold on your head, Robin Hood!'" % [place_name, bounty],
+		"location": backdrop,
+		"location_name": place_name,
+		"threat": 0,
+		"nodes": [
+			{"kind": "combat", "text": "The hunters close in with nets and cudgels.", "enemies": hunters.duplicate(), "is_escape": true},
+		],
+		"rewards": {"gold": 0, "reputation": 1},
 	}
 
 

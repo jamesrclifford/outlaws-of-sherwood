@@ -441,7 +441,24 @@ def king():
     return s.save("king")
 
 
-DRAWERS = [robin, robin_staff, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king]
+def bounty_hunter():
+    s = Sprite()
+    top = humanoid(s, "#c89a74", "#6a4a2e", "#52381f", "#3a3026", "#2a1e14", belt="#2a1e14", wide=1)
+    s.rect(11, top - 1, 21, top, "#3a2a1c")              # wide-brimmed hat
+    s.rect(13, top - 3, 19, top - 2, "#4a3626")
+    s.rect(14, top - 2, 19, top - 2, "#8a1f1f")          # red hatband
+    s.rect(16, top + 5, 19, top + 6, "#5a4030")          # rough beard
+    s.line(10, top + 8, 20, 19, "#a8885a")               # rope across the chest
+    s.rect(6, 20, 10, 25, "#a8885a")                     # coil of rope at the hip
+    s.rect(7, 21, 9, 24, "#7a6040")
+    s.rect(23, 9, 24, 19, "#5a3a1a")                     # cudgel
+    s.rect(22, 8, 25, 11, "#6a4a2a")
+    s.rect(18, top + 10, 20, top + 12, "#e8dcb0")        # folded wanted poster in the belt
+    s.px(19, top + 11, "#8a1f1f")
+    return s.save("bounty_hunter")
+
+
+DRAWERS = [robin, robin_staff, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king, bounty_hunter]
 
 
 def contact_sheet(images, path, scale=5):

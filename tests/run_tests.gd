@@ -54,6 +54,18 @@ func autoplay(b, max_turns := 400) -> void:
 		turns += 1
 
 
+## Travels like the map screen does: if bounty hunters jump the band on the way, fight them and walk on.
+func go(c, to: String) -> void:
+	for _i in 10:
+		c.travel(to)
+		if not c.ambush.is_empty():
+			var run = c.start_ambush()
+			autoplay_mission(run)
+			c.finish_mission(run)
+		if c.location == to or c.free_heroes().is_empty():
+			return
+
+
 func test_screens_load() -> void:
 	# Screens aren't run headlessly, so at least make sure each one parses.
 	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd", "res://scenes/minigame/minigame_view.gd"]:
@@ -593,15 +605,15 @@ func test_long_campaign_with_autoplay_stays_sane() -> void:
 			c.rest()
 			continue
 		var targets: Array = c.missions.keys()
-		c.travel(targets[0])
+		go(c, targets[0])
 		var run = c.start_mission()
 		if run == null:
-			c.travel("camp")
+			go(c, "camp")
 			continue
 		autoplay_mission(run, true)
 		c.finish_mission(run)
 		played += 1
-		c.travel("camp")
+		go(c, "camp")
 		while c.supply_days() < 8 and c.buy_supplies():
 			pass
 		c.rest()
@@ -992,6 +1004,7 @@ func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
 func test_every_legend_can_be_played_through() -> void:
 	var c = Campaign.new(db, 41)
 	c.reputation = 60
+	c.infamy = 60
 	var guard := 0
 	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
@@ -1002,7 +1015,7 @@ func test_every_legend_can_be_played_through() -> void:
 		if at == "":
 			c.rest()
 			continue
-		c.travel(at)
+		go(c, at)
 		for h in c.heroes.values():
 			h.hp = h.max_hp
 		var run = c.start_mission()
@@ -1010,7 +1023,7 @@ func test_every_legend_can_be_played_through() -> void:
 		c.finish_mission(run)
 		c.captured.clear()
 		c._remove_rescues()
-		c.travel("camp")
+		go(c, "camp")
 	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
 	for h in Campaign.FULL_BAND:
 		check(c.band.has(h), "%s has joined by the end of the legends" % h)
@@ -1039,17 +1052,17 @@ func test_story_campaign_with_autoplay() -> void:
 				continue
 			var targets: Array = c.missions.keys()
 			targets.sort_custom(func(a, b): return c.missions[a]["type"] == "story" and c.missions[b]["type"] != "story")
-			c.travel(targets[0])
+			go(c, targets[0])
 			var run = c.start_mission()
 			if run == null:
-				c.travel("camp")
+				go(c, "camp")
 				continue
 			autoplay_mission(run, true)
 			if c.band.size() <= 2 and run.mission["type"] != "story":
 				early_jobs += 1
 				early_ok += 1 if run.result == "success" else 0
 			c.finish_mission(run)
-			c.travel("camp")
+			go(c, "camp")
 			while c.supply_days() < 8 and c.buy_supplies():
 				pass
 			c.rest()
@@ -1057,3 +1070,144 @@ func test_story_campaign_with_autoplay() -> void:
 		print("story campaign %d: day %d, band %s, legends %s, gold %d, rep %d" % [s, c.day, c.band, c.stories_done, c.gold, c.reputation])
 	print("ordinary jobs tried with only Robin and Will: %d/%d succeeded" % [early_ok, early_jobs])
 	check(finished >= 6 * 3, "most legends get played within 30 trips (%d of %d)" % [finished, 6 * db.stories["stories"].size()])
+
+
+# --- The Sheriff hits back -----------------------------------------------------
+
+func test_wanted_posters_go_up_with_infamy() -> void:
+	var c = Campaign.new(db, 60, BAND4)
+	check(c.wanted_level() == 0 and c.bounty() == 0, "nobody is wanted at first")
+	c.infamy = 30
+	c._update_wanted()
+	check(c.wanted_level() == 1 and c.poster_news == 1, "infamy 30 puts up the first posters")
+	check(c.news.back().contains("Wanted posters"), "the news says so")
+	c.infamy = 80
+	c._update_wanted()
+	check(c.wanted_level() == 3 and c.bounty() > 100, "infamy 80 is the biggest bounty (%d)" % c.bounty())
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.posted_wanted == 3 and copy.poster_news == 3, "posters survive a save")
+	c.poster_news = 0
+	c.infamy = 76
+	c.rest()
+	check(c.infamy == 74 and c.wanted_level() == 2, "lying low at camp cools the band's infamy (%d)" % c.infamy)
+	check(c.posted_wanted == 2 and c.poster_news == 0, "the posters fade without a new one being shown")
+
+
+func test_robberies_raise_the_bounty() -> void:
+	var c = Campaign.new(db, 61, BAND4)
+	var run = MissionRun.new(db, MissionGen.new(db).generate("robbery", 10, 5, "great_north_road"), c.party())
+	run.mission["bait"] = {}
+	run.result = "success"
+	run.loot_taken = true
+	c.infamy = 22
+	c.location = "great_north_road"
+	c.finish_mission(run)
+	check(c.wanted_level() == 1 and c.poster_news == 1, "the robbery that tips infamy past 25 puts up posters")
+
+
+func test_bounty_hunters_ambush_on_the_road() -> void:
+	var ambushes := 0
+	var fights := 0
+	for s in 40:
+		var c = Campaign.new(db, 300 + s, BAND4)
+		c.infamy = 80
+		c.posted_wanted = 3
+		var visited: Array = c.travel("nottingham")
+		if c.ambush.is_empty():
+			check(c.location == "nottingham", "without an ambush the band arrives")
+			continue
+		ambushes += 1
+		check(c.location == visited.back() and c.location != "camp", "an ambush stops the band on the road")
+		var job_before = c.missions.get(c.location, {}).duplicate(true)
+		var run = c.start_ambush()
+		check(run.mission["type"] == "ambush" and run.mission["nodes"][0]["enemies"].has("bounty_hunter"), "bounty hunters are waiting")
+		var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+		check(not copy.ambush.is_empty(), "a waiting ambush survives a save")
+		autoplay_mission(run)
+		c.finish_mission(run)
+		fights += 1 if run.result == "success" else 0
+		check(c.ambush.is_empty(), "the ambush is over once fought")
+		check(JSON.stringify(c.missions.get(c.location, {})) == JSON.stringify(job_before) or run.result != "success", "the job at that place is still there")
+	check(ambushes >= 10, "a wanted band is often waylaid on a long walk (%d of 40)" % ambushes)
+	check(fights >= ambushes / 2, "the full band usually sees the hunters off (%d of %d)" % [fights, ambushes])
+	var calm = Campaign.new(db, 300, BAND4)
+	calm.travel("nottingham")
+	check(calm.ambush.is_empty(), "nobody hunts a band that isn't wanted")
+
+
+func test_running_from_hunters_is_getting_away() -> void:
+	var c = Campaign.new(db, 70, BAND4)
+	c.infamy = 60
+	c.posted_wanted = c.wanted_level()
+	c.location = "great_north_road"
+	c.ambush = MissionGen.new(db).ambush(["bounty_hunter"], "the road", "great_north_road", 100, 3)
+	var run = c.start_ambush()
+	var step: Dictionary = run.arrive()
+	var b = run.make_battle(step["enemies"])
+	b.result = "retreated"
+	run.battle_finished(b)
+	run.advance()
+	check(run.result == "success", "slipping away from bounty hunters still counts")
+	c.finish_mission(run)
+	check(c.news.any(func(n): return n.contains("slip")), "the news says the band gave them the slip")
+
+
+func test_sheriff_story_builds_to_the_castle() -> void:
+	var c = Campaign.new(db, 80, Campaign.FULL_BAND)
+	c.reputation = 40
+	c.missions.clear()
+	c._post_stories()
+	check(not c.missions.has("edwinstowe") or c.missions["edwinstowe"].get("story", "") != "wanted_posters", "no posters story before the band is wanted")
+	c.infamy = 30
+	c.missions.clear()
+	c._post_stories()
+	check(c.missions.get("edwinstowe", {}).get("story", "") == "wanted_posters", "the posters story comes once the band is wanted")
+	check(not c.story_ready("hunters_hunted") and not c.story_ready("storm_castle"), "the rest of the story waits its turn")
+	c.stories_done.append("wanted_posters")
+	check(not c.story_ready("hunters_hunted"), "Black Hob comes after the band only at a higher bounty")
+	c.infamy = 45
+	check(c.story_ready("hunters_hunted"), "then Black Hob's camp appears")
+	c.stories_done.append_array(["hunters_hunted", "silver_arrow"])
+	check(c.story_ready("storm_castle"), "with Hob's secret and the silver arrow, the castle can be stormed")
+	# An ordinary tale never pushes out the Sheriff's story, but the story does take a tale's place.
+	c.missions.clear()
+	c.missions["nottingham"] = MissionGen.new(db).story("butcher", 10, 1)
+	c.missions["nottingham"]["expires"] = 0
+	c._post_stories()
+	check(c.missions["nottingham"]["story"] == "storm_castle", "the finale takes the place of a waiting tale")
+
+
+func test_storming_the_castle_frees_sherwood() -> void:
+	var wins := 0
+	for s in 8:
+		var c = Campaign.new(db, 90 + s, Campaign.FULL_BAND)
+		c.infamy = 80
+		c.posted_wanted = 3
+		# A hired man is in the dungeon; the whole named band storms the castle.
+		c.reputation = 20
+		c.gold = 100
+		c.hire_merry_man()
+		c.captured["merry_man_1"] = {"node": "nottingham", "since": c.day}
+		c.missions.clear()
+		c.missions["nottingham"] = MissionGen.new(db).story("storm_castle", 60, 7 + s)
+		c.missions["nottingham"]["expires"] = 0
+		c.location = "nottingham"
+		check(not c.finale_won(), "the Sheriff still holds the castle")
+		var run = c.start_mission()
+		check(run.mission["location"] == "castle_courtyard", "the finale is fought in the castle courtyard")
+		autoplay_mission(run)
+		c.finish_mission(run)
+		if run.result != "success":
+			continue
+		wins += 1
+		check(c.finale_won(), "the Sheriff is driven out")
+		check(c.infamy == 0 and c.wanted_level() == 0, "the posters come down for good")
+		check(c.control.values().all(func(v): return v <= 40), "the Sheriff's grip is broken everywhere (%s)" % [c.control])
+		check(c.captured.is_empty(), "every cell is opened")
+	check(wins >= 4, "the whole band usually wins the finale (%d of 8)" % wins)
+
+
+func test_every_enemy_has_a_sprite_and_hunters_net() -> void:
+	check(db.enemies["bounty_hunter"]["abilities"].has("throw_net"), "bounty hunters carry nets")
+	check(ResourceLoader.exists("res://assets/sprites/bounty_hunter.png"), "bounty hunters have a picture")
+	check(ResourceLoader.exists("res://assets/backdrops/castle_courtyard.png"), "the castle courtyard is painted")

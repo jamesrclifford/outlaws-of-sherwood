@@ -250,7 +250,7 @@ func _objective_met() -> bool:
 	match mission["type"]:
 		"robbery":
 			return loot_taken
-		"story", "contest":
+		"story", "contest", "ambush":
 			return true
 	return prisoner_freed
 

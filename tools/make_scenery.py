@@ -831,6 +831,78 @@ def bd_harbour():
     return c
 
 
+def bd_castle_courtyard():
+    """Nottingham Castle by night: the keep with lit windows, torch-lit walls, flagstones and a hay cart."""
+    rng = random.Random(23)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#141a34", "#1e2a4a", "#34405e"])
+    for _ in range(40):                                   # stars
+        c.px(rng.randrange(BW), rng.randrange(0, 40), rng.choice(["#e8e8f4", "#a8b0d0", "#f0e0a0"]))
+    c.rect(150, 6, 157, 13, "#f0ecd0")                    # moon
+    c.rect(149, 8, 158, 11, "#f0ecd0")
+    c.rect(154, 7, 157, 10, "#d8d2b0")
+    # curtain walls left and right, with walkways
+    wall_top = 30
+    for x0, x1 in ((0, 52), (128, BW)):
+        c.rect(x0, wall_top, x1, HORIZON + 2, "#5a5664")
+        for y in range(wall_top, HORIZON + 2, 5):
+            off = 0 if (y // 5) % 2 else 5
+            for x in range(x0 + off - 10, x1, 10):
+                c.rect(max(x0, x), y, min(x1, x + 9), y, "#46424e")
+        for x in range(x0, x1, 8):
+            c.rect(x, wall_top - 5, x + 4, wall_top - 1, "#5a5664")
+    # the keep: a great square tower, lit windows
+    kx = 56
+    c.rect(kx, 4, kx + 68, HORIZON + 2, "#6a6474")
+    c.rect(kx + 50, 4, kx + 68, HORIZON + 2, "#524c5c")
+    for x in range(kx, kx + 69, 7):
+        c.rect(x, 0, x + 3, 3, "#6a6474")
+    for y in range(8, HORIZON, 6):
+        off = 0 if (y // 6) % 2 else 4
+        for x in range(kx + off, kx + 69, 9):
+            c.rect(x, y, x + 7, y, "#5a5464")
+    for wx, wy in ((kx + 12, 14), (kx + 30, 14), (kx + 48, 14), (kx + 20, 32), (kx + 40, 32)):
+        c.rect(wx, wy, wx + 4, wy + 7, "#f0c060")
+        c.rect(wx, wy, wx + 4, wy + 1, "#2a2430")
+        c.px(wx + 2, wy + 4, "#c08030")
+    for y in range(44, HORIZON + 3):                      # great door
+        half = 9 if y > 50 else round(math.sqrt(max(0, 81 - (50 - y) ** 2)))
+        c.rect(kx + 34 - half, y, kx + 34 + half, y, "#3a2618")
+    c.rect(kx + 34, 44, kx + 34, HORIZON + 2, "#24160e")
+    banner(c, kx + 4, 6)
+    banner(c, kx + 60, 6)
+    # torches with a warm glow on the walls
+    for tx, ty in ((24, 40), (150, 40), (kx + 18, 48), (kx + 50, 48)):
+        for r in range(7, 0, -1):
+            glow = mix("#5a5664", "#e09040", (8 - r) / 10)
+            for yy in range(ty - r, ty + r + 1):
+                for xx in range(tx - r, tx + r + 1):
+                    if (xx - tx) ** 2 + (yy - ty) ** 2 <= r * r and rng.random() < 0.5:
+                        c.px(xx, yy, glow)
+        c.rect(tx, ty, tx, ty + 5, "#4a3220")
+        c.rect(tx - 1, ty - 3, tx + 1, ty - 1, "#f0a030")
+        c.px(tx, ty - 4, "#f8e070")
+    # flagstone courtyard, lit by the torches
+    c.rect(0, HORIZON + 3, BW, BH, "#5a5450")
+    for row, y in enumerate(range(HORIZON + 3, BH, 7)):
+        off = 0 if row % 2 else 5
+        for x in range(-off, BW, 10):
+            shade = rng.choice(["#6e6862", "#666058", "#78716a"])
+            c.rect(x + 1, y + 1, x + 8, y + 5, shade)
+            c.px(x + 1, y + 1, "#8a847a")
+    c.rect(0, HORIZON + 3, BW, HORIZON + 4, "#3a3634")
+    # a hay cart by the keep wall, handy for falling into
+    c.rect(150, 72, 176, 80, "#7a5430")
+    c.rect(148, 64, 178, 72, "#d8b850")
+    for x in range(149, 178, 3):
+        c.px(x, 63, "#e8d070")
+        c.px(x + 1, 65, "#b89838")
+    for wx in (154, 172):
+        c.rect(wx - 3, 78, wx + 3, 84, "#4a3220")
+        c.px(wx, 81, "#2a1a10")
+    return c
+
+
 BACKDROPS = {
     "sherwood_edge": bd_sherwood_edge,
     "great_north_road": bd_great_north_road,
@@ -845,6 +917,7 @@ BACKDROPS = {
     "nottingham_market": bd_nottingham_market,
     "abbey": bd_abbey,
     "harbour": bd_harbour,
+    "castle_courtyard": bd_castle_courtyard,
 }
 
 

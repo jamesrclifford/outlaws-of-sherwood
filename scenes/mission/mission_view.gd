@@ -219,6 +219,11 @@ func _show_briefing() -> void:
 		_refresh()
 		_set_buttons([["Set out", _set_out]])
 		return
+	if run.mission["type"] == "ambush":
+		run.mission_log.append(run.mission["intro"])
+		_refresh()
+		_set_buttons([["Fight!", _set_out]])
+		return
 	run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [run.mission["type"].capitalize(), run.mission["location_name"], run.mission["rewards"]["gold"]])
 	if run.is_bait() and run.mission["bait"]["revealed"]:
 		run.mission_log.append("You already know this job is %s's trap." % db.baits[run.mission["bait"]["by"]]["name"])

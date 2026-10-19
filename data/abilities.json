@@ -17,6 +17,7 @@
   "throw_net":     {"fx": "net", "name": "Throw Net",       "ap": 2, "target": "enemy",       "range": "any",   "power": 0.2, "effects": [{"status": "netted", "turns": 2}], "desc": "Nets a foe so they lose turns until cut free."},
   "gisborne_duel": {"name": "Gisborne's Blade", "ap": 2, "target": "enemy",      "range": "melee", "power": 1.5, "bonus_crit": 0.2, "desc": "A fierce sword blow, often a critical hit."},
   "call_guards":   {"name": "Call the Guards", "ap": 2, "target": "self",        "summon": "man_at_arms", "desc": "Calls a man-at-arms to help."},
+  "call_hounds":   {"name": "Whistle for Hounds", "ap": 2, "target": "self",     "summon": "hound", "desc": "Whistles up a hunting hound."},
   "rousing_ballad": {"name": "Rousing Ballad", "ap": 2, "target": "all_allies",  "heal": 0.8, "effects": [{"status": "inspired", "turns": 2}], "desc": "Heals the whole band and they hit harder for 2 turns."},
   "lullaby":       {"name": "Lullaby",         "ap": 1, "target": "enemy",       "range": "any",   "power": 0.3, "fx": "note", "effects": [{"status": "stunned", "turns": 1, "chance": 0.75}], "desc": "A soft song at any foe. Usually puts them to sleep."}
 }
