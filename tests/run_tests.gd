@@ -556,3 +556,11 @@ func test_bribing_the_jailer_frees_prisoners() -> void:
 func test_every_unit_has_a_sprite() -> void:
 	for id in db.heroes.keys() + db.enemies.keys():
 		check(ResourceLoader.exists("res://assets/sprites/%s.png" % id), "%s has a sprite" % id)
+
+
+func test_every_battle_place_has_a_backdrop() -> void:
+	for id in db.locations:
+		check(ResourceLoader.exists("res://assets/backdrops/%s.png" % id), "%s has a backdrop" % id)
+	for id in db.encounters:
+		check(db.locations.has(db.encounters[id].get("location", "")), "encounter %s names a real location" % id)
+	check(ResourceLoader.exists("res://assets/map/map.png"), "the strategic map is painted")

@@ -1,0 +1,751 @@
+"""Generates the scenery art: battle backdrops, the strategic map and UI frames.
+
+Like make_sprites.py, everything is drawn from code with a seeded random
+generator, so re-running it gives the same pixels.
+
+  assets/backdrops/<location>.png  180x220, shown at 2x behind the battle field
+  assets/map/map.png               176x196, shown at 2x; roads and places come from data/map.json
+  assets/ui/*.png                  9-slice frames for buttons and panels, unit shadows and rings
+
+Usage: python3 tools/make_scenery.py
+"""
+import json
+import math
+import os
+import random
+from PIL import Image
+
+ROOT = os.path.join(os.path.dirname(__file__), "..")
+BW, BH = 180, 220   # battle backdrop size; the top 440px of the screen at 2x
+HORIZON = 64        # backdrop row where the ground starts
+BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+
+def hexc(h, a=255):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (a,)
+
+
+def mix(a, b, t):
+    a, b = hexc(a) if isinstance(a, str) else a, hexc(b) if isinstance(b, str) else b
+    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(4))
+
+
+class Canvas:
+    def __init__(self, w, h, fill=(0, 0, 0, 0)):
+        self.w, self.h = w, h
+        self.img = Image.new("RGBA", (w, h), hexc(fill) if isinstance(fill, str) else fill)
+        self.d = self.img.load()
+
+    def px(self, x, y, c):
+        x, y = int(x), int(y)
+        if 0 <= x < self.w and 0 <= y < self.h:
+            c = hexc(c) if isinstance(c, str) else c
+            if c[3] == 255:
+                self.d[x, y] = c
+            else:
+                self.d[x, y] = mix(self.d[x, y], (c[0], c[1], c[2], 255), c[3] / 255)
+
+    def get(self, x, y):
+        return self.d[int(x), int(y)] if 0 <= x < self.w and 0 <= y < self.h else None
+
+    def rect(self, x0, y0, x1, y1, c):
+        for y in range(int(y0), int(y1) + 1):
+            for x in range(int(x0), int(x1) + 1):
+                self.px(x, y, c)
+
+    def line(self, x0, y0, x1, y1, c, width=1):
+        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
+        for i in range(int(steps) + 1):
+            x = round(x0 + (x1 - x0) * i / steps)
+            y = round(y0 + (y1 - y0) * i / steps)
+            for o in range(width):
+                self.px(x + (o if abs(y1 - y0) > abs(x1 - x0) else 0), y + (0 if abs(y1 - y0) > abs(x1 - x0) else o), c)
+
+    def ellipse(self, cx, cy, rx, ry, c):
+        for y in range(int(cy - ry), int(cy + ry) + 1):
+            for x in range(int(cx - rx), int(cx + rx) + 1):
+                if ((x - cx) / max(rx, 0.5)) ** 2 + ((y - cy) / max(ry, 0.5)) ** 2 <= 1.0:
+                    self.px(x, y, c)
+
+    def gradient(self, y0, y1, colors, x0=0, x1=None):
+        """Vertical gradient through the colors, dithered between bands like an old console."""
+        x1 = self.w - 1 if x1 is None else x1
+        n = len(colors) - 1
+        for y in range(y0, y1 + 1):
+            f = (y - y0) / max(1, y1 - y0) * n
+            i = min(int(f), n - 1)
+            frac = f - i
+            for x in range(x0, x1 + 1):
+                use = i + 1 if frac * 16 > BAYER[y % 4][x % 4] + 0.5 else i
+                self.px(x, y, colors[use])
+
+    def outline(self, colour):
+        """Dark 1px outline around every opaque shape."""
+        solid = {(x, y) for x in range(self.w) for y in range(self.h) if self.d[x, y][3] > 0}
+        for x, y in solid:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if (x + dx, y + dy) not in solid and 0 <= x + dx < self.w and 0 <= y + dy < self.h:
+                    self.d[x + dx, y + dy] = hexc(colour)
+
+    def paste(self, other, x, y):
+        self.img.alpha_composite(other.img, (int(x), int(y)))
+
+    def save(self, *parts):
+        path = os.path.join(ROOT, *parts)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        self.img.save(path)
+        return path
+
+
+# ---------------------------------------------------------------- shared scenery pieces
+
+def speckle(c, y0, y1, colors, rng, density, x0=0, x1=None):
+    x1 = c.w - 1 if x1 is None else x1
+    for _ in range(int((x1 - x0) * (y1 - y0) * density)):
+        c.px(rng.randint(x0, x1), rng.randint(y0, y1), rng.choice(colors))
+
+
+def clouds(c, rng, count, y_max, light="#f4f4ee", shade="#cfd8e0"):
+    for _ in range(count):
+        cx, cy, w = rng.randint(0, c.w), rng.randint(4, y_max), rng.randint(14, 30)
+        for i in range(4):
+            ox = cx - w // 2 + i * w // 4 + rng.randint(-2, 2)
+            c.ellipse(ox, cy + 1, w // 5 + 2, 3, shade)
+        for i in range(4):
+            ox = cx - w // 2 + i * w // 4 + rng.randint(-2, 2)
+            c.ellipse(ox, cy - (1 if i in (1, 2) else 0), w // 5 + 1, 3 if i in (1, 2) else 2, light)
+
+
+def hills(c, rng, base, height, colour, top_colour=None, freq=1.0):
+    phase = rng.random() * 6
+    for x in range(c.w):
+        h = height * (0.55 + 0.3 * math.sin(x / 23 * freq + phase) + 0.15 * math.sin(x / 9 * freq + phase * 2))
+        top = int(base - h)
+        for y in range(top, base + 1):
+            c.px(x, y, colour)
+        if top_colour:
+            c.px(x, top, top_colour)
+
+
+def leafy_tree(c, rng, x, base, height, radius, greens, trunk=("#5a3d24", "#3e2a18")):
+    """A round-topped oak: trunk, then a canopy of shaded blobs lit from the top left."""
+    t0 = base - height
+    c.rect(x - 1, t0, x + 1, base, trunk[0])
+    c.rect(x + 1, t0, x + 1, base, trunk[1])
+    c.px(x - 2, base, trunk[1])
+    c.px(x + 2, base, trunk[1])
+    blobs = [(x + rng.randint(-radius, radius), t0 + rng.randint(-radius // 2, radius // 3), rng.randint(radius // 2 + 1, radius)) for _ in range(5)]
+    blobs.append((x, t0 - radius // 3, radius))
+    for bx, by, r in blobs:
+        c.ellipse(bx + 1, by + 1, r, r * 0.8, greens[0])
+    for bx, by, r in blobs:
+        c.ellipse(bx, by, r - 1, r * 0.8 - 1, greens[1])
+    for bx, by, r in blobs:
+        c.ellipse(bx - r // 3, by - r // 3, max(1, r // 2), max(1, r // 3), greens[2])
+    for _ in range(radius * 3):
+        bx, by, r = rng.choice(blobs)
+        c.px(bx + rng.randint(-r + 1, r - 1), by + rng.randint(-r // 2, r // 2), rng.choice(greens))
+
+
+def grass_tufts(c, rng, y0, y1, count, colours):
+    for _ in range(count):
+        x, y = rng.randint(0, c.w - 1), rng.randint(y0, y1)
+        col = rng.choice(colours)
+        c.px(x, y, col)
+        c.px(x - 1, y + 1, col)
+        c.px(x + 1, y + 1, col)
+        c.px(x, y - 1, col)
+
+
+def stones(c, rng, y0, y1, count, light="#a8a090", dark="#6a6458"):
+    for _ in range(count):
+        x, y = rng.randint(0, c.w - 1), rng.randint(y0, y1)
+        c.rect(x, y, x + 1, y, light)
+        c.px(x, y + 1, dark)
+        c.px(x + 1, y + 1, dark)
+
+
+def cottage(c, x, base, w, h, wall="#e2d3a8", beam="#4a3220", roof=("#c9a24a", "#9a7632", "#e2c070")):
+    """A timber-framed cottage with a thatched roof, front facing the viewer."""
+    c.rect(x, base - h, x + w, base, wall)
+    c.rect(x, base - h, x, base, beam)
+    c.rect(x + w, base - h, x + w, base, beam)
+    c.rect(x, base - h, x + w, base - h, beam)
+    c.line(x, base - h, x + w // 2, base - 2, beam)
+    c.line(x + w, base - h, x + w // 2, base - 2, beam)
+    c.rect(x + w // 2 - 2, base - 6, x + w // 2 + 1, base, "#5a3a22")
+    c.rect(x + 2, base - h + 3, x + 4, base - h + 5, "#3a4a5a")
+    c.rect(x + w - 4, base - h + 3, x + w - 2, base - h + 5, "#3a4a5a")
+    rh = h // 2 + 6
+    for i in range(rh):
+        y = base - h - 1 - i
+        inset = i * (w // 2 + 2) // rh
+        c.rect(x - 2 + inset, y, x + w + 2 - inset, y, roof[0] if i % 3 else roof[1])
+    c.rect(x - 2, base - h - 1, x + w + 2, base - h - 1, roof[1])
+    for i in range(0, w + 4, 3):
+        c.px(x - 2 + i, base - h - 2 - (i % 2), roof[2])
+    c.rect(x + w - 5, base - h - rh + 2, x + w - 3, base - h - rh // 2, "#7a6a5a")
+
+
+def banner(c, x, top, colour="#a01e22", trim="#e0b84a"):
+    c.rect(x, top, x + 5, top + 10, colour)
+    c.px(x, top + 11, colour)
+    c.px(x + 5, top + 11, colour)
+    c.rect(x, top, x + 5, top, trim)
+    c.rect(x + 2, top + 4, x + 3, top + 6, trim)
+
+
+def crow(c, x, y, colour="#1e1a22"):
+    c.px(x - 2, y - 1, colour)
+    c.px(x - 1, y, colour)
+    c.px(x, y, colour)
+    c.px(x + 1, y, colour)
+    c.px(x + 2, y - 1, colour)
+
+
+# ---------------------------------------------------------------- battle backdrops
+
+def new_backdrop():
+    return Canvas(BW, BH, "#000000")
+
+
+def bd_sherwood_edge():
+    rng = random.Random(11)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#c8d88a", "#8fb060", "#4f7a3a"])
+    # far trunks, then a dark canopy roof with sunlit gaps
+    for x in range(-4, BW, 9):
+        tx = x + rng.randint(0, 4)
+        c.rect(tx, 10, tx + 2, HORIZON, "#3e5a34")
+    for _ in range(70):
+        c.ellipse(rng.randint(0, BW), rng.randint(-4, 26), rng.randint(6, 14), rng.randint(4, 9), rng.choice(["#2a4a24", "#24401f", "#30552a"]))
+    for _ in range(14):
+        c.ellipse(rng.randint(0, BW), rng.randint(2, 22), 3, 2, rng.choice(["#5c8a3c", "#6e9a44"]))
+    # light shafts falling through the leaves
+    for sx in (30, 96, 150):
+        for y in range(18, BH):
+            for x in range(sx + (y - 18) // 3, sx + (y - 18) // 3 + 6):
+                if (x + y) % 2 == 0:
+                    c.px(x, y, (255, 246, 190, 34))
+    # big near trunks with roots
+    for tx in (6, 64, 122, 172):
+        w = rng.randint(5, 7)
+        c.rect(tx, 0, tx + w, HORIZON + 4, "#4a3322")
+        c.rect(tx + w - 2, 0, tx + w, HORIZON + 4, "#33231a")
+        c.rect(tx, 0, tx, HORIZON + 4, "#6a4a30")
+        for y in range(4, HORIZON, 7):
+            c.px(tx + 2 + y % 3, y, "#33231a")
+        c.line(tx - 4, HORIZON + 6, tx, HORIZON + 2, "#4a3322", 2)
+        c.line(tx + w + 4, HORIZON + 6, tx + w, HORIZON + 2, "#33231a", 2)
+    c.gradient(HORIZON + 2, BH - 1, ["#5a7a34", "#4a6a2e", "#3e5a28", "#334a22"])
+    speckle(c, HORIZON + 2, BH - 1, ["#6a8a3e", "#3a5426", "#7a6a3a", "#5a4a2a"], rng, 0.08)
+    for _ in range(26):   # ferns
+        x, y = rng.randint(0, BW), rng.randint(HORIZON + 8, BH - 4)
+        for i in range(-4, 5):
+            c.px(x + i, y - (4 - abs(i)) // 2, "#7aa040")
+            c.px(x + i, y - (4 - abs(i)) // 2 + 1, "#4f7a2e")
+        c.line(x, y, x, y + 3, "#3f6024")
+    for _ in range(7):    # toadstools
+        x, y = rng.randint(4, BW - 4), rng.randint(HORIZON + 10, BH - 4)
+        c.rect(x, y, x, y + 2, "#e8e0c8")
+        c.rect(x - 2, y - 1, x + 2, y - 1, "#c0302a")
+        c.rect(x - 1, y - 2, x + 1, y - 2, "#c0302a")
+        c.px(x - 1, y - 1, "#f4f0e0")
+    grass_tufts(c, rng, HORIZON + 4, BH - 2, 60, ["#7aa046", "#8ab24e"])
+    return c
+
+
+def bd_great_north_road():
+    rng = random.Random(12)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#4f86c4", "#78a8d8", "#b4d4e8", "#dce8e4"])
+    clouds(c, rng, 6, 34)
+    hills(c, rng, HORIZON - 4, 22, "#7a9aa4", freq=0.7)
+    hills(c, rng, HORIZON - 1, 13, "#5f8a50", "#7aa25c")
+    for x in range(0, BW, 5):   # hedgerow
+        c.ellipse(x + rng.randint(0, 2), HORIZON - 1, 3, 2, rng.choice(["#3f6a30", "#4a7a36"]))
+    leafy_tree(c, rng, 26, HORIZON, 14, 8, ["#2e5226", "#447a34", "#6a9e48"])
+    leafy_tree(c, rng, 150, HORIZON - 1, 10, 6, ["#2e5226", "#447a34", "#6a9e48"])
+    c.gradient(HORIZON, BH - 1, ["#86ae58", "#74a04c", "#628c42", "#527a38"])
+    speckle(c, HORIZON, BH - 1, ["#94bc62", "#5a8240"], rng, 0.06)
+    # the road: a wide dirt band with cart ruts and stones
+    top, bot = 104, 176
+    for y in range(top, bot + 1):
+        wob = round(math.sin(y / 7) * 1.5)
+        for x in range(BW):
+            edge = y - top < 2 + (x + wob) % 3 or bot - y < 2 + (x * 7) % 3
+            c.px(x, y, "#9a7e52" if edge else ("#b49466" if (x + y) % 9 else "#a88a5c"))
+    for ry in (118, 124, 156, 162):
+        for x in range(BW):
+            if rng.random() < 0.85:
+                c.px(x, ry + (1 if x % 23 < 3 else 0), "#7e6440")
+    stones(c, rng, top + 4, bot - 4, 40, "#c8b48a", "#7e6440")
+    speckle(c, top, bot, ["#c4a676", "#8e7248"], rng, 0.04)
+    grass_tufts(c, rng, HORIZON + 4, top - 2, 30, ["#9cc466", "#4e7a34"])
+    grass_tufts(c, rng, bot + 3, BH - 2, 30, ["#9cc466", "#4e7a34"])
+    # milestone at the roadside
+    c.rect(88, 90, 94, 102, "#a8a49a")
+    c.rect(89, 88, 93, 89, "#a8a49a")
+    c.rect(93, 90, 94, 102, "#7a766c")
+    c.rect(90, 93, 92, 93, "#5a564e")
+    c.rect(90, 96, 91, 96, "#5a564e")
+    return c
+
+
+def bd_locksley():
+    rng = random.Random(13)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#5a90c8", "#8ab8dc", "#cfe2e6"])
+    clouds(c, rng, 4, 26)
+    hills(c, rng, HORIZON - 6, 14, "#6f9a5a", freq=0.8)
+    leafy_tree(c, rng, 10, HORIZON - 2, 12, 9, ["#2e5226", "#447a34", "#6a9e48"])
+    cottage(c, 22, HORIZON + 2, 26, 16)
+    cottage(c, 70, HORIZON - 1, 20, 13, wall="#d8c49a")
+    leafy_tree(c, rng, 104, HORIZON - 2, 10, 7, ["#2e5226", "#447a34", "#6a9e48"])
+    cottage(c, 120, HORIZON + 3, 30, 18)
+    c.rect(160, HORIZON - 14, 161, HORIZON + 2, "#6a6a6a")   # a little church tower in the distance
+    c.rect(157, HORIZON - 10, 164, HORIZON + 2, "#9a968a")
+    c.rect(159, HORIZON - 7, 162, HORIZON - 5, "#3a3a44")
+    c.gradient(HORIZON + 3, BH - 1, ["#8cb45a", "#78a24e", "#668e44", "#567c3a"])
+    speckle(c, HORIZON + 3, BH - 1, ["#9ac464", "#5a8240", "#c8c070"], rng, 0.05)
+    # wattle fence along the back of the green
+    for x in range(0, BW, 6):
+        c.rect(x, HORIZON + 4, x, HORIZON + 12, "#6a4a2c")
+    for y in (HORIZON + 6, HORIZON + 9):
+        c.line(0, y, BW, y, "#8a6a40")
+    # a beaten dirt path winding down the green
+    for y in range(HORIZON + 13, BH):
+        cx = 90 + round(math.sin(y / 18) * 22)
+        w = 6 + (y - HORIZON) // 10
+        c.rect(cx - w, y, cx + w, y, "#b29468" if y % 5 else "#a4865c")
+        c.px(cx - w, y, "#8e7248")
+        c.px(cx + w, y, "#8e7248")
+    stones(c, rng, HORIZON + 16, BH - 4, 18, "#c4b08a", "#7e6440")
+    # the village well
+    c.rect(150, 130, 168, 140, "#9a968a")
+    for x in range(150, 169, 4):
+        c.rect(x, 130 + (x // 4) % 2 * 4, x + 3, 130 + (x // 4) % 2 * 4, "#6e6a60")
+    c.rect(151, 116, 152, 130, "#5a3d24")
+    c.rect(166, 116, 167, 130, "#5a3d24")
+    c.rect(148, 112, 170, 115, "#8a3a2a")
+    c.rect(150, 111, 168, 111, "#a84a34")
+    c.line(159, 116, 159, 124, "#3a2a1a")
+    c.rect(157, 124, 161, 127, "#7a5a34")
+    grass_tufts(c, rng, HORIZON + 14, BH - 2, 50, ["#a2ca6c", "#4e7a34"])
+    for _ in range(9):   # daisies
+        x, y = rng.randint(0, BW), rng.randint(HORIZON + 14, BH - 2)
+        c.px(x, y, "#f4f0e0")
+        c.px(x + 1, y, "#f0d040")
+    return c
+
+
+def bd_nottingham_gate():
+    rng = random.Random(14)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#7a8aa4", "#9cacbc", "#c4ccc8"])
+    clouds(c, rng, 3, 14, "#e4e6e4", "#b4bcc4")
+    # town wall with crenellations, two towers and the gatehouse
+    wall_top = 22
+    c.rect(0, wall_top, BW, HORIZON + 2, "#8e8676")
+    for y in range(wall_top, HORIZON + 2, 5):
+        off = 0 if (y // 5) % 2 else 5
+        for x in range(off - 10, BW, 10):
+            c.rect(x, y, x + 9, y, "#6e685c")
+            c.px(x, y + 1, "#6e685c")
+            c.px(x, y + 2, "#6e685c")
+            c.px(x, y + 3, "#6e685c")
+    for x in range(0, BW, 8):
+        c.rect(x, wall_top - 5, x + 4, wall_top - 1, "#8e8676")
+        c.rect(x + 4, wall_top - 5, x + 4, wall_top - 1, "#6e685c")
+    for tx in (14, 148):
+        c.rect(tx, 4, tx + 18, HORIZON + 2, "#9a9282")
+        c.rect(tx + 14, 4, tx + 18, HORIZON + 2, "#7a7466")
+        for x in range(tx, tx + 19, 5):
+            c.rect(x, 0, x + 2, 3, "#9a9282")
+        c.rect(tx + 7, 16, tx + 9, 22, "#2a2830")
+        c.rect(tx + 7, 36, tx + 9, 42, "#2a2830")
+    gx = 70
+    c.rect(gx, 8, gx + 40, HORIZON + 2, "#a29a8a")
+    for x in range(gx, gx + 41, 6):
+        c.rect(x, 3, x + 3, 7, "#a29a8a")
+    for y in range(28, HORIZON + 3):   # arched gateway
+        half = 11 if y > 36 else round(math.sqrt(max(0, 121 - (36 - y) ** 2)))
+        c.rect(gx + 20 - half, y, gx + 20 + half, y, "#2a2422")
+    for x in range(gx + 10, gx + 31, 3):   # portcullis
+        c.rect(x, 26, x, HORIZON - 6, "#4a4038")
+    for y in range(30, HORIZON - 6, 4):
+        c.rect(gx + 10, y, gx + 30, y, "#4a4038")
+    banner(c, gx + 4, 12)
+    banner(c, gx + 31, 12)
+    banner(c, 40, wall_top + 2)
+    banner(c, 132, wall_top + 2)
+    # cobbled square
+    c.rect(0, HORIZON + 3, BW, BH, "#7a7268")
+    for row, y in enumerate(range(HORIZON + 3, BH, 5)):
+        off = 0 if row % 2 else 3
+        for x in range(-off, BW, 6):
+            shade = rng.choice(["#9a9286", "#8e8678", "#a69e90"])
+            c.rect(x + 1, y + 1, x + 4, y + 3, shade)
+            c.px(x + 1, y + 1, "#b8b0a2")
+    speckle(c, HORIZON + 3, BH - 1, ["#6a6258", "#5e7a40"], rng, 0.01)
+    c.rect(0, HORIZON + 3, BW, HORIZON + 4, "#5e584e")
+    return c
+
+
+def bd_hanged_mans_crossing():
+    rng = random.Random(15)
+    c = new_backdrop()
+    c.gradient(0, HORIZON, ["#4a3a6a", "#8a4a5a", "#d0704a", "#f0b06a"])
+    c.ellipse(132, HORIZON - 6, 12, 12, "#f8d890")
+    c.ellipse(132, HORIZON - 6, 9, 9, "#fce8b0")
+    hills(c, rng, HORIZON - 2, 18, "#4a3a44", freq=0.6)
+    hills(c, rng, HORIZON + 1, 9, "#3a3434", "#5a4a40")
+    c.gradient(HORIZON + 2, BH - 1, ["#6a5a3e", "#5e5036", "#52462e", "#463c28"])
+    speckle(c, HORIZON + 2, BH - 1, ["#7a6a46", "#4a3e2a", "#6a6a3a"], rng, 0.08)
+    # two muddy tracks crossing
+    for y in range(HORIZON + 2, BH):
+        w = 5 + (y - HORIZON) // 9
+        cx = 90 + (y - HORIZON) // 6
+        c.rect(cx - w, y, cx + w, y, "#7e6844" if y % 4 else "#74603e")
+    for y in range(128, 150):
+        c.rect(0, y, BW, y, "#7e6844" if y % 3 else "#74603e")
+    for _ in range(6):   # puddles holding the sunset
+        x, y = rng.randint(10, BW - 20), rng.randint(HORIZON + 14, BH - 8)
+        c.ellipse(x, y, rng.randint(4, 8), 2, "#c88a5a")
+        c.rect(x - 2, y - 1, x + 1, y - 1, "#f0b878")
+    # a bare twisted oak
+    tx = 34
+    c.rect(tx, 18, tx + 4, HORIZON + 6, "#2e2422")
+    c.rect(tx + 3, 18, tx + 4, HORIZON + 6, "#1e1816")
+    for (x0, y0, x1, y1) in ((tx, 30, tx - 14, 14), (tx - 9, 19, tx - 18, 16), (tx + 4, 26, tx + 20, 10), (tx + 14, 15, tx + 26, 16), (tx + 2, 20, tx + 6, 4), (tx - 14, 14, tx - 16, 6)):
+        c.line(x0, y0, x1, y1, "#2e2422", 2)
+    crow(c, tx + 21, 8)
+    crow(c, 88, 14)
+    crow(c, 100, 20)
+    # the old crossroads signpost
+    sx = 120
+    c.rect(sx, 40, sx + 1, HORIZON + 8, "#4a3424")
+    c.rect(sx - 12, 42, sx + 2, 46, "#7a5a3a")
+    c.px(sx - 13, 44, "#7a5a3a")
+    c.rect(sx, 50, sx + 14, 54, "#6e5034")
+    c.px(sx + 15, 52, "#6e5034")
+    c.rect(sx - 10, 44, sx - 2, 44, "#3a2a1a")
+    c.rect(sx + 3, 52, sx + 11, 52, "#3a2a1a")
+    grass_tufts(c, rng, HORIZON + 4, BH - 2, 40, ["#8a8a4a", "#5a5432"])
+    return c
+
+
+def bd_sheriffs_toll_bridge():
+    rng = random.Random(16)
+    c = new_backdrop()
+    c.gradient(0, HORIZON - 16, ["#5a8cc4", "#8ab4d8", "#c4dce4"])
+    clouds(c, rng, 4, 20)
+    hills(c, rng, HORIZON - 18, 12, "#5a8a4e", "#78a25e")
+    for x in range(0, BW, 7):
+        leafy_tree(c, rng, x + rng.randint(0, 3), HORIZON - 18, 3, 4, ["#2a4a24", "#3a6a30", "#5a8a40"])
+    c.gradient(HORIZON - 17, HORIZON + 6, ["#7aa4c4", "#4f7ea4", "#3a6488"])   # the river
+    for _ in range(40):
+        x, y = rng.randint(0, BW), rng.randint(HORIZON - 15, HORIZON + 4)
+        c.rect(x, y, x + rng.randint(2, 5), y, "#b4d4e8")
+    # toll booth on the far end, Sheriff's colours
+    c.rect(132, 14, 160, HORIZON - 6, "#8a6a44")
+    for x in range(132, 161, 4):
+        c.rect(x, 14, x, HORIZON - 6, "#6a4e30")
+    c.rect(128, 8, 164, 13, "#8a3226")
+    c.rect(130, 5, 162, 7, "#a84434")
+    c.rect(142, 26, 150, 34, "#2a2422")
+    banner(c, 120, 14)
+    c.rect(100, 34, 131, 35, "#c8b04a")   # the toll barrier, striped
+    for x in range(100, 132, 6):
+        c.rect(x, 34, x + 2, 35, "#a01e22")
+    c.rect(130, 32, 132, HORIZON - 6, "#5a4028")
+    # the bridge deck: planks running across, with a railing at the back
+    for x in range(0, BW, 7):
+        shade = rng.choice(["#9a7a4e", "#8e6e44", "#a48456"])
+        c.rect(x, HORIZON + 7, x + 5, BH, shade)
+        c.rect(x + 6, HORIZON + 7, x + 6, BH, "#4a3420")
+        for y in range(HORIZON + 10, BH, rng.randint(9, 15)):
+            c.rect(x + 1, y, x + 3, y, "#7a5c38")
+        c.px(x + 1, HORIZON + 9, "#3a2a1a")
+        c.px(x + 4, BH - 3, "#3a2a1a")
+    speckle(c, HORIZON + 8, BH - 1, ["#b49466", "#6e5232"], rng, 0.03)
+    c.rect(0, HORIZON - 2, BW, HORIZON - 1, "#6a4a2c")   # rail
+    c.rect(0, HORIZON + 3, BW, HORIZON + 3, "#6a4a2c")
+    for x in range(2, BW, 16):
+        c.rect(x, HORIZON - 4, x + 2, HORIZON + 7, "#5a3d24")
+        c.px(x, HORIZON - 4, "#7a5a3a")
+    c.rect(0, HORIZON + 6, BW, HORIZON + 6, "#3a2818")
+    return c
+
+
+BACKDROPS = {
+    "sherwood_edge": bd_sherwood_edge,
+    "great_north_road": bd_great_north_road,
+    "locksley": bd_locksley,
+    "nottingham_gate": bd_nottingham_gate,
+    "hanged_mans_crossing": bd_hanged_mans_crossing,
+    "sheriffs_toll_bridge": bd_sheriffs_toll_bridge,
+}
+
+
+# ---------------------------------------------------------------- strategic map
+
+MW, MH = 176, 196        # shown at 2x in the 352x392 map area
+ICON_LIFT = 6            # icons sit this many map pixels above their node so the label fits below
+INK = "#4a3826"
+
+
+def map_point(node):
+    return node["x"] / 2, node["y"] / 2 - ICON_LIFT
+
+
+def bezier(p0, p1, bend):
+    mx, my = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    ctrl = (mx - dy * bend, my + dx * bend)
+    n = int(math.hypot(dx, dy) * 2) + 1
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        pts.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * ctrl[0] + t * t * p1[0],
+                    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * ctrl[1] + t * t * p1[1]))
+    return pts
+
+
+def map_tree(c, x, y, rng):
+    dark, mid, light = rng.choice([("#2e4a26", "#4a7236", "#6e9a4a"), ("#2a4422", "#41682f", "#5f8c40")])
+    c.rect(x, y + 2, x, y + 3, "#5a3d24")
+    c.rect(x - 2, y - 1, x + 2, y + 1, mid)
+    c.rect(x - 1, y - 2, x + 1, y + 2, mid)
+    c.px(x - 1, y - 1, light)
+    c.px(x + 2, y + 1, dark)
+    c.px(x + 1, y + 2, dark)
+
+
+def icon_camp(c, x, y):
+    """The Major Oak with the band's tent beneath it."""
+    rng = random.Random(1)
+    leafy_tree(c, rng, x - 2, y + 6, 6, 6, ["#2a4422", "#4a7a34", "#78a84c"])
+    for i in range(6):   # tent
+        c.rect(x + 2 + i // 2, y + 6 - i, x + 9 - i // 2, y + 6 - i, "#c8b88a" if i else "#a8986a")
+    c.rect(x + 5, y + 3, x + 6, y + 6, "#4a3826")
+    c.px(x, y + 6, "#f0a030")   # campfire
+    c.px(x, y + 5, "#f8d050")
+
+
+def icon_village(c, x, y):
+    cottage(c, x - 7, y + 6, 8, 5)
+    cottage(c, x + 1, y + 7, 7, 4, wall="#d4c49c")
+
+
+def icon_forest(c, x, y):
+    rng = random.Random(2)
+    for dx, dy in ((-5, 2), (4, 1), (0, -2), (-1, 4), (6, 5)):
+        leafy_tree(c, rng, x + dx, y + dy + 4, 3, 3, ["#203a1c", "#355a2a", "#527e3a"])
+
+
+def icon_signpost(c, x, y):
+    c.rect(x, y - 4, x, y + 6, "#4a3424")
+    c.rect(x - 5, y - 3, x - 1, y - 1, "#8a6a44")
+    c.px(x - 6, y - 2, "#8a6a44")
+    c.rect(x + 1, y, x + 5, y + 2, "#7a5a3a")
+    c.px(x + 6, y + 1, "#7a5a3a")
+    c.rect(x - 3, y + 6, x + 3, y + 6, "#6a5a3e")
+
+
+def icon_toll(c, x, y):
+    c.rect(x - 4, y - 3, x + 3, y + 5, "#8a6a44")
+    c.rect(x - 5, y - 5, x + 4, y - 3, "#a03a2a")
+    c.rect(x - 1, y + 1, x, y + 5, "#2a2422")
+    c.rect(x + 4, y + 2, x + 10, y + 2, "#c8b04a")
+    c.px(x + 6, y + 2, "#a01e22")
+    c.px(x + 9, y + 2, "#a01e22")
+
+
+def icon_town(c, x, y):
+    """Nottingham: castle keep on its rock behind the town wall."""
+    c.rect(x - 9, y + 1, x + 9, y + 7, "#9a9282")
+    for i in range(-9, 10, 3):
+        c.px(x + i, y, "#9a9282")
+    c.rect(x - 4, y - 7, x + 4, y + 1, "#aaa292")
+    c.rect(x + 2, y - 7, x + 4, y + 1, "#8a8476")
+    for i in (-4, -2, 0, 2, 4):
+        c.px(x + i, y - 8, "#aaa292")
+    c.rect(x - 1, y - 4, x, y - 2, "#2a2830")
+    c.rect(x - 1, y + 4, x + 1, y + 7, "#2a2422")
+    c.line(x, y - 8, x, y - 13, "#3a2a1a")
+    c.rect(x + 1, y - 13, x + 4, y - 11, "#a01e22")
+    for tx in (-9, 8):
+        c.rect(x + tx, y - 2, x + tx + 1, y + 7, "#8a8476")
+
+
+def icon_for(node_id, node):
+    if node_id == "sheriffs_toll_bridge":
+        return icon_toll
+    if node_id == "hanged_mans_crossing":
+        return icon_signpost
+    return {"camp": icon_camp, "village": icon_village, "forest": icon_forest, "road": icon_signpost, "town": icon_town}[node["kind"]]
+
+
+def make_map():
+    rng = random.Random(21)
+    data = json.load(open(os.path.join(ROOT, "data", "map.json")))
+    nodes = data["nodes"]
+    c = Canvas(MW, MH, "#d8c497")
+    # aged parchment: mottled, darker towards the edges
+    for y in range(MH):
+        for x in range(MW):
+            edge = min(x, y, MW - 1 - x, MH - 1 - y)
+            t = max(0.0, 1 - edge / 22) ** 2 * 0.5 + rng.random() * 0.08
+            c.px(x, y, mix("#dccb9e", "#a88a5a", t))
+    for _ in range(30):
+        c.ellipse(rng.randint(0, MW), rng.randint(0, MH), rng.randint(4, 12), rng.randint(3, 8), (168, 138, 90, 26))
+
+    pts = {k: map_point(n) for k, n in nodes.items()}
+    near_place = lambda x, y, r: any(math.hypot(x - px, y - py) < r for px, py in pts.values())
+
+    # farmland strips in the open north
+    for fx, fy in ((50, 14), (78, 30), (112, 14), (150, 40), (165, 70)):
+        for i in range(4):
+            for j in range(8):
+                xx, yy = fx + j * 2 - 8, fy + i * 3 - 6
+                if not near_place(xx, yy, 10):
+                    c.rect(xx, yy, xx + 1, yy + 1, ["#c8bc78", "#a8b468", "#bca86a", "#9cae60"][(i + j // 4) % 4])
+    # hills to the east
+    for hx, hy in ((150, 90), (162, 98), (156, 106), (168, 84), (120, 150), (100, 112)):
+        for i in range(-4, 5):
+            c.px(hx + i, hy - (4 - abs(i)) // 2, INK)
+        c.rect(hx - 1, hy - 1, hx + 1, hy, "#b89a6a")
+
+    # the river, flowing from the east under the Sheriff's bridge and away south-west
+    river = bezier((MW + 4, 100), pts["sheriffs_toll_bridge"], 0.1) + bezier(pts["sheriffs_toll_bridge"], (104, MH + 4), 0.2)
+    water = set()
+    for i, (x, y) in enumerate(river):
+        w = 2.4 + i / len(river) * 1.6
+        for yy in range(int(y - w), int(y + w) + 1):
+            for xx in range(int(x - w), int(x + w) + 1):
+                if math.hypot(xx - x, yy - y) <= w:
+                    water.add((xx, yy))
+    for xx, yy in water:
+        c.px(xx, yy, "#6a9ab4")
+    for xx, yy in water:
+        if any((xx + dx, yy + dy) not in water for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            c.px(xx, yy, "#3e6a88")
+        elif (xx * 3 + yy) % 11 == 0:
+            c.px(xx, yy, "#a8cce0")
+
+    # Sherwood: trees thick around the outlaw places, kept clear of roads and places
+    forest = [(30, 52, 30), (72, 88, 34), (50, 128, 26), (112, 82, 22), (98, 112, 18), (20, 100, 20)]
+    road_pts = []
+    drawn = set()
+    for a, n in nodes.items():
+        for b in n["links"]:
+            key = tuple(sorted((a, b)))
+            if key in drawn:
+                continue
+            drawn.add(key)
+            bend = ((sum(map(ord, key[0] + key[1])) % 7) - 3) * 0.04   # stable per road, unlike hash()
+            road_pts.append(bezier(pts[key[0]], pts[key[1]], bend))
+    on_road = lambda x, y, r: any(math.hypot(x - rx, y - ry) < r for road in road_pts for rx, ry in road[::2])
+    trees = []
+    for gy in range(4, MH - 4, 5):
+        for gx in range(4, MW - 4, 5):
+            x, y = gx + rng.randint(-1, 2), gy + rng.randint(-1, 2)
+            inside = any(math.hypot(x - fx, y - fy) < r * (0.85 + rng.random() * 0.3) for fx, fy, r in forest)
+            if inside and not near_place(x, y, 11) and not on_road(x, y, 4) and (x, y) not in water:
+                trees.append((x, y))
+    for x, y in sorted(trees, key=lambda p: p[1]):
+        map_tree(c, x, y, rng)
+
+    # roads: dusty tracks, turning to planks where they cross water
+    for road in road_pts:
+        for x, y in road:
+            for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                xx, yy = int(x) + dx, int(y) + dy
+                if (xx, yy) in water:
+                    c.px(xx, yy, "#8a6a44")
+                else:
+                    c.px(xx, yy, "#a2865a" if (xx + yy) % 5 else "#8e7248")
+
+    # compass rose
+    cx, cy = 18, MH - 20
+    c.line(cx, cy - 9, cx, cy + 9, INK)
+    c.line(cx - 9, cy, cx + 9, cy, INK)
+    c.rect(cx - 1, cy - 8, cx + 1, cy - 2, "#a01e22")
+    c.rect(cx - 1, cy + 2, cx + 1, cy + 8, INK)
+    c.px(cx, cy - 10, INK)
+    c.ellipse(cx, cy, 2, 2, "#e0c070")
+    for dy, row in enumerate(("1001", "1101", "1011", "1001")):   # a tiny N above the needle
+        for dx, bit in enumerate(row):
+            if bit == "1":
+                c.px(cx - 2 + dx, cy - 16 + dy, INK)
+
+    # each place's icon
+    for k, n in nodes.items():
+        x, y = pts[k]
+        icon = Canvas(MW, MH)
+        icon_for(k, n)(icon, round(x), round(y))
+        icon.outline("#2a1e14")
+        c.paste(icon, 0, 0)
+
+    # inked double frame
+    for i, colour in ((0, "#3a2a1a"), (1, "#8a6a44"), (3, "#5a4430")):
+        c.rect(i, i, MW - 1 - i, i, colour)
+        c.rect(i, MH - 1 - i, MW - 1 - i, MH - 1 - i, colour)
+        c.rect(i, i, i, MH - 1 - i, colour)
+        c.rect(MW - 1 - i, i, MW - 1 - i, MH - 1 - i, colour)
+    return c
+
+
+# ---------------------------------------------------------------- UI pieces
+
+def frame(fill, light, dark, border="#1e140c", size=12):
+    """A bevelled 9-slice frame: dark border, lit top-left edge, shaded bottom-right."""
+    c = Canvas(size, size, fill)
+    c.rect(1, 1, size - 2, 1, light)
+    c.rect(1, 1, 1, size - 2, light)
+    c.rect(1, size - 2, size - 2, size - 2, dark)
+    c.rect(size - 2, 1, size - 2, size - 2, dark)
+    c.rect(0, 0, size - 1, 0, border)
+    c.rect(0, size - 1, size - 1, size - 1, border)
+    c.rect(0, 0, 0, size - 1, border)
+    c.rect(size - 1, 0, size - 1, size - 1, border)
+    return c
+
+
+def make_ui():
+    frame("#6a4a2c", "#8e6a42", "#4a321e").save("assets", "ui", "button.png")
+    frame("#7e5a36", "#a47c4e", "#56391f").save("assets", "ui", "button_hover.png")
+    frame("#4a321e", "#3a2616", "#6a4a2c").save("assets", "ui", "button_pressed.png")
+    frame("#3e3226", "#4a3e32", "#2e2620", border="#1a140e").save("assets", "ui", "button_disabled.png")
+    p = frame("#2a1e14", "#4a3826", "#1a120c", border="#0e0a06")
+    p.rect(2, 2, 9, 9, (42, 30, 20, 235))
+    p.save("assets", "ui", "panel.png")
+    plaque = frame("#e8d8aa", "#f8ecc8", "#b49a6a", border="#4a3826")
+    plaque.save("assets", "ui", "plaque.png")
+    frame("#f0d070", "#fff0a8", "#c09a3a", border="#4a3826").save("assets", "ui", "plaque_selected.png")
+    shadow = Canvas(28, 8)
+    shadow.ellipse(13.5, 3.5, 13, 3.5, (0, 0, 0, 110))
+    shadow.save("assets", "ui", "shadow.png")
+    for name, colour in (("ring_turn", "#ffd860"), ("ring_target", "#7ad4ff")):
+        ring = Canvas(32, 10)
+        ring.ellipse(15.5, 4.5, 15, 4.5, hexc(colour, 255))
+        # hollow out the middle, leaving a soft shadow inside the ring
+        for y in range(10):
+            for x in range(32):
+                if ((x - 15.5) / 12.5) ** 2 + ((y - 4.5) / 2.8) ** 2 <= 1:
+                    ring.d[x, y] = (0, 0, 0, 90)
+        ring.save("assets", "ui", name + ".png")
+
+
+def make_all():
+    for name, fn in BACKDROPS.items():
+        fn().save("assets", "backdrops", name + ".png")
+    make_map().save("assets", "map", "map.png")
+    make_ui()
+
+
+if __name__ == "__main__":
+    make_all()
+    print("wrote %d backdrops, the map and UI frames" % len(BACKDROPS))

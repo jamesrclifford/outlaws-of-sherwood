@@ -178,7 +178,7 @@ func _handle(step: Dictionary) -> void:
 func _fight(enemy_ids: Array) -> void:
 	var view := BattleView.new()
 	view.set_anchors_preset(Control.PRESET_FULL_RECT)
-	view.run_battle(db, run.make_battle(enemy_ids), run.current_node()["text"])
+	view.run_battle(db, run.make_battle(enemy_ids), run.current_node()["text"], run.mission["location"])
 	view.finished.connect(func(b):
 		view.queue_free()
 		run.battle_finished(b)

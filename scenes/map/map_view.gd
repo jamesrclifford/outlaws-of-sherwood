@@ -1,15 +1,19 @@
 ## The strategic map: pick a place, the band walks there by itself, and the days pass.
-## Placeholder parchment and blocks stand in for the pixel-art map.
+## The painted map (tools/make_scenery.py) shows roads and places; parchment plaques name them.
 extends Control
 
 const GameData = preload("res://core/game_data.gd")
 const Campaign = preload("res://core/campaign.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
+const Style = preload("res://scenes/ui/style.gd")
 
 const MAP_TOP := 64
-const KIND_COLORS := {"camp": Color("3f7d3a"), "village": Color("a07a45"), "forest": Color("2f5a2a"), "road": Color("7a6a55"), "town": Color("6a5a7a")}
 const STEP_SECONDS := 0.35
+## The map art draws each place's icon this far above its node point, leaving room for the name below.
+const ICON_LIFT := 12
+const TOKEN_OFFSET := Vector2(12, -44)
+const INK := Color("3a2a1a")
 
 var db
 var campaign
@@ -18,7 +22,7 @@ var busy := false
 
 var status_label: Label
 var map_layer: Control
-var band_token: ColorRect
+var band_token: TextureRect
 var info_label: Label
 var buttons: GridContainer
 var news_label: Label
@@ -32,6 +36,7 @@ func start(game_data, c) -> void:
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	theme = Style.theme()
 	if campaign == null:
 		db = GameData.new()
 		campaign = Campaign.new(db, int(Time.get_ticks_usec()))
@@ -41,31 +46,35 @@ func _ready() -> void:
 
 func _build_layout() -> void:
 	var bg := ColorRect.new()
-	bg.color = Color("1d2b1f")
+	bg.color = Color("1a140e")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	add_child(Style.panel(Vector2(0, 0), Vector2(360, 62)))
 	status_label = _label(Vector2(8, 4), Vector2(344, 56), 10)
 
-	var parchment := ColorRect.new()
-	parchment.color = Color("c9b68a")
-	parchment.position = Vector2(4, MAP_TOP)
-	parchment.size = Vector2(352, 392)
-	add_child(parchment)
+	# 176x196 pixel art shown at 2x; roads, river, forest and place icons are all in the picture.
+	var art := TextureRect.new()
+	art.texture = preload("res://assets/map/map.png")
+	art.position = Vector2(4, MAP_TOP)
+	art.size = Vector2(352, 392)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_SCALE
+	add_child(art)
 	map_layer = Control.new()
 	map_layer.position = Vector2(4, MAP_TOP)
 	map_layer.size = Vector2(352, 392)
 	add_child(map_layer)
-	_draw_roads()
 	for id in campaign.map["nodes"]:
 		_add_node_button(id)
-	band_token = ColorRect.new()
-	band_token.color = Color("1a6b1a")
-	band_token.size = Vector2(12, 12)
+	band_token = TextureRect.new()
+	band_token.texture = preload("res://assets/sprites/robin.png")
+	band_token.size = Vector2(32, 32)
 	band_token.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_layer.add_child(band_token)
 	_place_token(campaign.location)
 
-	info_label = _label(Vector2(8, 460), Vector2(344, 64), 9)
+	add_child(Style.panel(Vector2(0, 458), Vector2(360, 182)))
+	info_label = _label(Vector2(8, 462), Vector2(344, 64), 9)
 	buttons = GridContainer.new()
 	buttons.columns = 2
 	buttons.position = Vector2(8, 528)
@@ -90,38 +99,39 @@ func _node_pos(id: String) -> Vector2:
 	return Vector2(n["x"], n["y"])
 
 
-func _draw_roads() -> void:
-	var drawn := {}
-	for id in campaign.map["nodes"]:
-		for other in campaign.node(id)["links"]:
-			var key: String = id + other if id < other else other + id
-			if drawn.has(key):
-				continue
-			drawn[key] = true
-			var line := Line2D.new()
-			line.width = 3
-			line.default_color = Color("8a7350")
-			line.add_point(_node_pos(id))
-			line.add_point(_node_pos(other))
-			map_layer.add_child(line)
-
-
+## Each place gets an invisible button over its painted icon and a parchment name plaque below it.
 func _add_node_button(id: String) -> void:
+	var icon := Button.new()
+	Style.flat(icon)
+	icon.size = Vector2(40, 30)
+	icon.position = _node_pos(id) - Vector2(20, ICON_LIFT + 16)
+	icon.pressed.connect(func(): _select(id))
+	map_layer.add_child(icon)
 	var b := Button.new()
 	b.name = id
-	b.size = Vector2(76, 30)
-	b.position = _node_pos(id) - Vector2(38, 15)
 	b.add_theme_font_size_override("font_size", 8)
-	var style := StyleBoxFlat.new()
-	style.bg_color = KIND_COLORS[campaign.node(id)["kind"]]
-	style.set_corner_radius_all(3)
-	b.add_theme_stylebox_override("normal", style)
+	b.add_theme_constant_override("line_spacing", -3)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(state, INK)
 	b.pressed.connect(func(): _select(id))
 	map_layer.add_child(b)
 
 
+## Sizes a place's plaque to its text and centres it under the icon.
+func _fit_plaque(id: String, selected_now: bool) -> void:
+	var b: Button = map_layer.get_node(id)
+	var style := Style.frame("plaque_selected" if selected_now else "plaque", 3)
+	style.content_margin_top = 1
+	style.content_margin_bottom = 1
+	for state in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(state, style)
+	b.reset_size()
+	var pos := _node_pos(id) + Vector2(-b.size.x / 2, 2)
+	b.position = Vector2(clamp(pos.x, 2, map_layer.size.x - b.size.x - 2), pos.y)
+
+
 func _place_token(id: String) -> void:
-	band_token.position = _node_pos(id) + Vector2(30, -20)
+	band_token.position = _node_pos(id) + TOKEN_OFFSET
 
 
 func _refresh() -> void:
@@ -135,7 +145,7 @@ func _refresh() -> void:
 		if c.missions.has(id):
 			tag = "\n[FREE FRIENDS]" if c.missions[id].has("rescue_heroes") else "\n[%s]" % c.missions[id]["type"].to_upper()
 		b.text = c.node(id)["name"] + tag
-		b.modulate = Color("ffe08a") if id == selected else Color.WHITE
+		_fit_plaque(id, id == selected)
 
 
 func _select(id: String) -> void:
@@ -208,7 +218,7 @@ func _travel(to: String) -> void:
 	var path: Array = campaign.route(to)
 	for step in path:
 		var tween := create_tween()
-		tween.tween_property(band_token, "position", _node_pos(step) + Vector2(30, -20), STEP_SECONDS)
+		tween.tween_property(band_token, "position", _node_pos(step) + TOKEN_OFFSET, STEP_SECONDS)
 		await tween.finished
 	campaign.travel(to)
 	busy = false
