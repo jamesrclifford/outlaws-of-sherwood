@@ -180,6 +180,10 @@ func finish_mission(run) -> void:
 		location = "camp"
 		gold = gold / 2
 	_post_stories()
+	if run.scouted:
+		# Scouting cost a day: food eaten, villains plotting, other jobs moving on, and no time to rest.
+		_news("Scouting the job cost the band a day.")
+		_end_day(false, false)
 
 
 # --- Spending gold -----------------------------------------------------------
@@ -334,7 +338,7 @@ func bribe_jailer() -> bool:
 
 # --- The day passes: villains act -------------------------------------------
 
-func _end_day(resting: bool) -> void:
+func _end_day(resting: bool, heal := true) -> void:
 	day += 1
 	var band := free_heroes()
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
@@ -344,9 +348,9 @@ func _end_day(resting: bool) -> void:
 		_news("The band has run out of food and arrows. Everyone grows weak.")
 	for h in band:
 		h.statuses.clear()
-		if fed:
+		if fed and heal:
 			h.heal(int(ceil(h.max_hp * (HEAL_AT_CAMP if resting else HEAL_ON_ROAD))))
-		else:
+		elif not fed:
 			h.hp = maxi(1, h.hp - int(ceil(h.max_hp * float(econ["supplies"]["hunger_damage"]))))
 	for id in missions.keys():
 		if not missions[id].has("rescue_heroes") and missions[id]["type"] != "story" and missions[id]["expires"] < day:
