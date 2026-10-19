@@ -1,5 +1,6 @@
 ## Procedural mission generator. A mission is plain data: a linear list of nodes the band walks through.
-## The Sheriff and Guy act as directors: the higher the threat, the more traps they plant.
+## The Sheriff and Guy act as directors: some robberies are really bait they have set up, and the higher
+## the threat, the more often that happens. Bait missions look normal until the band reaches the prize.
 extends RefCounted
 
 ## Rough "threat points" per enemy, used to spend a node's difficulty budget.
@@ -29,10 +30,14 @@ func generate(type: String, threat: int, seed_value: int, location_id := "", hun
 		var kinds: Array = slot.split("|")
 		nodes.append(_make_node(kinds[rng.randi_range(0, kinds.size() - 1)], loc, threat, type))
 
-	_plant_traps(nodes, threat, hunted_hero)
+	var bait := {}
+	if type == "robbery" and rng.randf() < bait_chance(threat):
+		bait = {"by": "guy" if rng.randf() < 0.5 else "sheriff", "revealed": false}
+		_set_bait(nodes, bait["by"], hunted_hero)
 
 	var gold := int(tpl["base_gold"] * (1.0 + threat / 100.0))
 	return {
+		"bait": bait,
 		"seed": seed_value,
 		"type": type,
 		"name": names[rng.randi_range(0, names.size() - 1)],
@@ -42,6 +47,42 @@ func generate(type: String, threat: int, seed_value: int, location_id := "", hun
 		"nodes": nodes,
 		"rewards": {"gold": gold, "reputation": int(tpl.get("reputation", 0))},
 	}
+
+
+## Chance that a robbery is really a trap. Grows with the Sheriff's grip on the region.
+static func bait_chance(threat: int) -> float:
+	return 0.15 + threat / 250.0
+
+
+## Turns a robbery into bait: the prize is a decoy guarding an ambush, the chase home is certain,
+## and the villain plants their own traps along the way.
+func _set_bait(nodes: Array, by: String, hunted_hero: String) -> void:
+	var b: Dictionary = db.baits[by]
+	for n in nodes:
+		if n["kind"] == "objective":
+			n["text"] = b["reveal"]
+			n["enemies"] = b["ambush"].duplicate()
+			n["loot"] = false
+			n["ambush"] = true
+		elif n.get("is_escape", false):
+			n["kind"] = "combat"
+			n["text"] = "They give chase!"
+			n["enemies"] = b["pursuers"].duplicate()
+	var owned: Array = db.traps.keys().filter(func(t): return db.traps[t]["owner"] == by)
+	var count := 1 + rng.randi_range(0, 1)
+	var candidates := []
+	for i in nodes.size():
+		if nodes[i]["kind"] != "approach":
+			candidates.append(i)
+	for _n in count:
+		if candidates.is_empty():
+			return
+		var node: Dictionary = nodes[candidates.pop_at(rng.randi_range(0, candidates.size() - 1))]
+		var options := owned.filter(func(t): return _trap_fits(t, node))
+		if options.is_empty():
+			continue
+		var trap_id: String = options[rng.randi_range(0, options.size() - 1)]
+		node["trap"] = {"id": trap_id, "revealed": false, "target": hunted_hero if db.traps[trap_id].get("targets", "") == "hunted" else ""}
 
 
 func _make_node(kind: String, loc: Dictionary, threat: int, mission_type: String) -> Dictionary:
@@ -88,29 +129,8 @@ func _buy_enemies(loc: Dictionary, budget: int) -> Array:
 	return out
 
 
-func _plant_traps(nodes: Array, threat: int, hunted_hero: String) -> void:
-	var count := 1 + threat / 40
-	var candidates := []
-	for i in nodes.size():
-		if nodes[i]["kind"] != "approach":
-			candidates.append(i)
-	var trap_ids: Array = db.traps.keys()
-	for _n in count:
-		if candidates.is_empty():
-			return
-		var idx: int = candidates.pop_at(rng.randi_range(0, candidates.size() - 1))
-		var node: Dictionary = nodes[idx]
-		var options := trap_ids.filter(func(t): return _trap_fits(t, node))
-		if options.is_empty():
-			continue
-		var trap_id: String = options[rng.randi_range(0, options.size() - 1)]
-		node["trap"] = {"id": trap_id, "revealed": false, "target": hunted_hero if db.traps[trap_id]["targets"] == "hunted" else ""} if db.traps[trap_id].has("targets") else {"id": trap_id, "revealed": false, "target": ""}
-
-
 func _trap_fits(trap_id: String, node: Dictionary) -> bool:
 	match db.traps[trap_id]["effect"]:
 		"ambush":
 			return node.has("enemies") and not node["enemies"].is_empty()
-		"steal_loot":
-			return node.get("loot", false)
 	return true

@@ -3,5 +3,5 @@
   "snare":           {"name": "Forester's Snare",    "owner": "guy",     "desc": "{hero} steps into a snare.",                      "effect": "snare",    "damage": 8, "targets": "random"},
   "tripwire":        {"name": "Tripwire Bell",       "owner": "guy",     "desc": "A bell rings. More guards are coming!",          "effect": "ambush",   "extra_enemies": ["man_at_arms", "hound"]},
   "hidden_crossbows":{"name": "Hidden Crossbowmen",  "owner": "sheriff", "desc": "Crossbowmen were waiting in the trees.",         "effect": "ambush",   "extra_enemies": ["crossbowman", "crossbowman"]},
-  "false_chest":     {"name": "The Sheriff's False Chest", "owner": "sheriff", "desc": "The chest is full of stones. The Sheriff keeps his gold.", "effect": "steal_loot", "loot_lost": 0.5}
+  "watch_horn":      {"name": "Watchman's Horn",     "owner": "sheriff", "desc": "A watchman spots the band and sounds his horn!", "effect": "ambush",   "extra_enemies": ["man_at_arms", "man_at_arms"]}
 }

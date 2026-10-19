@@ -105,11 +105,23 @@ func _show_briefing() -> void:
 	run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [run.mission["type"].capitalize(), run.mission["location_name"], run.mission["rewards"]["gold"]])
 	_refresh()
 	_set_buttons([
-		["Send scouts ahead", func():
-			run.scout()
-			_set_out()],
+		["Send scouts ahead", _scout],
 		["Set out now", _set_out],
 	])
+
+
+func _scout() -> void:
+	run.scout()
+	_refresh()
+	if run.is_bait() and run.mission["bait"]["revealed"]:
+		_set_buttons([
+			["Call it off", func():
+				run.call_off()
+				_finish()],
+			["Go anyway", _set_out],
+		])
+	else:
+		_set_out()
 
 
 func _set_out() -> void:

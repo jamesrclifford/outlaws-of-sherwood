@@ -214,14 +214,67 @@ func test_generator_is_deterministic_and_valid() -> void:
 			check(n.get("enemies", []).size() <= 5, "no more than five enemies per node")
 
 
-func test_higher_threat_means_more_traps() -> void:
+func test_some_robberies_are_bait_more_at_high_threat() -> void:
 	var gen = MissionGen.new(db)
 	var low := 0
 	var high := 0
-	for s in 50:
-		low += gen.generate("rescue", 0, s)["nodes"].filter(func(n): return n.has("trap")).size()
-		high += gen.generate("rescue", 90, s)["nodes"].filter(func(n): return n.has("trap")).size()
-	check(high > low, "threat 90 plants more traps than threat 0 (%d vs %d)" % [high, low])
+	for s in 200:
+		low += 1 if not gen.generate("robbery", 0, s)["bait"].is_empty() else 0
+		high += 1 if not gen.generate("robbery", 90, s)["bait"].is_empty() else 0
+	check(low > 0 and high > low, "bait robberies exist and are more common at high threat (%d vs %d of 200)" % [low, high])
+	for s in 100:
+		var m: Dictionary = gen.generate("rescue", 90, s)
+		check(m["bait"].is_empty(), "rescues are never bait")
+
+
+func test_only_bait_missions_have_traps() -> void:
+	var gen = MissionGen.new(db)
+	for s in 200:
+		var m: Dictionary = gen.generate(["robbery", "rescue"][s % 2], 80, s, "", "little_john")
+		var traps: Array = m["nodes"].filter(func(n): return n.has("trap"))
+		if m["bait"].is_empty():
+			check(traps.is_empty(), "an honest job has no planted traps")
+		else:
+			var by: String = m["bait"]["by"]
+			check(traps.all(func(n): return db.traps[n["trap"]["id"]]["owner"] == by), "traps in a bait job belong to whoever set it")
+			var goal: Dictionary = m["nodes"].filter(func(n): return n["kind"] == "objective")[0]
+			check(goal.get("ambush", false) and not goal.get("loot", false), "the bait's prize is an ambush with no loot")
+			if by == "guy":
+				check(goal["enemies"].has("guy"), "Gisborne springs his own trap")
+
+
+func _bait_mission(by: String) -> Dictionary:
+	var gen = MissionGen.new(db)
+	for s in 1000:
+		var m: Dictionary = gen.generate("robbery", 90, s)
+		if not m["bait"].is_empty() and m["bait"]["by"] == by:
+			return m
+	return {}
+
+
+func test_scouts_can_expose_bait_and_call_it_off() -> void:
+	var exposed := 0
+	for s in 40:
+		var m := _bait_mission("sheriff")
+		m["seed"] = s
+		var run = MissionRun.new(db, m, party())
+		run.scout()
+		if m["bait"]["revealed"]:
+			exposed += 1
+			run.call_off()
+			check(run.result == "called_off" and run.gold == 0 and run.captured.is_empty(), "calling off a bait job is safe")
+	check(exposed > 10 and exposed < 40, "scouts expose some but not all bait (%d/40)" % exposed)
+
+
+func test_surviving_bait_pays_no_loot() -> void:
+	for s in 20:
+		var m := _bait_mission("guy")
+		m["seed"] = s
+		var run = MissionRun.new(db, m, party())
+		autoplay_mission(run)
+		check(run.is_over(), "bait mission finishes")
+		if run.result == "success":
+			check(not run.loot_taken, "there was never any loot in the bait wagon")
 
 
 func test_gisborne_net_targets_the_hunted_hero() -> void:
@@ -253,20 +306,6 @@ func test_revealed_trap_can_be_avoided() -> void:
 	check(run.heroes.all(func(h): return h.hp == h.max_hp), "avoiding the snare means nobody is hurt")
 
 
-func test_false_chest_halves_the_loot() -> void:
-	var gen = MissionGen.new(db)
-	var m: Dictionary = gen.generate("robbery", 0, 4)
-	var obj: Dictionary = m["nodes"].filter(func(n): return n.get("loot", false))[0]
-	for n in m["nodes"]:
-		n.erase("trap")
-	obj["trap"] = {"id": "false_chest", "revealed": false, "target": ""}
-	var full: int = m["rewards"]["gold"]
-	var run = MissionRun.new(db, m, party())
-	autoplay_mission(run)
-	if run.result == "success":
-		check(m["rewards"]["gold"] == int(full * 0.5), "false chest halves the mission gold")
-
-
 func test_missions_finish_and_failures_capture_not_kill() -> void:
 	var gen = MissionGen.new(db)
 	var wins := 0
@@ -276,7 +315,7 @@ func test_missions_finish_and_failures_capture_not_kill() -> void:
 		check(run.is_over(), "mission %d finishes" % s)
 		if run.result == "success":
 			wins += 1
-			check(run.gold > 0, "a successful mission pays out")
+			check(run.gold > 0 or run.is_bait(), "a successful honest mission pays out")
 		else:
 			check(run.gold == 0, "a failed mission pays nothing")
 	print("mission success rate at threat 40 with simple autoplay: %d/40" % wins)

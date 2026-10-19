@@ -1,0 +1,16 @@
+{
+  "guy": {
+    "name": "Sir Guy of Gisborne",
+    "reveal": "The wagon's cover is thrown back. Sir Guy of Gisborne was waiting inside! It's a trap!",
+    "ambush": ["guy", "forester", "man_at_arms"],
+    "pursuers": ["hound", "hound", "forester"],
+    "scout_hint": "Hoofprints of a heavy warhorse circle the road. This smells like one of Gisborne's traps."
+  },
+  "sheriff": {
+    "name": "The Sheriff of Nottingham",
+    "reveal": "The strongbox is full of stones, and the Sheriff's soldiers rise from the ditches! It's a trap!",
+    "ambush": ["knight", "crossbowman", "crossbowman", "man_at_arms"],
+    "pursuers": ["knight", "man_at_arms"],
+    "scout_hint": "The wagon is barely guarded, and soldiers left the castle at dawn. The Sheriff may be baiting you."
+  }
+}

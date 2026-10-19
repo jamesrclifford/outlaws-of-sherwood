@@ -11,6 +11,7 @@ var encounters: Dictionary
 var locations: Dictionary
 var mission_templates: Dictionary
 var traps: Dictionary
+var baits: Dictionary
 
 
 func _init() -> void:
@@ -21,6 +22,7 @@ func _init() -> void:
 	locations = _load("res://data/locations.json")
 	mission_templates = _load("res://data/mission_templates.json")
 	traps = _load("res://data/traps.json")
+	baits = _load("res://data/baits.json")
 
 
 static func _load(path: String) -> Dictionary:

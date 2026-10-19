@@ -14,7 +14,7 @@ var reputation := 0
 var prisoner_freed := false
 var loot_taken := false
 var captured: Array = []
-var result := ""              # "", "success", "failed"
+var result := ""              # "", "success", "failed", "called_off"
 var mission_log: Array = []
 var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
@@ -25,6 +25,13 @@ func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
 	mission = mission_data
 	heroes = hero_units
 	rng.seed = int(mission["seed"]) + 7
+
+
+## Walks away from a job the scouts exposed as bait. No reward, no risk.
+func call_off() -> void:
+	if node_index == 0 and is_bait() and mission["bait"]["revealed"]:
+		result = "called_off"
+		_log("The band melts back into Sherwood. %s waits in vain." % db.baits[mission["bait"]["by"]]["name"])
 
 
 func current_node() -> Dictionary:
@@ -39,11 +46,19 @@ func _log(text: String) -> void:
 	mission_log.append(text)
 
 
-## Scouting ahead reveals each trap with a good chance. Only possible before setting out.
+func is_bait() -> bool:
+	return not mission.get("bait", {}).is_empty()
+
+
+## Scouting ahead may uncover that the whole job is bait, and reveals each planted trap with a
+## good chance. Only possible before setting out.
 func scout() -> int:
 	var found := 0
 	if node_index > 0:
 		return found
+	if is_bait() and rng.randf() < 0.6:
+		mission["bait"]["revealed"] = true
+		_log(db.baits[mission["bait"]["by"]]["scout_hint"])
 	for n in mission["nodes"]:
 		if n.has("trap") and not n["trap"]["revealed"] and rng.randf() < 0.75:
 			n["trap"]["revealed"] = true
@@ -119,6 +134,11 @@ func battle_finished(battle) -> void:
 	if battle.result == "retreated" and node.get("is_escape", false) and _objective_met():
 		_log("The band shakes off the pursuit, but leaves friends behind.")
 		return
+	if battle.result == "retreated" and is_bait() and (node.get("ambush", false) or node.get("is_escape", false)):
+		# Slipping out of a trap is the goal of a bait mission: skip straight home.
+		_log("The band slips out of the trap and runs for the greenwood.")
+		node_index = mission["nodes"].size() - 1
+		return
 	_fail("The mission has failed." if battle.result == "defeat" else "The band falls back to Sherwood.")
 
 
@@ -129,7 +149,11 @@ func advance() -> void:
 	_trap_decided = false
 	_sprung.clear()
 	if node_index >= mission["nodes"].size():
-		if _objective_met():
+		if is_bait():
+			result = "success"
+			reputation += 5
+			_log("The band escaped %s's trap with %d gold!" % [db.baits[mission["bait"]["by"]]["name"], gold])
+		elif _objective_met():
 			gold += int(mission["rewards"]["gold"])
 			reputation += int(mission["rewards"]["reputation"])
 			result = "success"
@@ -145,9 +169,9 @@ func _objective_met() -> bool:
 func _apply_objective(node: Dictionary) -> void:
 	if node.get("loot", false):
 		loot_taken = true
-		if node.get("loot_lost", 0.0) > 0.0:
-			mission["rewards"]["gold"] = int(mission["rewards"]["gold"] * (1.0 - node["loot_lost"]))
 		_log("The loot is taken!")
+	if node.get("ambush", false):
+		_log("The band fights its way out of the ambush!")
 	if node.get("prisoner", false):
 		prisoner_freed = true
 		_log("The prisoner is free!")
@@ -176,8 +200,6 @@ func _spring_trap(node: Dictionary) -> void:
 				victim.add_status("pinned", 2)
 		"ambush":
 			_sprung["extra_enemies"] = trap["extra_enemies"]
-		"steal_loot":
-			node["loot_lost"] = float(trap["loot_lost"])
 
 
 func _pick_victim(target_id: String):
