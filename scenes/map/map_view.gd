@@ -143,7 +143,13 @@ func _refresh() -> void:
 		var b: Button = map_layer.get_node(id)
 		var tag := ""
 		if c.missions.has(id):
-			tag = "\n[FREE FRIENDS]" if c.missions[id].has("rescue_heroes") else "\n[%s]" % c.missions[id]["type"].to_upper()
+			var m: Dictionary = c.missions[id]
+			if m.has("rescue_heroes"):
+				tag = "\n[FREE FRIENDS]"
+			elif m["type"] == "story":
+				tag = "\n[LEGEND]"
+			else:
+				tag = "\n[%s]" % m["type"].to_upper()
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 
@@ -164,8 +170,12 @@ func _select(id: String) -> void:
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
-		var expiry: String = "" if m.has("rescue_heroes") else ", gone after day %d" % m["expires"]
-		lines.append("Job: %s. Reward %d gold%s." % [m["name"], m["rewards"]["gold"], expiry])
+		if m["type"] == "story":
+			var joins: String = " %s may join the band." % db.heroes[m["recruit"]]["name"] if m["recruit"] != "" else ""
+			lines.append("Legend: %s.%s" % [m["name"], joins])
+		else:
+			var expiry: String = "" if m.has("rescue_heroes") else ", gone after day %d" % m["expires"]
+			lines.append("Job: %s. Reward %d gold%s." % [m["name"], m["rewards"]["gold"], expiry])
 	if not c.news.is_empty():
 		lines.append(c.news.back())
 	info_label.text = "\n".join(lines)

@@ -22,6 +22,7 @@ var captured: Array = []  # hero ids captured when the band loses or retreats
 var gold_escaped := 0
 var gold_won := 0
 var battle_log: Array = []
+var friendly := false     # a sporting bout from a story: losers yield instead of being captured
 
 
 func _init(ability_db: Dictionary, enemy_db: Dictionary, seed_value: int) -> void:
@@ -296,6 +297,9 @@ func _finish(how: String) -> void:
 			if how == "victory":
 				h.hp = 1
 				_emit("%s is helped back to their feet." % h.name)
+			elif friendly:
+				h.hp = 1
+				_emit("%s yields the bout." % h.name)
 			else:
 				captured.append(h.id)
 				_emit("%s is captured by the Sheriff's men!" % h.name)

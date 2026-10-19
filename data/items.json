@@ -13,5 +13,7 @@
   "mail_shirt":       {"name": "Mail Shirt",           "slot": "armor",   "classes": [],          "price": 150, "bonus": {"def": 3, "hp": 8, "spd": -1}},
   "lucky_charm":      {"name": "Lucky Charm",          "slot": "trinket", "classes": [],          "price": 50,  "bonus": {"crit": 0.05}},
   "hunters_boots":    {"name": "Hunter's Boots",       "slot": "trinket", "classes": [],          "price": 60,  "bonus": {"spd": 2}},
-  "herb_satchel":     {"name": "Herb Satchel",         "slot": "trinket", "classes": [],          "price": 50,  "bonus": {"hp": 6}}
+  "herb_satchel":     {"name": "Herb Satchel",         "slot": "trinket", "classes": [],          "price": 50,  "bonus": {"hp": 6}},
+  "ash_lute":           {"name": "Ash Lute",            "slot": "weapon",  "classes": ["Minstrel"], "price": 60,  "bonus": {"atk": 2}},
+  "silver_harp":        {"name": "Silver-strung Harp",  "slot": "weapon",  "classes": ["Minstrel"], "price": 120, "bonus": {"atk": 2, "spd": 2}}
 }

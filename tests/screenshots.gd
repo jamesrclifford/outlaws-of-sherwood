@@ -1,9 +1,12 @@
-## Saves screenshots of the title screen, a mission briefing and a battle mid-attack.
+## Saves screenshots of the title screen, a mission briefing, a legend's briefing and duel, and a battle mid-attack.
 ## xvfb-run godot --path . --rendering-driver opengl3 -s tests/screenshots.gd -- out_dir
 extends SceneTree
 
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
+const GameData = preload("res://core/game_data.gd")
+const MissionGen = preload("res://core/mission_gen.gd")
+const MissionRun = preload("res://core/mission_run.gd")
 
 
 func _snap(dir: String, tag: String) -> void:
@@ -29,6 +32,27 @@ func _init() -> void:
 	mission.threat = 40
 	root.add_child(mission)
 	await _snap(dir, "mission")
+	await _clear()
+
+	var db = GameData.new()
+	var story := MissionView.new()
+	var run = MissionRun.new(db, MissionGen.new(db).story("little_john_bridge", 25, 1), [db.make_hero("robin"), db.make_hero("will")])
+	story.play(db, run)
+	root.add_child(story)
+	await _snap(dir, "story")
+	# Walk to the duel on the bridge.
+	for i in 2:
+		story.buttons.get_child(story.buttons.get_child_count() - 1).pressed.emit()
+		await process_frame
+		await process_frame
+	await _snap(dir, "story_choice")
+	story.buttons.get_child(0).pressed.emit()
+	await process_frame
+	await process_frame
+	story.buttons.get_child(0).pressed.emit()   # Onward, to the bridge
+	for i in 30:
+		await process_frame
+	await _snap(dir, "duel")
 	await _clear()
 
 	var battle := BattleView.new()
