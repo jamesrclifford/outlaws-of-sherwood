@@ -2,6 +2,7 @@
 extends RefCounted
 
 const AP_PER_TURN := 2
+const BACK_ROW_ABILITY := "bow_shot"
 
 var id: String
 var name: String
@@ -37,6 +38,14 @@ static func from_data(unit_id: String, data: Dictionary, unit_side: String):
 	u.abilities = data.get("abilities", [])
 	u.carries_gold = int(data.get("carries_gold", 0))
 	return u
+
+
+## Abilities usable right now. Anyone standing in the back row can loose a bow shot.
+func available_abilities() -> Array:
+	var out := abilities.duplicate()
+	if row == "back" and not out.has(BACK_ROW_ABILITY):
+		out.append(BACK_ROW_ABILITY)
+	return out
 
 
 func is_active() -> bool:

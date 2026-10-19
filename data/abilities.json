@@ -1,6 +1,6 @@
 {
   "strike":        {"name": "Strike",          "ap": 1, "target": "enemy",       "range": "melee", "power": 1.0},
-  "shoot":         {"name": "Shoot",           "ap": 1, "target": "enemy",       "range": "any",   "power": 0.9},
+  "bow_shot":      {"name": "Bow Shot",        "ap": 1, "target": "enemy",       "range": "any",   "power": 0.8},
   "defend":        {"name": "Defend",          "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}]},
   "split_arrow":   {"name": "Split the Arrow", "ap": 2, "target": "enemy",       "range": "any",   "power": 1.7, "bonus_crit": 0.35},
   "pinning_shot":  {"name": "Pinning Shot",    "ap": 1, "target": "enemy",       "range": "any",   "power": 0.6, "effects": [{"status": "pinned", "turns": 2}]},

@@ -107,7 +107,7 @@ func upcoming() -> Array:
 # --- Targeting ---------------------------------------------------------------
 
 func usable_abilities(u) -> Array:
-	return u.abilities.filter(func(a): return abilities[a]["ap"] <= u.ap and not legal_targets(u, a).is_empty())
+	return u.available_abilities().filter(func(a): return abilities[a]["ap"] <= u.ap and not legal_targets(u, a).is_empty())
 
 
 func legal_targets(u, ability_id: String) -> Array:
@@ -141,7 +141,7 @@ func _has_front(side: String) -> bool:
 
 ## Performs an ability. Returns true if it was legal and happened.
 func perform(u, ability_id: String, target) -> bool:
-	if is_over() or u != current() or not u.abilities.has(ability_id):
+	if is_over() or u != current() or not u.available_abilities().has(ability_id):
 		return false
 	var ab: Dictionary = abilities[ability_id]
 	if ab["ap"] > u.ap or not legal_targets(u, ability_id).has(target):

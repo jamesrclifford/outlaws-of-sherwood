@@ -84,7 +84,7 @@ func test_melee_cannot_reach_back_row_while_front_stands() -> void:
 	check(not targets.is_empty(), "will has melee targets")
 	check(targets.all(func(t): return t.row == "front"), "melee only hits front row")
 	var robin_b = db.make_battle(["robin"], "tax_wagon", 3)
-	var shots: Array = robin_b.legal_targets(robin_b.heroes()[0], "shoot")
+	var shots: Array = robin_b.legal_targets(robin_b.heroes()[0], "bow_shot")
 	check(shots.any(func(t): return t.row == "back"), "ranged can hit back row")
 
 
@@ -93,6 +93,19 @@ func test_back_row_cannot_use_melee_while_front_row_ally_stands() -> void:
 	var tuck = Unit.from_data("tuck", db.heroes["tuck"], "heroes")
 	b.add_unit(tuck)
 	check(b.legal_targets(tuck, "strike").is_empty(), "back-row tuck cannot melee past little john")
+
+
+func test_back_row_gets_bow_shot() -> void:
+	var b = db.make_battle(["robin", "little_john"], "tax_wagon", 3)
+	var tuck = Unit.from_data("tuck", db.heroes["tuck"], "heroes")
+	b.add_unit(tuck)
+	check(tuck.available_abilities().has("bow_shot"), "back-row tuck can use a bow shot")
+	check(b.legal_targets(tuck, "bow_shot").any(func(t): return t.row == "back"), "bow shot reaches the enemy back row")
+	var john = b.heroes()[1]
+	check(not john.available_abilities().has("bow_shot"), "front-row little john has no bow shot")
+	john.row = "back"
+	check(john.available_abilities().has("bow_shot"), "little john gets a bow shot after moving to the back row")
+	check(tuck.available_abilities().count("bow_shot") == 1 and b.heroes()[0].available_abilities().count("bow_shot") == 1, "no duplicate bow shot")
 
 
 func test_taunt_forces_targeting() -> void:

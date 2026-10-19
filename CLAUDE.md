@@ -1,6 +1,6 @@
 # Outlaws of Sherwood
 
-Godot 4.3 / GDScript mobile game (portrait 360x640, pixel art). Design: docs/design-plan.md.
+Godot 4.7 / GDScript mobile game (portrait 360x640, pixel art). Design: docs/design-plan.md.
 
 - Keep rules in `core/` free of UI so they can be tested headlessly; screens in `scenes/` only call into core.
 - Content (heroes, enemies, abilities, encounters, later missions/traps) is data in `data/*.json`.

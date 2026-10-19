@@ -149,7 +149,7 @@ func _refresh_actions() -> void:
 	var cur = battle.current()
 	if cur == null or cur.side != "heroes":
 		return
-	for a in cur.abilities:
+	for a in cur.available_abilities():
 		var ab: Dictionary = db.abilities[a]
 		var btn := _add_button(actions_box, "%s (%d)" % [ab["name"], ab["ap"]], _on_ability_pressed.bind(a))
 		btn.disabled = not battle.usable_abilities(cur).has(a)

@@ -12,8 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Download Godot
         run: |
-          curl -sSL -o godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          curl -sSL -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
           unzip -q godot.zip
-          mv Godot_v4.3-stable_linux.x86_64 "$RUNNER_TEMP/godot"
+          mv Godot_v4.7.1-stable_linux.x86_64 "$RUNNER_TEMP/godot"
       - name: Run tests
         run: GODOT="$RUNNER_TEMP/godot" tests/run.sh
