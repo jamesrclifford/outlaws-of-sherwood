@@ -1,0 +1,794 @@
+{
+  "tales": {
+    "robins_wager": {
+      "name": "Robin's First Wager",
+      "node": "locksley",
+      "backdrop": "locksley",
+      "place": "The green at Locksley",
+      "requires": {},
+      "rewards": {"gold": 20, "reputation": 3},
+      "intro": "An old tale the band likes to tell: how young Robin of Locksley first crossed the King's foresters, and why he lives in the greenwood now.",
+      "nodes": [
+        {"kind": "approach", "text": "Young Robin walks to Nottingham fair with his bow. Under a tree sit fifteen foresters, eating pies and boasting."},
+        {"kind": "choice", "text": "'Ho, boy! That toy bow couldn't hit a barn door!' The foresters laugh at him.",
+          "options": [
+            {"label": "Wager he can hit the far oak", "result": "next", "log": "Robin bets them twenty shillings, draws, and splits a knot on an oak a hundred paces off."},
+            {"label": "Shrug and walk on", "result": "next", "log": "Robin walks on, but the foresters follow, jeering. He turns, shoots, and knocks the cap off the loudest one."}
+          ]},
+        {"kind": "combat", "text": "'Seize the cheeky pup!' Two of the foresters come at him.", "enemies": ["forester", "forester"]},
+        {"kind": "objective", "text": "The foresters run for Nottingham, dropping their purse. Robin buys supper for the whole village, and from that day he is an outlaw of Sherwood."}
+      ]
+    },
+    "will_meets_robin": {
+      "name": "The Stranger in Scarlet",
+      "node": "locksley",
+      "backdrop": "sherwood_edge",
+      "place": "A glade near Locksley",
+      "requires": {},
+      "rewards": {"gold": 0, "reputation": 3},
+      "intro": "Around the fire, Will Scarlet tells how he and Robin first met, and both of them insist they won.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, newly outlawed, sees a young man in fine scarlet strolling through the glade, sniffing a rose."},
+        {"kind": "choice", "text": "'Stand!' says Robin. The stranger yawns. 'Must I?'",
+          "options": [
+            {"label": "Ask for a toll", "result": "next", "log": "'A toll? From me?' The stranger draws his sword with a flourish."},
+            {"label": "Challenge him to a bout", "result": "next", "log": "'A bout? Delightful.' The stranger draws his sword with a flourish."}
+          ]},
+        {"kind": "duel", "text": "Bow against blade in the glade!", "party": ["robin"], "enemies": ["rival_will"], "friendly": true,
+          "win": "Robin trips the stranger into a gorse bush. 'Ow! All right, all right!'",
+          "lose": "The stranger flicks Robin's hood over his eyes. 'Shall we call it a draw?'"},
+        {"kind": "objective", "text": "'Will Gamwell is my name, Robin. I'm your own cousin, come to find you!' Ever after, the band calls him Will Scarlet."}
+      ]
+    },
+    "gamwell_christmas": {
+      "name": "Christmas at Gamwell Hall",
+      "node": "locksley",
+      "backdrop": "locksley",
+      "place": "Gamwell Hall",
+      "requires": {"reputation": 2},
+      "rewards": {"gold": 25, "reputation": 3},
+      "intro": "Will takes Robin home to his father's hall for Christmas. There's a yule log, plum pudding and games on the green.",
+      "nodes": [
+        {"kind": "approach", "text": "Old Squire Gamwell hugs his son and pours Robin a mug of hot spiced cider."},
+        {"kind": "choice", "text": "The village gathers on the green for the Christmas games.",
+          "options": [
+            {"label": "Join the cudgel play", "result": "next", "log": "Robin and Will knock over every challenger, and the village cheers."},
+            {"label": "Sing carols in the hall", "result": "next", "log": "Will sings loud and badly. Everyone joins in to drown him out."}
+          ]},
+        {"kind": "combat", "text": "A bailiff barges in. 'A Christmas tax, by order of the Sheriff! Hand over the pudding money!'", "enemies": ["tax_collector", "man_at_arms"]},
+        {"kind": "objective", "text": "The bailiff runs off into the snow without his hat. The squire gives the band a cartload of Christmas cheer for Sherwood."}
+      ]
+    },
+    "tanner": {
+      "name": "Arthur a Bland the Tanner",
+      "node": "edwinstowe",
+      "backdrop": "sherwood_edge",
+      "place": "Deep in Sherwood, near Edwinstowe",
+      "requires": {},
+      "rewards": {"gold": 0, "reputation": 4},
+      "intro": "A big tanner from Nottingham has been striding through Sherwood as if he owns it. Robin decides to have some fun.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin pulls his hood up and pretends to be a keeper of the King's forest."},
+        {"kind": "choice", "text": "'Who are you, bold fellow, to walk in the King's wood?' The tanner leans on his staff. 'Who are you to ask?'",
+          "options": [
+            {"label": "Demand his name", "result": "next", "log": "'My name? Make me tell you,' grins the tanner."},
+            {"label": "Measure staves", "result": "next", "log": "They measure their staves. The tanner's is longer. Robin cuts a longer one. The tanner laughs."}
+          ]},
+        {"kind": "duel", "text": "The tanner swings, and the oak leaves shake.", "party": ["robin"], "enemies": ["rival_tanner"], "friendly": true,
+          "win": "Robin's staff whacks the tanner's knuckles. 'Ow! Fair hit!'",
+          "lose": "THWACK! Robin sits down in the ferns, seeing stars. 'Hold your hand! I'll own you're the better man.'"},
+        {"kind": "objective", "text": "'Arthur a Bland is my name.' He promises to tan leather jerkins for the whole band, free of charge."}
+      ]
+    },
+    "golden_prize": {
+      "name": "Robin Hood's Golden Prize",
+      "node": "great_north_road",
+      "backdrop": "great_north_road",
+      "place": "The Great North Road",
+      "requires": {"reputation": 2},
+      "rewards": {"gold": 30, "reputation": 3},
+      "intro": "Two rich priests ride north, refusing every beggar on the road. Robin borrows a friar's robe.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, dressed as a poor friar, hobbles up to the priests. 'A penny for a hungry brother?'"},
+        {"kind": "choice", "text": "'We haven't a penny between us!' they cry. Their saddlebags clink.",
+          "options": [
+            {"label": "'Then let us pray for some!'", "result": "next", "gold": 40, "log": "Robin makes them kneel and pray. Then they all check their bags... and what a miracle! Robin shares out the gold, keeping a little for the poor."},
+            {"label": "Throw off the robe", "result": "fight", "enemies": ["monk", "monk"], "log": "'Robin Hood!' The priests swing their purses at him like clubs."}
+          ]},
+        {"kind": "objective", "text": "Robin makes the priests swear to be kind to beggars, and sends them on with enough for their supper."}
+      ]
+    },
+    "tinker": {
+      "name": "The Tinker's Warrant",
+      "node": "edwinstowe",
+      "backdrop": "locksley",
+      "place": "The inn at Edwinstowe",
+      "requires": {"reputation": 3},
+      "rewards": {"gold": 10, "reputation": 4},
+      "intro": "A tinker is going about with a warrant from the Sheriff to arrest Robin Hood. He has no idea what Robin looks like.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin finds the tinker at the inn, boasting about his warrant to anyone who'll listen."},
+        {"kind": "choice", "text": "'Do you know where Robin Hood is?' asks the tinker.",
+          "options": [
+            {"label": "Buy him another ale", "result": "next", "log": "Robin buys round after round. The tinker falls asleep, and Robin borrows the warrant and leaves him the bill."},
+            {"label": "'I'm sitting right here!'", "result": "next", "log": "The tinker laughs so hard he falls off his stool. Robin slips the warrant from his bag."}
+          ]},
+        {"kind": "duel", "text": "The tinker catches up with Robin in the lane, waving his hammer. 'You owe me a warrant and a bill!'", "party": ["robin"], "enemies": ["rival_tinker"], "friendly": true,
+          "win": "Robin knocks the tinker's hat over his eyes. The tinker can't stop laughing.",
+          "lose": "The tinker bonks Robin on the head with his tool bag. 'Got you!' But he's laughing too hard to hold on."},
+        {"kind": "objective", "text": "The tinker tears up the warrant himself. 'A man who pays for my ale is no villain.' He promises to mend the band's pots for life."}
+      ]
+    },
+    "pinder": {
+      "name": "The Jolly Pinder of Wakefield",
+      "node": "locksley",
+      "backdrop": "locksley",
+      "place": "The cornfields of Wakefield",
+      "requires": {"reputation": 4},
+      "rewards": {"gold": 10, "reputation": 4},
+      "intro": "The Pinder of Wakefield guards the town's fields, and nobody, knight or squire or outlaw, takes a shortcut across them.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin and Will take the short way, straight across the corn."},
+        {"kind": "choice", "text": "A big man with a big staff blocks the path. 'Back you go, the long way round, the pair of you.'",
+          "options": [
+            {"label": "'There are two of us!'", "result": "next", "log": "'Good,' says the Pinder, 'I was getting bored.'"},
+            {"label": "Offer to pay for the corn", "result": "next", "log": "'It's not the corn, it's the rule,' says the Pinder, setting his back to a thorn bush."}
+          ]},
+        {"kind": "duel", "text": "The Pinder takes on both of them at once!", "party": ["robin", "will"], "enemies": ["rival_pinder"], "friendly": true,
+          "win": "Robin and Will finally land him in the hedge. 'Well fought! Come and have bread and ale.'",
+          "lose": "The Pinder plants his staff and laughs. 'Had enough? Then come and eat.'"},
+        {"kind": "objective", "text": "Over bread and ale the Pinder agrees to join the band at Michaelmas, when his year of service ends."}
+      ]
+    },
+    "much_miller": {
+      "name": "Much the Miller's Son",
+      "node": "blidworth",
+      "backdrop": "locksley",
+      "place": "Blidworth mill",
+      "requires": {"reputation": 3},
+      "rewards": {"gold": 20, "reputation": 4},
+      "intro": "The miller of Blidworth grinds the poor folk's corn for free. Now the Sheriff has fined him, and his son Much has sent for Robin.",
+      "nodes": [
+        {"kind": "approach", "text": "Much, a quick little lad dusted white with flour, leads the outlaws to the mill."},
+        {"kind": "choice", "text": "The Sheriff's men are already counting the mill's sacks.",
+          "options": [
+            {"label": "Hide in the flour sacks", "result": "sneak", "log": "Robin and Will climb into the flour sacks..."},
+            {"label": "Stand in the mill door", "result": "fight", "enemies": ["tax_collector", "tax_collector", "man_at_arms"], "log": "'Put the miller's money back,' says Robin."}
+          ]},
+        {"kind": "objective", "text": "The fine is paid back, and the villagers have flour for the winter. Much becomes the band's swiftest messenger."}
+      ]
+    },
+    "beggar": {
+      "name": "Robin and the Beggar",
+      "node": "hanged_mans_crossing",
+      "backdrop": "hanged_mans_crossing",
+      "place": "The crossroads",
+      "requires": {"reputation": 4},
+      "rewards": {"gold": 15, "reputation": 3},
+      "intro": "Robin meets a sturdy old beggar at the crossroads with a heavy meal-bag and a heavier staff.",
+      "nodes": [
+        {"kind": "approach", "text": "For a joke, Robin asks the beggar to lend him a penny."},
+        {"kind": "choice", "text": "'Lend you? I'd sooner lend you a whack!'",
+          "options": [
+            {"label": "'Let's see your whack, then'", "result": "next", "log": "The beggar spits on his hands and grips his pikestaff."},
+            {"label": "Try to take the bag", "result": "next", "log": "The beggar slaps Robin's hand away. 'Mind your manners!'"}
+          ]},
+        {"kind": "duel", "text": "The old beggar is quicker than he looks!", "party": ["robin"], "enemies": ["rival_beggar"], "friendly": true,
+          "win": "Robin tips the beggar onto his own meal-bag, and oatmeal flies everywhere.",
+          "lose": "The beggar raps Robin's knuckles until he yelps. 'Respect your elders, lad!'"},
+        {"kind": "objective", "text": "They make friends, and the beggar teaches Robin how to walk and talk like a beggar, a disguise he will use many times."}
+      ]
+    },
+    "shepherd": {
+      "name": "Robin and the Shepherd",
+      "node": "blidworth",
+      "backdrop": "great_north_road",
+      "place": "The sheep meadows by Blidworth",
+      "requires": {"reputation": 5},
+      "rewards": {"gold": 10, "reputation": 3},
+      "intro": "A shepherd sits by the road with a fine bottle and a fat bag of bread. Robin and Will are very hungry.",
+      "nodes": [
+        {"kind": "approach", "text": "'Share your supper with two hungry travellers?' asks Robin."},
+        {"kind": "choice", "text": "The shepherd whistles for his dog. 'Win it off me, if you can.'",
+          "options": [
+            {"label": "Wager a gold piece", "result": "next", "log": "'Done!' says the shepherd. 'Loser pays for supper.'"},
+            {"label": "Wager Robin's horn", "result": "next", "log": "'Done!' says the shepherd. 'I fancy a horn.'"}
+          ]},
+        {"kind": "duel", "text": "The shepherd and his dog against Robin and Will!", "party": ["robin", "will"], "enemies": ["rival_shepherd", "hound"], "friendly": true,
+          "win": "The dog rolls over for a tummy rub, and the shepherd gives up laughing.",
+          "lose": "The dog herds Robin and Will into a pen with the sheep. Baaa!"},
+        {"kind": "objective", "text": "The shepherd shares his supper anyway, and promises to warn the band whenever the Sheriff's riders cross his meadows."}
+      ]
+    },
+    "ranger": {
+      "name": "Robin and the Ranger",
+      "node": "edwinstowe",
+      "backdrop": "sherwood_edge",
+      "place": "The King's deer park",
+      "requires": {"reputation": 6},
+      "rewards": {"gold": 10, "reputation": 4},
+      "intro": "A new ranger guards the King's deer park, and he's sworn to keep Robin Hood out of it.",
+      "nodes": [
+        {"kind": "approach", "text": "The ranger finds Robin sitting on the park wall, eating an apple."},
+        {"kind": "choice", "text": "'Off that wall, outlaw, or I'll knock you off!'",
+          "options": [
+            {"label": "Jump down", "result": "next", "log": "Robin jumps down. 'Bows or swords?' 'Swords. Bows are for cowards.' 'We'll see.'"},
+            {"label": "Throw him the apple core", "result": "next", "log": "It bounces off the ranger's nose. That settles it."}
+          ]},
+        {"kind": "duel", "text": "Ranger against outlaw among the deer!", "party": ["robin"], "enemies": ["rival_ranger"], "friendly": true,
+          "win": "Robin's arrow pins the ranger's cloak to a tree. 'I give up! Well shot!'",
+          "lose": "The ranger knocks Robin's bow away. 'Yield?' 'Yield. But you fight like an outlaw.'"},
+        {"kind": "objective", "text": "The ranger admits the Sheriff pays him badly anyway. He'll look the other way whenever the band passes through."}
+      ]
+    },
+    "bold_pedlar": {
+      "name": "The Bold Pedlar",
+      "node": "locksley",
+      "backdrop": "great_north_road",
+      "place": "The road out of Locksley",
+      "requires": {"reputation": 5},
+      "rewards": {"gold": 15, "reputation": 4},
+      "intro": "A pedlar with a huge pack is walking the road. Will Scarlet wants to know what's in it.",
+      "nodes": [
+        {"kind": "approach", "text": "'What's in the pack, friend?' asks Will. 'Needles, ribbons, buttons... and a stout stick for nosy folk.'"},
+        {"kind": "choice", "text": "The pedlar sets the pack down and cracks his knuckles.",
+          "options": [
+            {"label": "Will draws his sword", "result": "next", "log": "'Swords? I'll use my staff,' grins the pedlar."},
+            {"label": "Robin offers to buy a ribbon", "result": "next", "log": "'No you don't,' says Will. 'I want to fight him!'"}
+          ]},
+        {"kind": "duel", "text": "Will against the pedlar, with Robin watching and eating an apple.", "party": ["will"], "enemies": ["rival_pedlar"], "friendly": true,
+          "win": "Will spins the pedlar around until he sits down dizzy.",
+          "lose": "The pedlar whacks Will's sword out of his hand. Robin laughs so hard he chokes on the apple."},
+        {"kind": "objective", "text": "'Gamble Gold is my name,' says the pedlar. 'I'm running from the Sheriff myself.' Robin knows the name: he's Robin's own cousin!"}
+      ]
+    },
+    "poor_knight": {
+      "name": "The Sad Knight",
+      "node": "great_north_road",
+      "backdrop": "major_oak",
+      "place": "Under the greenwood tree",
+      "requires": {"reputation": 5},
+      "rewards": {"gold": 0, "reputation": 6},
+      "intro": "A knight rides by in a shabby cloak, with his hood pulled down and the saddest face in England.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin invites the knight to dinner under the greenwood tree. He eats like a man who hasn't had a good meal in weeks."},
+        {"kind": "choice", "text": "'I am Sir Richard at the Lee. I owe the Abbot of St Mary's four hundred pounds. If I can't pay by Midsummer, he takes my lands.'",
+          "options": [
+            {"label": "Lend him the money", "result": "next", "log": "'Who will stand surety for you?' 'Only Our Lady.' 'Then she is surety enough.' Robin counts out four hundred pounds."},
+            {"label": "Lend him the money, and a horse", "result": "next", "log": "Robin lends him the money, a good grey horse and Will as his squire for the road."}
+          ]},
+        {"kind": "combat", "text": "Two of the Abbot's spies have been watching from the bushes. They mean to report to the Abbot!", "enemies": ["forester", "monk"]},
+        {"kind": "objective", "text": "Sir Richard rides away a happier man. 'Within a year I will repay you,' he swears."}
+      ]
+    },
+    "robins_larder": {
+      "name": "Robin Hood's Larder",
+      "node": "sherwood_edge",
+      "backdrop": "sherwood_edge",
+      "place": "The hollow oak called Robin Hood's Larder",
+      "requires": {"band": ["little_john"], "reputation": 6},
+      "rewards": {"gold": 20, "reputation": 6},
+      "intro": "Winter is coming. The band fills a great hollow oak with food for the poor families of Sherwood.",
+      "nodes": [
+        {"kind": "approach", "text": "Little John hauls sacks of flour, Will rolls cheeses, and Robin counts out the hams."},
+        {"kind": "hazard", "text": "Snow starts to fall. The band has to drag the last cart through the drifts."},
+        {"kind": "combat", "text": "The Sheriff's foresters and hounds have found the larder! 'All this belongs to the Sheriff now!'", "enemies": ["forester", "forester", "hound", "hound"]},
+        {"kind": "objective", "text": "The foresters flee through the snow. All winter long, no family in Sherwood goes hungry."}
+      ]
+    },
+    "three_keepers": {
+      "name": "Robin Hood's Delight",
+      "node": "sherwood_edge",
+      "backdrop": "sherwood_edge",
+      "place": "A clearing in Sherwood",
+      "requires": {"band": ["little_john"], "reputation": 7},
+      "rewards": {"gold": 0, "reputation": 4},
+      "intro": "On a fine May morning, Robin, Little John and Will meet three of the King's keepers, who swear they'll catch an outlaw today.",
+      "nodes": [
+        {"kind": "approach", "text": "'Three of you, three of us,' says Robin. 'Shall we make a morning of it?'"},
+        {"kind": "choice", "text": "The keepers look at each other, then at Little John's size, and gulp.",
+          "options": [
+            {"label": "Swords and staves", "result": "next", "log": "'Agreed!' They pair off across the clearing."},
+            {"label": "First to the brook loses", "result": "next", "log": "'Agreed!' Everyone eyes the muddy brook."}
+          ]},
+        {"kind": "duel", "text": "They fight from morning to afternoon, and nobody wants to stop!", "party": ["robin", "little_john", "will"], "enemies": ["rival_keeper", "rival_keeper", "rival_keeper"], "friendly": true,
+          "win": "The keepers fall over, puffing. 'Enough! We'll buy the drinks!'",
+          "lose": "The outlaws flop down, puffing. 'Enough! We'll buy the drinks!'"},
+        {"kind": "objective", "text": "All six walk to Nottingham arm in arm and spend the evening telling stories at the inn. They call it Robin Hood's Delight."}
+      ]
+    },
+    "butcher": {
+      "name": "Robin the Butcher",
+      "node": "nottingham",
+      "backdrop": "nottingham_market",
+      "place": "Nottingham market",
+      "requires": {"band": ["little_john"], "reputation": 6},
+      "rewards": {"gold": 50, "reputation": 5},
+      "intro": "Robin buys a butcher's cart, his apron and all his meat, and drives to Nottingham market to sell it.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin sells meat at a penny a pound. The other butchers grumble. The townsfolk queue round the square."},
+        {"kind": "choice", "text": "The Sheriff thinks this new butcher must be a rich fool. 'Have you any horned beasts to sell, good butcher?'",
+          "options": [
+            {"label": "'Hundreds! Come and see.'", "result": "next", "log": "The Sheriff brings three hundred pounds and follows Robin into Sherwood, rubbing his hands."},
+            {"label": "Give meat free to widows first", "result": "next", "reputation": 2, "log": "Every widow in Nottingham goes home with a roast. Then Robin leads the greedy Sheriff into Sherwood."}
+          ]},
+        {"kind": "approach", "text": "A herd of deer bounds across the glade. 'There are my horned beasts!' says Robin, and blows his horn."},
+        {"kind": "combat", "text": "'It's Robin Hood!' The Sheriff's guards draw their swords.", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "The Sheriff pays for his dinner with his three hundred pounds and rides home very grumpy."}
+      ]
+    },
+    "potter": {
+      "name": "Robin and the Potter",
+      "node": "nottingham",
+      "backdrop": "nottingham_market",
+      "place": "Nottingham market",
+      "requires": {"band": ["little_john"], "reputation": 8},
+      "rewards": {"gold": 40, "reputation": 5},
+      "intro": "A potter has driven his cart through Sherwood for three years without paying Robin a penny of toll. Little John bets Robin can't make him pay.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin steps into the road and grabs the potter's horse. The potter jumps down with a staff."},
+        {"kind": "duel", "text": "Robin against the potter, with Little John watching and grinning.", "party": ["robin"], "enemies": ["rival_potter"], "friendly": true,
+          "win": "Robin knocks the potter's staff away. They shake hands, laughing.",
+          "lose": "The potter knocks Robin flat. Little John wins his bet."},
+        {"kind": "choice", "text": "Robin trades clothes with the potter and drives the pots to Nottingham. He sells them so cheap that the Sheriff's wife buys the last five, and asks him to dinner!",
+          "options": [
+            {"label": "Shoot with the Sheriff's men", "result": "next", "log": "After dinner Robin out-shoots every archer at the Sheriff's butts. 'Who taught you?' 'Robin Hood himself. I could take you to him...'"},
+            {"label": "Give the lady a gift", "result": "next", "reputation": 1, "log": "Robin gives the Sheriff's wife a pot of honey. She likes him far better than her husband. 'I could take you to Robin Hood,' he tells the Sheriff."}
+          ]},
+        {"kind": "combat", "text": "Deep in Sherwood, the Sheriff and his guards realise who the potter really is!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "The Sheriff walks home without his horse. Robin sends the lady a white pony 'from the potter', and pays the real potter ten pounds for his pots."}
+      ]
+    },
+    "reynold_greenleaf": {
+      "name": "Little John in the Sheriff's House",
+      "node": "nottingham",
+      "backdrop": "archery_contest",
+      "place": "The Sheriff's house in Nottingham",
+      "requires": {"band": ["little_john"], "reputation": 9},
+      "rewards": {"gold": 70, "reputation": 5},
+      "intro": "Little John shoots in the Sheriff's contest under the name Reynold Greenleaf. He shoots so well that the Sheriff hires him as a servant!",
+      "nodes": [
+        {"kind": "approach", "text": "One morning the Sheriff goes hunting. Little John wakes up late and very hungry, and the steward won't give him breakfast."},
+        {"kind": "choice", "text": "The kitchen door is locked.",
+          "options": [
+            {"label": "Knock it down", "result": "next", "log": "CRASH! John eats a whole pie, a loaf and a ham."},
+            {"label": "Climb through the window", "result": "next", "log": "John squeezes through the window, gets stuck, gets unstuck, and eats a whole pie."}
+          ]},
+        {"kind": "duel", "text": "The Sheriff's cook comes at John with a ladle and a sword!", "party": ["little_john"], "enemies": ["rival_cook"], "friendly": true,
+          "win": "John sits the cook in his own flour bin. 'You're the best fighter in this house!' gasps the cook.",
+          "lose": "The cook bops John on the head with the ladle. 'You're the best fighter I've met!' gasps John."},
+        {"kind": "objective", "text": "The cook wants to join the outlaws. Together they pack up the Sheriff's silver plates and four hundred pounds."},
+        {"kind": "combat", "text": "A guard spots them carrying sacks of silver out of the back door!", "party": ["little_john"], "enemies": ["man_at_arms"], "is_escape": true}
+      ]
+    },
+    "sheriff_dinner": {
+      "name": "The Sheriff Dines in Sherwood",
+      "node": "sherwood_edge",
+      "backdrop": "major_oak",
+      "place": "Under the Major Oak",
+      "requires": {"stories": ["reynold_greenleaf"], "reputation": 12},
+      "rewards": {"gold": 60, "reputation": 6},
+      "intro": "Little John goes looking for the Sheriff, who is still out hunting and has no idea his silver has gone.",
+      "nodes": [
+        {"kind": "approach", "text": "'Master!' cries John. 'I've seen a green hart with seven score deer behind him! Come and see!'"},
+        {"kind": "choice", "text": "The Sheriff follows John deep into the forest, straight to Robin's camp.",
+          "options": [
+            {"label": "Serve dinner on his own silver", "result": "next", "log": "The Sheriff stares at his own silver plates, holding his own roast. He loses his appetite."},
+            {"label": "Let him sleep under the stars", "result": "next", "log": "The Sheriff spends a cold night on the ground in his shirt. 'I'd give anything for my own feather bed!'"}
+          ]},
+        {"kind": "combat", "text": "The Sheriff's escort finally catches up and charges into the camp!", "enemies": ["sheriff", "man_at_arms", "man_at_arms"]},
+        {"kind": "objective", "text": "The Sheriff swears an oath never to harm the band again. Nobody believes him, but he goes home very quietly."}
+      ]
+    },
+    "four_beggars": {
+      "name": "Little John and the Four Beggars",
+      "node": "blidworth",
+      "backdrop": "great_north_road",
+      "place": "The road to Blidworth",
+      "requires": {"band": ["little_john"], "reputation": 8},
+      "rewards": {"gold": 40, "reputation": 4},
+      "intro": "Little John borrows a palmer's robe and goes begging along the road, to see what he can learn.",
+      "nodes": [
+        {"kind": "approach", "text": "He meets four beggars: one blind, one deaf, one dumb and one lame."},
+        {"kind": "choice", "text": "'Give us something, brother!' says the dumb one. The blind one is counting coins.",
+          "options": [
+            {"label": "'Let's share what we have'", "result": "next", "log": "John opens his empty purse. The beggars scowl. 'You're no use. Clear off!'"},
+            {"label": "'I thought you were blind?'", "result": "next", "log": "The blind beggar blushes. The lame one jumps up. The dumb one shouts 'Get him!'"}
+          ]},
+        {"kind": "combat", "text": "The sham beggars attack Little John!", "party": ["little_john"], "enemies": ["fake_beggar", "fake_beggar", "fake_beggar"]},
+        {"kind": "objective", "text": "Their ragged cloaks are sewn full of gold! The blind run, the lame leap a hedge, and John shares the gold out among the real poor of Blidworth."}
+      ]
+    },
+    "scotsman": {
+      "name": "Robin and the Scotsman",
+      "node": "sheriffs_toll_bridge",
+      "backdrop": "sheriffs_toll_bridge",
+      "place": "The Sheriff's toll bridge",
+      "requires": {"band": ["little_john"], "reputation": 9},
+      "rewards": {"gold": 10, "reputation": 4},
+      "intro": "A huge Scotsman has come south to join Robin Hood's band. He says he can beat anyone in it.",
+      "nodes": [
+        {"kind": "approach", "text": "'Anyone?' says Little John, rolling up his sleeves."},
+        {"kind": "choice", "text": "A crowd gathers on the bridge to watch.",
+          "options": [
+            {"label": "Staves", "result": "next", "log": "'Staves it is!' The Scotsman twirls a staff as long as a boat."},
+            {"label": "Fists", "result": "next", "log": "'Fists, then!' Robin says they'd better use staves, so nobody loses a tooth."}
+          ]},
+        {"kind": "duel", "text": "Little John against the Scotsman, in the middle of the bridge!", "party": ["little_john"], "enemies": ["rival_scot"], "friendly": true,
+          "win": "SPLASH! The Scotsman goes into the river. He comes up laughing.",
+          "lose": "SPLASH! Little John goes into the river, just like the old days."},
+        {"kind": "objective", "text": "The Scotsman joins the band, and the crowd go home talking about the best fight they've ever seen."}
+      ]
+    },
+    "three_pedlars": {
+      "name": "Robin and the Three Pedlars",
+      "node": "sheriffs_toll_bridge",
+      "backdrop": "great_north_road",
+      "place": "The road by the toll bridge",
+      "requires": {"band": ["little_john"], "reputation": 10},
+      "rewards": {"gold": 15, "reputation": 4},
+      "intro": "Three pedlars walk the road with heavy packs. 'They must be carrying something good,' says Will.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin calls to them to stop. They walk faster."},
+        {"kind": "choice", "text": "Robin shoots an arrow into the leading pedlar's pack. Out pours a cloud of sweet-smelling herbs.",
+          "options": [
+            {"label": "Apologise", "result": "next", "log": "'Sorry about your pack,' says Robin. 'Sorry about your head,' say the pedlars, raising their staves."},
+            {"label": "Call them to fight", "result": "next", "log": "The pedlars drop their packs and raise their staves."}
+          ]},
+        {"kind": "duel", "text": "Three pedlars against three outlaws!", "party": ["robin", "little_john", "will"], "enemies": ["rival_chapman", "rival_chapman", "rival_chapman"], "friendly": true,
+          "win": "The pedlars sit down in the road. 'You win! Have some of our healing balm.'",
+          "lose": "The outlaws are black and blue. The pedlars rub their healing balm on every bruise."},
+        {"kind": "objective", "text": "The pedlars sell healing herbs, and now they'll sell them to the band at half price."}
+      ]
+    },
+    "noble_fisherman": {
+      "name": "The Noble Fisherman",
+      "node": "great_north_road",
+      "backdrop": "harbour",
+      "place": "Scarborough harbour",
+      "requires": {"band": ["little_john"], "reputation": 10},
+      "rewards": {"gold": 80, "reputation": 5},
+      "intro": "Robin wonders if a fisherman's life is easier than an outlaw's. He rides to Scarborough and hires on a fishing boat as 'Simon'.",
+      "nodes": [
+        {"kind": "approach", "text": "Simon is the worst fisherman the boat has ever seen. He tangles every line."},
+        {"kind": "choice", "text": "A French pirate ship comes alongside! The fishermen shake with fear.",
+          "options": [
+            {"label": "'Tie me to the mast!'", "result": "next", "log": "'So the waves don't throw off my aim,' says Simon, stringing his bow."},
+            {"label": "Climb into the rigging", "result": "next", "log": "Simon climbs the mast like a squirrel and strings his bow."}
+          ]},
+        {"kind": "combat", "text": "The pirates swing aboard with cutlasses!", "party": ["robin"], "enemies": ["pirate", "pirate"]},
+        {"kind": "objective", "text": "The pirates jump back to their ship and sail away, leaving a chest of gold behind. Robin gives half to the fishermen, and half to the poor of Scarborough."}
+      ]
+    },
+    "knight_pays_abbot": {
+      "name": "The Knight and the Abbot",
+      "node": "great_north_road",
+      "backdrop": "abbey",
+      "place": "St Mary's Abbey, York",
+      "requires": {"stories": ["poor_knight"], "band": ["little_john"], "reputation": 9},
+      "rewards": {"gold": 30, "reputation": 5},
+      "intro": "It's Midsummer. Sir Richard rides to St Mary's Abbey to pay his debt, and the band comes along in disguise.",
+      "nodes": [
+        {"kind": "approach", "text": "Sir Richard comes before the Abbot in his old, shabby cloak. The Abbot rubs his hands."},
+        {"kind": "choice", "text": "'Have you brought my money, knight? No? Then your lands are mine!'",
+          "options": [
+            {"label": "Pour out the gold", "result": "next", "log": "Sir Richard pours four hundred pounds onto the table. 'Not one penny more.' The Abbot turns purple."},
+            {"label": "Make him beg first", "result": "next", "log": "Sir Richard pleads for more time, and the Abbot laughs. Then the knight pours the gold onto the table. The Abbot turns purple."}
+          ]},
+        {"kind": "combat", "text": "'Guards! Throw them out and keep the gold!'", "enemies": ["abbot", "man_at_arms", "man_at_arms", "monk"]},
+        {"kind": "objective", "text": "Sir Richard rides home free and clear. 'Now I must save up to repay Robin,' he says."}
+      ]
+    },
+    "cellarer": {
+      "name": "Our Lady Repays",
+      "node": "sherwood_edge",
+      "backdrop": "major_oak",
+      "place": "Under the greenwood tree",
+      "requires": {"stories": ["knight_pays_abbot"], "reputation": 12},
+      "rewards": {"gold": 80, "reputation": 4},
+      "intro": "The High Cellarer of St Mary's Abbey rides through Sherwood with a great train of packhorses.",
+      "nodes": [
+        {"kind": "approach", "text": "Little John bows deeply and invites the monks to dinner with Robin Hood."},
+        {"kind": "choice", "text": "'Our Lady stood surety for a loan to a knight,' says Robin. 'Perhaps she's sent the money with you. How much do you carry?' 'Only twenty marks,' says the cellarer.",
+          "options": [
+            {"label": "Search the saddlebags", "result": "next", "gold": 60, "log": "Little John counts eight hundred pounds! 'Our Lady has paid us twice over,' says Robin."},
+            {"label": "Take him at his word", "result": "next", "log": "Robin trusts him, but a bag splits open, and gold coins roll everywhere."}
+          ]},
+        {"kind": "combat", "text": "The cellarer's guards draw their swords!", "enemies": ["man_at_arms", "man_at_arms", "monk", "monk"]},
+        {"kind": "objective", "text": "The monks ride on, lighter by a fortune. The band shares it among every poor village in Sherwood."}
+      ]
+    },
+    "knight_returns": {
+      "name": "Sir Richard Keeps His Word",
+      "node": "blidworth",
+      "backdrop": "locksley",
+      "place": "The wrestling green at Wentbridge",
+      "requires": {"stories": ["cellarer"], "reputation": 14},
+      "rewards": {"gold": 60, "reputation": 5},
+      "intro": "A year has passed. Sir Richard rides to Sherwood to repay Robin, bringing a hundred fine bows as a gift. On the way, he passes a wrestling match.",
+      "nodes": [
+        {"kind": "approach", "text": "A poor yeoman has won the wrestling, but the bad losers are trying to cheat him out of his prize."},
+        {"kind": "choice", "text": "Sir Richard stops his horse. Little John is with him as an escort.",
+          "options": [
+            {"label": "Stand by the yeoman", "result": "next", "log": "Sir Richard stands beside the yeoman. 'The prize is his. Who says otherwise?'"},
+            {"label": "Wrestle the champion", "result": "next", "log": "Little John offers to wrestle the champion of the bad losers."}
+          ]},
+        {"kind": "duel", "text": "Little John wrestles the champion!", "party": ["little_john"], "enemies": ["rival_wrestler"], "friendly": true,
+          "win": "Little John flips the champion head over heels. The crowd roars.",
+          "lose": "The champion pins Little John, but shakes his hand. 'The yeoman won fair.'"},
+        {"kind": "combat", "text": "The bad losers set their hired men on Sir Richard!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "Sir Richard arrives in Sherwood late, with four hundred pounds and a hundred bows. Robin won't take the money: Our Lady already paid it!"}
+      ]
+    },
+    "widows_sons": {
+      "name": "The Widow's Three Sons",
+      "node": "hanged_mans_crossing",
+      "backdrop": "hanged_mans_crossing",
+      "place": "The crossroads",
+      "requires": {"band": ["little_john"], "reputation": 11},
+      "rewards": {"gold": 30, "reputation": 7},
+      "intro": "A widow weeps on the road. Her three sons were caught taking the King's deer to feed their family, and the Sheriff means to make an example of them.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin swaps clothes with an old pilgrim and hobbles to the crossroads."},
+        {"kind": "choice", "text": "The Sheriff is there with his guards and the three frightened brothers.",
+          "options": [
+            {"label": "Offer to be the Sheriff's helper", "result": "next", "log": "'I'll do the job for a shilling,' says the 'old pilgrim'. The Sheriff agrees, and Robin steps up beside the brothers."},
+            {"label": "Blow the horn at once", "result": "next", "log": "Robin blows three blasts. A hundred outlaws come running over the hill!"}
+          ]},
+        {"kind": "combat", "text": "'It's Robin Hood! Seize him!'", "enemies": ["sheriff", "man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "Robin cuts the brothers free, and they run home to their mother. All three join the band."},
+        {"kind": "escape", "text": "The band melts into the trees before more soldiers arrive.", "is_escape": true}
+      ]
+    },
+    "will_stutly": {
+      "name": "The Rescue of Will Stutly",
+      "node": "nottingham",
+      "backdrop": "nottingham_gate",
+      "place": "Nottingham gate",
+      "requires": {"band": ["little_john"], "reputation": 12},
+      "rewards": {"gold": 30, "reputation": 6},
+      "intro": "Will Stutly, one of the band, was spying in Nottingham in a friar's robe. The Sheriff caught him, and means to lock him away forever.",
+      "nodes": [
+        {"kind": "approach", "text": "The band comes to Nottingham disguised as pilgrims and beggars, and waits by the gate."},
+        {"kind": "choice", "text": "The Sheriff's men march Will Stutly out of the gate in chains.",
+          "options": [
+            {"label": "Little John grabs Stutly", "result": "next", "log": "Little John strolls up, cuts Stutly's ropes, and hands him a sword. 'You didn't think we'd leave you, did you?'"},
+            {"label": "Robin shouts a challenge", "result": "next", "log": "Robin throws back his pilgrim's hood. The guards gasp."}
+          ]},
+        {"kind": "combat", "text": "The guards fight to keep their prisoner!", "enemies": ["man_at_arms", "man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "combat", "text": "More soldiers pour out of the gate as the band runs for the trees!", "enemies": ["crossbowman", "knight"], "is_escape": true}
+      ]
+    },
+    "bishop_old_woman": {
+      "name": "The Bishop and the Old Woman",
+      "node": "blidworth",
+      "backdrop": "locksley",
+      "place": "An old woman's cottage near Blidworth",
+      "requires": {"band": ["tuck"], "reputation": 14},
+      "rewards": {"gold": 60, "reputation": 5},
+      "intro": "The Bishop of Hereford is hunting Robin through the woods. Robin runs into the cottage of an old woman he once helped.",
+      "nodes": [
+        {"kind": "approach", "text": "'Quick!' says the old woman. 'Give me your green clothes and put on my grey dress!'"},
+        {"kind": "choice", "text": "Robin walks right past the Bishop's men in a grey dress and bonnet.",
+          "options": [
+            {"label": "Curtsey to the Bishop", "result": "next", "log": "Robin curtseys. 'Good day, your Grace.' The Bishop doesn't even look."},
+            {"label": "Ask the Bishop for a penny", "result": "next", "log": "'Away, old hag!' snaps the Bishop. Robin hides his giggles."}
+          ]},
+        {"kind": "approach", "text": "The Bishop's men drag the 'outlaw' out of the cottage: the old woman, in Robin's green, laughing her head off."},
+        {"kind": "combat", "text": "Robin's horn sounds from the hill, and the band charges down!", "enemies": ["bishop", "man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "The Bishop pays for the old woman's new roof, and Friar Tuck makes him say sorry to her, twice."}
+      ]
+    },
+    "bishop_dinner": {
+      "name": "The Bishop's Supper",
+      "node": "edwinstowe",
+      "backdrop": "major_oak",
+      "place": "Under the greenwood tree",
+      "requires": {"stories": ["bishop_old_woman"], "band": ["alan"], "reputation": 18},
+      "rewards": {"gold": 90, "reputation": 6},
+      "intro": "The Bishop of Hereford is riding through Sherwood again. Robin and his men dress as shepherds and roast a fine supper beside the road.",
+      "nodes": [
+        {"kind": "approach", "text": "The Bishop smells the roast. 'Shepherds, roasting the King's deer? I'll have you all arrested!'"},
+        {"kind": "choice", "text": "'Mercy, my lord!' says Robin, and blows his horn.",
+          "options": [
+            {"label": "Invite him to supper", "result": "next", "log": "The Bishop eats three helpings. Then Robin hands him the bill."},
+            {"label": "Ask Alan for a song first", "result": "next", "log": "Alan plays a jig so lively that the Bishop's feet start tapping all by themselves."}
+          ]},
+        {"kind": "combat", "text": "The Bishop's knight and guards won't let him pay!", "enemies": ["bishop", "knight", "man_at_arms", "man_at_arms"]},
+        {"kind": "objective", "text": "The Bishop pays the bill (the whole contents of his saddlebags) and then, for good measure, dances a jig around the oak while Alan plays."}
+      ]
+    },
+    "monk_of_nottingham": {
+      "name": "Robin Hood and the Monk",
+      "node": "nottingham",
+      "backdrop": "nottingham_gate",
+      "place": "St Mary's church, Nottingham",
+      "requires": {"band": ["tuck"], "reputation": 16},
+      "rewards": {"gold": 40, "reputation": 6},
+      "intro": "Robin wants to hear Mass in St Mary's church in Nottingham. Little John warns him not to go alone, but Robin goes anyway.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin kneels at the back of the church. A monk he once robbed on the road looks round, and his eyes go wide."},
+        {"kind": "choice", "text": "The monk slips out of the side door, running for the Sheriff.",
+          "options": [
+            {"label": "Finish his prayers", "result": "next", "log": "Robin finishes his prayers. By then, the church doors are full of soldiers."},
+            {"label": "Run after the monk", "result": "next", "log": "Robin runs for the door, but it slams shut in his face."}
+          ]},
+        {"kind": "combat", "text": "Robin fights alone in the churchyard!", "party": ["robin"], "enemies": ["man_at_arms", "monk"]},
+        {"kind": "combat", "text": "Over the churchyard wall and through the streets! Little John and the band are waiting at the gate.", "enemies": ["man_at_arms", "crossbowman", "monk"], "is_escape": true},
+        {"kind": "objective", "text": "'I told you so,' says Little John. Robin admits he was right, and buys him supper for a week."}
+      ]
+    },
+    "guy_horsehide": {
+      "name": "Guy of Gisborne",
+      "node": "sherwood_edge",
+      "backdrop": "sherwood_edge",
+      "place": "Deep in Sherwood",
+      "requires": {"band": ["tuck"], "reputation": 18},
+      "rewards": {"gold": 50, "reputation": 7},
+      "intro": "Robin dreams of two strong yeomen who beat him and bind him. When he wakes, he goes to find them. Instead he finds a man dressed in a horse's hide.",
+      "nodes": [
+        {"kind": "approach", "text": "The stranger has a horse's hide over his armour, tail and mane and all. He's looking for someone."},
+        {"kind": "choice", "text": "'I'm hunting Robin Hood,' he says. 'Shall we shoot a match while I wait for him?'",
+          "options": [
+            {"label": "Shoot at the garland", "result": "next", "log": "They set up a rose garland at sixty paces. Robin's arrow splits the wand down the middle."},
+            {"label": "Tell him who you are", "result": "next", "log": "'I am Robin Hood.' The stranger throws back the hide. 'And I am Guy of Gisborne!'"}
+          ]},
+        {"kind": "combat", "text": "Sir Guy blows a whistle, and his trackers leap out of the bracken!", "enemies": ["guy", "forester", "forester"]},
+        {"kind": "objective", "text": "Sir Guy lands in the bracken, out cold. Robin borrows his horse-hide cloak and his silver horn. He has an idea."}
+      ]
+    },
+    "john_rescued": {
+      "name": "Robin in Guy's Cloak",
+      "node": "hanged_mans_crossing",
+      "backdrop": "hanged_mans_crossing",
+      "place": "Barnsdale crossroads",
+      "requires": {"stories": ["guy_horsehide"], "band": ["little_john"]},
+      "rewards": {"gold": 50, "reputation": 7},
+      "intro": "While Robin met Sir Guy, the Sheriff caught Little John. He's tied to a tree at the crossroads.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, wrapped in Guy's horse hide, blows Guy's silver horn."},
+        {"kind": "choice", "text": "'That's Sir Guy's horn!' cries the Sheriff. 'He's caught Robin Hood! Ask any reward, Sir Guy!'",
+          "options": [
+            {"label": "'Let me deal with the prisoner'", "result": "next", "log": "Robin strides to Little John, cuts his ropes and hands him Guy's bow."},
+            {"label": "'Just the outlaw on the tree'", "result": "next", "log": "The Sheriff waves him over. Robin slices John free. 'Took your time,' says John."}
+          ]},
+        {"kind": "combat", "text": "The Sheriff sees the face under the hood. 'It's Robin Hood!' The rest of the band bursts out of the trees.", "enemies": ["sheriff", "man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "The Sheriff gallops all the way back to Nottingham without stopping, and Sir Guy has to walk home without his cloak."}
+      ]
+    },
+    "queens_match": {
+      "name": "Queen Katherine's Archers",
+      "node": "sheriffs_toll_bridge",
+      "backdrop": "archery_contest",
+      "place": "Finsbury Field, London",
+      "requires": {"band": ["alan"], "reputation": 22},
+      "rewards": {"gold": 100, "reputation": 6},
+      "intro": "The Queen has made a wager with the King: her archers will beat his. She secretly sends for Robin Hood to shoot on her side.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, Little John and Will ride to London dressed in scarlet, and the Queen hides them among her men."},
+        {"kind": "choice", "text": "The King's champions shoot first, and every arrow hits the gold.",
+          "options": [
+            {"label": "Ask the King for safety first", "result": "next", "log": "'Whoever shoots on my side,' says the Queen, 'may go home safe.' The King agrees, chuckling."},
+            {"label": "Just shoot", "result": "next", "log": "Robin steps up to the mark without a word."}
+          ]},
+        {"kind": "duel", "text": "The Queen's archers against the King's!", "party": ["robin", "little_john", "will"], "enemies": ["kings_archer", "kings_archer", "kings_archer"], "friendly": true,
+          "win": "Robin's last arrow splits the King's champion's arrow. The Queen claps with delight.",
+          "lose": "The King's champions edge it by a whisker, but the Queen says she's never seen finer shooting."},
+        {"kind": "objective", "text": "Robin kneels and gives his name. The King frowns, but a promise is a promise: forty days to go home safe."}
+      ]
+    },
+    "robins_chase": {
+      "name": "Robin Hood's Chase",
+      "node": "great_north_road",
+      "backdrop": "great_north_road",
+      "place": "The Great North Road",
+      "requires": {"stories": ["queens_match"]},
+      "rewards": {"gold": 20, "reputation": 6},
+      "intro": "The forty days are over, and the King himself rides north to catch Robin Hood.",
+      "nodes": [
+        {"kind": "approach", "text": "The King reaches Sherwood. Robin has gone to Yorkshire."},
+        {"kind": "hazard", "text": "The King follows to Yorkshire. Robin has gone to Lancashire. The King's horse is very tired."},
+        {"kind": "combat", "text": "The King's knights finally catch up on the Great North Road!", "enemies": ["knight", "man_at_arms", "man_at_arms"], "is_escape": true},
+        {"kind": "objective", "text": "Robin doubles back to London to ask the Queen for help. The King, footsore and laughing, gives up the chase. 'That fellow leads me a merry dance!'"}
+      ]
+    },
+    "prince_of_aragon": {
+      "name": "The Prince of Aragon",
+      "node": "sheriffs_toll_bridge",
+      "backdrop": "archery_contest",
+      "place": "The tiltyard in London",
+      "requires": {"band": ["alan"], "reputation": 26},
+      "rewards": {"gold": 120, "reputation": 8},
+      "intro": "A proud prince from Aragon has come to London with two giant champions. Unless three men can beat them, he will carry off the King's young cousin to be his bride.",
+      "nodes": [
+        {"kind": "approach", "text": "Nobody in London dares to fight. Then three pilgrims step out of the crowd."},
+        {"kind": "choice", "text": "The princess looks hopefully at the three pilgrims. The giants laugh.",
+          "options": [
+            {"label": "Throw off the pilgrim robes", "result": "next", "log": "Robin, Little John and Will throw off their robes. The crowd roars."},
+            {"label": "Fight in disguise", "result": "next", "log": "The pilgrims pick up their staves. The giants stop laughing."}
+          ]},
+        {"kind": "combat", "text": "Three outlaws against the prince's champions!", "party": ["robin", "little_john", "will"], "enemies": ["champion", "champion", "knight"]},
+        {"kind": "objective", "text": "The giants flee back to Aragon with their proud prince. The princess is free, and the King of England thanks three 'pilgrims' with a bag of gold."}
+      ]
+    },
+    "castle_siege": {
+      "name": "The Siege of Castle Lee",
+      "node": "edwinstowe",
+      "backdrop": "nottingham_gate",
+      "place": "Sir Richard's castle at the Lee",
+      "requires": {"stories": ["silver_arrow", "knight_returns"], "reputation": 24},
+      "rewards": {"gold": 80, "reputation": 6},
+      "intro": "After the silver arrow, Sir Richard shelters the whole band in his castle. The Sheriff's army surrounds it.",
+      "nodes": [
+        {"kind": "approach", "text": "Sir Richard pulls up the drawbridge. 'You saved my lands. Now my walls will save you.'"},
+        {"kind": "choice", "text": "The Sheriff calls up at the walls: 'Hand over the outlaws!'",
+          "options": [
+            {"label": "'Only the King may ask that'", "result": "next", "log": "'Only the King may tell me who to shelter!' calls Sir Richard. The Sheriff stamps his foot."},
+            {"label": "Pelt them with apples", "result": "next", "log": "Alan sings a rude song about the Sheriff, while Tuck pelts the soldiers with apples."}
+          ]},
+        {"kind": "combat", "text": "The Sheriff's men storm the gate!", "enemies": ["knight", "man_at_arms", "man_at_arms", "crossbowman", "crossbowman"]},
+        {"kind": "objective", "text": "The Sheriff's army gives up and marches home to ask the King for help. The band slips back to Sherwood."}
+      ]
+    },
+    "sir_richard_rescue": {
+      "name": "The Rescue of Sir Richard",
+      "node": "hanged_mans_crossing",
+      "backdrop": "hanged_mans_crossing",
+      "place": "The road to Nottingham",
+      "requires": {"stories": ["castle_siege"], "reputation": 26},
+      "rewards": {"gold": 100, "reputation": 8},
+      "intro": "The Sheriff has caught Sir Richard out hawking and is taking him to Nottingham in chains. His lady rides to Sherwood to beg Robin's help.",
+      "nodes": [
+        {"kind": "approach", "text": "'Our Lady is your friend, Robin,' says the Lady of the Lee. 'Help my husband for her sake.'"},
+        {"kind": "choice", "text": "Robin calls every man in the band. The Sheriff's party is on the road below.",
+          "options": [
+            {"label": "Charge down the hill", "result": "next", "log": "A hundred and forty outlaws charge down the hill in Lincoln green!"},
+            {"label": "Block the road with a tree", "result": "next", "log": "Little John drops an oak across the road. The Sheriff's horses skid to a halt."}
+          ]},
+        {"kind": "combat", "text": "The Sheriff will not give up his prisoner!", "enemies": ["sheriff", "knight", "man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "Sir Richard is free! The Sheriff flees so fast that he leaves his hat in the road, and he isn't seen in Sherwood for a long time."}
+      ]
+    },
+    "kings_ransom": {
+      "name": "The King's Ransom",
+      "node": "nottingham",
+      "backdrop": "nottingham_gate",
+      "place": "Nottingham Castle",
+      "requires": {"stories": ["silver_arrow"], "reputation": 28},
+      "rewards": {"gold": 60, "reputation": 8},
+      "intro": "King Richard is held captive across the sea. Everyone has paid a ransom tax to free him, but Prince John's men are keeping the silver for themselves.",
+      "nodes": [
+        {"kind": "approach", "text": "Carts loaded with the ransom silver roll into Nottingham Castle, never to leave."},
+        {"kind": "choice", "text": "'That silver is meant to bring the King home,' says Robin.",
+          "options": [
+            {"label": "Ambush the carts at the gate", "result": "next", "log": "The band hides in the hay carts going into the castle."},
+            {"label": "Sneak in at night", "result": "sneak", "log": "The band climbs the castle rock in the dark..."}
+          ]},
+        {"kind": "combat", "text": "Prince John's tax men and their guards!", "enemies": ["tax_collector", "tax_collector", "knight", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "The silver goes to Queen Eleanor, who sends it straight on to bring her son home."},
+        {"kind": "escape", "text": "The band rides out of Nottingham with the carts empty and their hearts full.", "is_escape": true}
+      ]
+    },
+    "king_in_sherwood": {
+      "name": "The King Comes to Sherwood",
+      "node": "sherwood_edge",
+      "backdrop": "major_oak",
+      "place": "Under the Major Oak",
+      "requires": {"stories": ["kings_ransom", "sir_richard_rescue", "robins_chase"], "reputation": 35},
+      "rewards": {"gold": 200, "reputation": 15},
+      "intro": "King Richard is home. He hears that Robin Hood rules Sherwood, and decides to see for himself, disguised as a tall abbot.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin stops a tall abbot on the road and invites him to dinner, as the band always does."},
+        {"kind": "choice", "text": "After a feast of venison, the band shoots at a rose garland. Whoever misses gets a buffet from the abbot.",
+          "options": [
+            {"label": "Robin shoots last", "result": "next", "log": "Robin's arrow misses the garland by three fingers. 'Abbot, I'll take my buffet.'"},
+            {"label": "Robin shoots first", "result": "next", "log": "Robin misses the garland for the first time in his life. 'Abbot, I'll take my buffet.'"}
+          ]},
+        {"kind": "duel", "text": "The tall abbot rolls up his sleeves. His arms are like oak trees.", "party": ["robin"], "enemies": ["rival_king"], "friendly": true,
+          "win": "Robin ducks the buffet, and the abbot spins round and falls on his bottom. He laughs louder than anyone.",
+          "lose": "The abbot's buffet knocks Robin flat on the grass! 'Who hits that hard?' says Robin, and looks up into the face of the King."},
+        {"kind": "objective", "text": "The abbot throws off his hood: it is King Richard! The whole band kneels. The King pardons every one of them, and there is a feast in Sherwood that lasts all night."}
+      ]
+    }
+  }
+}

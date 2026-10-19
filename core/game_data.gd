@@ -31,6 +31,11 @@ func _init() -> void:
 	items = _load("res://data/items.json")
 	economy = _load("res://data/economy.json")
 	stories = _load("res://data/stories.json")
+	# Tales from the legends (data/tales.json) are story missions that recruit nobody.
+	var tales: Dictionary = _load("res://data/tales.json")["tales"]
+	for id in tales:
+		tales[id]["recruit"] = ""
+		stories["stories"][id] = tales[id]
 
 
 static func _load(path: String) -> Dictionary:

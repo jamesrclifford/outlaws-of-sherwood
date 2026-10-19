@@ -14,6 +14,7 @@ const DUNGEON := "nottingham"
 const HEAL_AT_CAMP := 1.0          # fraction of max HP restored per day resting at camp
 const HEAL_ON_ROAD := 0.15
 const PARTY_SIZE := 5
+const MAX_TALES := 2               # tales that recruit nobody posted at once, so ordinary jobs still appear
 const STAT_KEYS := ["hp", "atk", "def", "spd", "crit"]
 
 var db
@@ -423,13 +424,25 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 
 ## Puts each story whose requirements are met on the map at its place, taking over any ordinary
 ## job there (but never a rescue). Story jobs never expire; one that fails comes back the next day.
+## A story where someone joins the band may also bump a waiting tale; tales are capped at MAX_TALES.
 func _post_stories() -> void:
 	var gen = MissionGen.new(db)
+	var tales := missions.values().filter(func(m): return m["type"] == "story" and m["recruit"] == "").size()
 	for id in db.stories["stories"]:
 		var st: Dictionary = db.stories["stories"][id]
+		var is_tale: bool = st["recruit"] == ""
 		var held: Dictionary = missions.get(st["node"], {})
-		if stories_done.has(id) or held.has("rescue_heroes") or held.get("type", "") == "story" or not story_ready(id):
+		if stories_done.has(id) or held.has("rescue_heroes") or not story_ready(id):
 			continue
+		if is_tale and not held.is_empty():
+			continue        # tales wait for a free spot; they never push out a job you may be heading to
+		if held.get("type", "") == "story" and held["recruit"] != "":
+			continue
+		if is_tale and tales >= MAX_TALES:
+			continue
+		if held.get("type", "") == "story":
+			tales -= 1      # an origin story bumps the tale back into the queue
+		tales += 1 if is_tale else 0
 		var at: String = st["node"]
 		missions[at] = gen.story(id, threat(at), rng.randi())
 		missions[at]["expires"] = 0
@@ -443,6 +456,9 @@ func story_ready(id: String) -> bool:
 	var req: Dictionary = st["requires"]
 	for h in req.get("band", []):
 		if not band.has(h):
+			return false
+	for s in req.get("stories", []):
+		if not stories_done.has(s):
 			return false
 	return reputation >= int(req.get("reputation", 0))
 
@@ -522,6 +538,11 @@ static func _fix_ints(m: Dictionary) -> void:
 			m[k] = int(m[k])
 	for k in m["rewards"]:
 		m["rewards"][k] = int(m["rewards"][k])
+	for n in m["nodes"]:
+		for opt in n.get("options", []):
+			for k in ["gold", "reputation"]:
+				if opt.has(k):
+					opt[k] = int(opt[k])
 
 
 const SAVE_PATH := "user://campaign.json"
