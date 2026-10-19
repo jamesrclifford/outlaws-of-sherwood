@@ -1,6 +1,6 @@
 {
-  "tax_wagon":    {"name": "Tax Wagon on the Great North Road", "enemies": ["man_at_arms", "man_at_arms", "tax_collector", "crossbowman"]},
-  "forest_patrol":{"name": "Foresters' Patrol",                 "enemies": ["forester", "forester", "hound", "hound"]},
-  "knight_escort":{"name": "Knight's Escort",                   "enemies": ["knight", "man_at_arms", "crossbowman"]},
-  "gisborne":     {"name": "Gisborne's Ambush",                 "enemies": ["guy", "man_at_arms", "forester"]}
+  "tax_wagon":    {"name": "Tax Wagon on the Great North Road", "location": "great_north_road", "enemies": ["man_at_arms", "man_at_arms", "tax_collector", "crossbowman"]},
+  "forest_patrol":{"name": "Foresters' Patrol",                 "location": "sherwood_edge", "enemies": ["forester", "forester", "hound", "hound"]},
+  "knight_escort":{"name": "Knight's Escort",                   "location": "nottingham_gate", "enemies": ["knight", "man_at_arms", "crossbowman"]},
+  "gisborne":     {"name": "Gisborne's Ambush",                 "location": "hanged_mans_crossing", "enemies": ["guy", "man_at_arms", "forester"]}
 }

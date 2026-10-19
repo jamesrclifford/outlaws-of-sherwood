@@ -1,0 +1,13 @@
+{
+  "robbery": {
+    "names": ["Lighten the Tax Wagon", "The Bishop's Silver", "A Toll for the Sheriff", "The Merchant's Strongbox"],
+    "nodes": ["approach", "combat|choice", "objective_loot", "escape"],
+    "base_gold": 45
+  },
+  "rescue": {
+    "names": ["Cut the Rope", "Freedom for the Miller", "The Widow's Sons", "A Prisoner at Dawn"],
+    "nodes": ["approach", "hazard", "combat", "objective_prisoner", "escape"],
+    "base_gold": 15,
+    "reputation": 10
+  }
+}
