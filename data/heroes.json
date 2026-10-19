@@ -1,0 +1,6 @@
+{
+  "robin":       {"name": "Robin Hood",  "class": "Archer",  "hp": 30, "atk": 9,  "def": 3, "spd": 8, "crit": 0.15, "row": "back",  "abilities": ["bow_shot", "split_arrow", "pinning_shot", "defend"]},
+  "little_john": {"name": "Little John", "class": "Tank",    "hp": 46, "atk": 8,  "def": 6, "spd": 4, "crit": 0.05, "row": "front", "abilities": ["strike", "bridge_hold", "staff_sweep", "defend"]},
+  "will":        {"name": "Will Scarlet","class": "Duelist", "hp": 32, "atk": 10, "def": 3, "spd": 9, "crit": 0.12, "row": "front", "abilities": ["strike", "flourish", "defend"]},
+  "tuck":        {"name": "Friar Tuck",  "class": "Healer",  "hp": 38, "atk": 7,  "def": 4, "spd": 5, "crit": 0.05, "row": "back",  "abilities": ["strike", "blessing", "tavern_brawl", "defend"]}
+}

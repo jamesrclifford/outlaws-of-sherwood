@@ -8,7 +8,7 @@ The full design and roadmap are in [docs/design-plan.md](docs/design-plan.md).
 
 ## Running
 
-1. Install [Godot 4.3](https://godotengine.org/download).
+1. Install [Godot 4.7](https://godotengine.org/download).
 2. Open this folder in Godot and press Play, or run `godot --path .`.
 
 ## Layout
