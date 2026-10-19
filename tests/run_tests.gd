@@ -1211,3 +1211,75 @@ func test_every_enemy_has_a_sprite_and_hunters_net() -> void:
 	check(db.enemies["bounty_hunter"]["abilities"].has("throw_net"), "bounty hunters carry nets")
 	check(ResourceLoader.exists("res://assets/sprites/bounty_hunter.png"), "bounty hunters have a picture")
 	check(ResourceLoader.exists("res://assets/backdrops/castle_courtyard.png"), "the castle courtyard is painted")
+
+
+# --- Disguises -------------------------------------------------------------------
+
+func test_disguises_offer_one_of_each_fate() -> void:
+	for s in 30:
+		var m: Dictionary = MissionGen.new(db).generate(["robbery", "rescue"][s % 2], 30, s, "great_north_road")
+		var run = MissionRun.new(db, m, [db.make_hero("robin"), db.make_hero("little_john")])
+		check(run.can_disguise(), "a %s can be done in disguise" % m["type"])
+		var opts: Array = run.disguise_options()
+		check(opts.size() == 3, "three disguises are offered")
+		var fates: Array = opts.map(func(o): return o["fate"])
+		fates.sort()
+		check(fates == ["blown", "slip", "surprise"], "one works, one half-works, one fails (%s)" % [fates])
+		check(opts.map(func(o): return o["id"]).all(func(id): return db.disguises.has(id)), "they are real disguises")
+		var again = MissionRun.new(db, MissionGen.new(db).generate(m["type"], 30, s, "great_north_road"), [])
+		check(JSON.stringify(again.disguise_options()) == JSON.stringify(opts), "the same job always offers the same disguises")
+	for id in db.disguises:
+		for k in ["name", "wear", "slip", "surprise", "blown"]:
+			check(db.disguises[id].has(k), "disguise %s says %s" % [id, k])
+	var story = MissionRun.new(db, MissionGen.new(db).story("wanted_posters", 10, 1), [])
+	check(not story.can_disguise(), "legends are played as told, without disguises")
+
+
+func _run_with_fate(fate: String, type := "rescue"):
+	for s in 50:
+		var run = MissionRun.new(db, MissionGen.new(db).generate(type, 30, s, "great_north_road"), BAND4.map(func(h): return db.make_hero(h)))
+		var opts: Array = run.disguise_options()
+		for i in 3:
+			if opts[i]["fate"] == fate:
+				run.wear_disguise(i)
+				return run
+	return null
+
+
+func test_a_good_disguise_slips_past_a_fight() -> void:
+	var run = _run_with_fate("slip")
+	var fights_before: int = run.mission["nodes"].filter(func(n): return not n.get("enemies", []).is_empty() and not n.has("slipped")).size()
+	var battles := 0
+	var guard := 0
+	while not run.is_over() and guard < 20:
+		guard += 1
+		var step: Dictionary = run.arrive()
+		if step["type"] == "battle":
+			battles += 1
+			var b = run.make_battle(step["enemies"])
+			autoplay(b)
+			run.battle_finished(b)
+		run.advance()
+	check(run.mission_log.any(func(l): return l.contains(db.disguises[run.disguise]["slip"].left(20))), "the log tells how the band slipped past")
+	check(battles <= fights_before, "one fight fewer than without the disguise (%d of %d)" % [battles, fights_before])
+	check(run.result == "success" and run.prisoner_freed, "and the prisoner is still freed")
+
+
+func test_a_half_good_disguise_strikes_first() -> void:
+	var run = _run_with_fate("surprise")
+	check(run.surprise, "the band will strike first")
+	var step: Dictionary = run.arrive()
+	while step["type"] != "battle":
+		run.advance()
+		step = run.arrive()
+	var b = run.make_battle(step["enemies"])
+	check(b.units.filter(func(u): return u.side == "enemies").all(func(u): return u.has_status("stunned")), "every foe starts the fight stunned")
+	check(not run.surprise, "only the first fight is a surprise")
+
+
+func test_a_bad_disguise_brings_an_attack_at_once() -> void:
+	var run = _run_with_fate("blown", "robbery")
+	var first: Dictionary = run.current_node()
+	check(first["kind"] == "combat" and not first["enemies"].is_empty(), "the band is attacked straight away")
+	check(run.arrive()["type"] == "battle", "the fight starts before the approach")
+	check(run.mission_log.any(func(l): return l == db.disguises[run.disguise]["blown"].format({"place": run.mission["location_name"]})), "the log tells how the disguise was seen through")

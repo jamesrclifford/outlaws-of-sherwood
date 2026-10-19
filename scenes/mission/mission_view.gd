@@ -237,10 +237,25 @@ func _show_briefing() -> void:
 		])
 		return
 	_refresh()
-	_set_buttons([
-		["Send scouts ahead (1 day)", _scout],
-		["Set out now", _set_out],
-	])
+	var opts := [["Send scouts ahead (1 day)", _scout]]
+	if run.can_disguise():
+		opts.append(["Go in disguise", _pick_disguise])
+	opts.append(["Set out now", _set_out])
+	_set_buttons(opts)
+
+
+## Three disguises from the legends; only trying one shows how it goes.
+func _pick_disguise() -> void:
+	run.mission_log.append("Which disguise will the band wear?")
+	_refresh()
+	var opts := []
+	var options: Array = run.disguise_options()
+	for i in options.size():
+		opts.append([db.disguises[options[i]["id"]]["name"], func():
+			run.wear_disguise(i)
+			_refresh()
+			_set_buttons([["Onward", _set_out]])])
+	_set_buttons(opts)
 
 
 func _scout() -> void:

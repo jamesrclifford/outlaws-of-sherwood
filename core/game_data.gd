@@ -17,6 +17,7 @@ var items: Dictionary
 var economy: Dictionary
 var stories: Dictionary
 var contests: Dictionary
+var disguises: Dictionary
 
 
 func _init() -> void:
@@ -33,6 +34,7 @@ func _init() -> void:
 	economy = _load("res://data/economy.json")
 	stories = _load("res://data/stories.json")
 	contests = _load("res://data/contests.json")
+	disguises = _load("res://data/disguises.json")["disguises"]
 	# Tales from the legends (data/tales.json) are story missions that recruit nobody.
 	var tales: Dictionary = _load("res://data/tales.json")["tales"]
 	for id in tales:

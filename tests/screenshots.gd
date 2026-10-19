@@ -43,6 +43,10 @@ func _init() -> void:
 	mission.threat = 40
 	root.add_child(mission)
 	await _snap(dir, "mission")
+	mission.buttons.get_child(1).pressed.emit()   # Go in disguise
+	await _snap(dir, "disguise_pick")
+	mission.buttons.get_child(0).pressed.emit()
+	await _snap(dir, "disguise_worn")
 	await _clear()
 
 	var db = GameData.new()

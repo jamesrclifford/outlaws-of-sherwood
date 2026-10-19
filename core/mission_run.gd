@@ -22,6 +22,8 @@ var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
 var scouted := false          # scouting takes the band a day, paid when the mission ends
 var _duel_loadouts := {}      # hero id -> [abilities, row, sprite] kept while a duel sets the weapons
+var disguise := ""            # the disguise the band wore, if any
+var surprise := false         # the next battle opens with the enemy caught flat-footed
 
 
 func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
@@ -72,6 +74,54 @@ func scout() -> int:
 	return found
 
 
+## The three disguises on offer for this job, each secretly fated to work ("slip": walk past a
+## fight), half-work ("surprise": strike first) or fail ("blown": attacked at once). The mission's
+## seed decides, so the same job always offers the same three with the same fates.
+func disguise_options() -> Array:
+	if not mission.has("disguises"):
+		var pick := RandomNumberGenerator.new()
+		pick.seed = int(mission["seed"]) + 31
+		var ids: Array = db.disguises.keys()
+		var fates := ["slip", "surprise", "blown"]
+		var options := []
+		for i in 3:
+			var id: String = ids.pop_at(pick.randi_range(0, ids.size() - 1))
+			options.append({"id": id, "fate": fates.pop_at(pick.randi_range(0, fates.size() - 1))})
+		mission["disguises"] = options
+	return mission["disguises"]
+
+
+func can_disguise() -> bool:
+	return node_index == 0 and disguise == "" and not scouted and mission["type"] in ["robbery", "rescue"]
+
+
+## Puts on the chosen disguise and tells how it went. Returns its fate.
+func wear_disguise(option_index: int) -> String:
+	var opt: Dictionary = disguise_options()[option_index]
+	var d: Dictionary = db.disguises[opt["id"]]
+	disguise = opt["id"]
+	_log(d["wear"])
+	var place: String = mission["location_name"]
+	match opt["fate"]:
+		"slip":
+			for i in range(1, mission["nodes"].size()):
+				var n: Dictionary = mission["nodes"][i]
+				if not n.get("enemies", []).is_empty() or n["kind"] == "choice":
+					n["slipped"] = d["slip"].format({"place": place})
+					break
+		"surprise":
+			surprise = true
+			_log(d["surprise"].format({"place": place}))
+		"blown":
+			_log(d["blown"].format({"place": place}))
+			var pool: Array = db.locations[mission["location"]]["enemy_pool"]
+			var foes := []
+			for _i in 2 + int(mission["threat"]) / 40:
+				foes.append(pool[rng.randi_range(0, pool.size() - 1)])
+			mission["nodes"].insert(0, {"kind": "combat", "text": "Spotted! The guards attack before the band is ready.", "enemies": foes})
+	return opt["fate"]
+
+
 ## Called when the band reaches the current node. Returns what the player must do next:
 ##   {"type": "trap_choice"}  a known trap: call decide_trap(avoid)
 ##   {"type": "choice", "options": [...]}  call choose(i)
@@ -86,6 +136,10 @@ func arrive() -> Dictionary:
 		if node["trap"]["revealed"] and not _trap_decided:
 			return {"type": "trap_choice", "trap": db.traps[node["trap"]["id"]]}
 		_spring_trap(node)
+	if node.has("slipped"):
+		_log(node["slipped"])
+		_apply_objective(node)
+		return {"type": "continue"}
 	if node["kind"] == "choice":
 		return {"type": "choice", "options": node["options"]}
 	if node["kind"] == "archery":
@@ -132,6 +186,12 @@ func make_battle(enemy_ids: Array):
 		_arm_for_duel(node["abilities"], node.get("sprites", {}))
 	var b = db.make_custom_battle(fighters(), enemy_ids, rng.randi())
 	b.friendly = node.get("friendly", false)
+	if surprise:
+		surprise = false
+		_log("Surprise attack! The enemy is caught flat-footed.")
+		for u in b.units:
+			if u.side == "enemies":
+				u.add_status("stunned", 1)
 	return b
 
 

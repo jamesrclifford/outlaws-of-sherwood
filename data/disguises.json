@@ -1,0 +1,54 @@
+{
+  "_note": "Disguises picked before a job. Each mission offers three, and which one works is decided by the mission's seed: one slips the band past a fight, one lets them strike first, one gets them spotted. {place} is the job's location.",
+  "disguises": {
+    "potter": {
+      "name": "Potter",
+      "wear": "Robin buys a potter's cart, pots and all, and cries his wares at half price.",
+      "slip": "The guards are so busy haggling over cheap pots that the band rolls straight past them into {place}.",
+      "surprise": "While the guards squabble over a cracked jug, the band tips the cart over and charges!",
+      "blown": "A guard picks up a pot. 'This is a bucket with a hole in it!' He looks closer. 'And you're Robin Hood!'"
+    },
+    "beggar": {
+      "name": "Beggar",
+      "wear": "The band puts on rags and patched cloaks, and Robin limps along on a crutch.",
+      "slip": "Nobody looks twice at a crowd of beggars. The band shuffles right past the guards at {place}.",
+      "surprise": "A guard tosses Robin a coin. Robin catches it, throws off his rags, and the beggars leap into action!",
+      "blown": "A soldier kicks the crutch away, and Robin forgets to limp. 'That beggar runs like an outlaw!'"
+    },
+    "monk": {
+      "name": "Monks",
+      "wear": "The band borrows brown habits from a friendly abbey. Everyone pulls their hoods low and hums a hymn.",
+      "slip": "The guards bow their heads for the holy brothers, and the band walks solemnly past them at {place}.",
+      "surprise": "The 'monks' ask the guards to kneel for a blessing, and then the blessing turns into a scuffle!",
+      "blown": "One monk's habit is far too short, and his muddy boots stick out. 'Since when do monks carry longbows?'"
+    },
+    "butcher": {
+      "name": "Butcher",
+      "wear": "Robin borrows a butcher's apron and cart and sells his meat so cheap the whole market crowds round.",
+      "slip": "The guards are too busy buying sausages to notice the band slipping into {place}.",
+      "surprise": "Robin hands out free sausages, and while the guards munch, the band jumps them!",
+      "blown": "The real butcher storms up, red in the face. 'That's MY cart! Guards, seize that thief!'"
+    },
+    "tinker": {
+      "name": "Tinker",
+      "wear": "Robin hangs pots and kettles off a pack and bangs his hammer, calling for things to mend.",
+      "slip": "The guards wave the noisy tinker through just to be rid of the racket, and the band follows him into {place}.",
+      "surprise": "Robin offers to mend a guard's helmet, then claps it down over his eyes. Now!",
+      "blown": "Robin tries to mend a sergeant's kettle and knocks a hole right through it. 'You're no tinker!'"
+    },
+    "pilgrims": {
+      "name": "Pilgrims",
+      "wear": "The band dresses as pilgrims on the road to the shrine, with scallop shells on their hats.",
+      "slip": "The guards wish the pilgrims a safe journey, and the band strolls right through {place}.",
+      "surprise": "The pilgrims stop to ask the way, and while the guards point down the road, the band pounces!",
+      "blown": "A guard asks which shrine they're going to. Three outlaws answer at once, with three different shrines."
+    },
+    "minstrels": {
+      "name": "Minstrels",
+      "wear": "Robin tunes a borrowed lute, and the band dresses in bright motley as travelling players.",
+      "slip": "The guards stop to listen to a merry song, and the rest of the band tiptoes past behind them at {place}.",
+      "surprise": "Robin plays a lullaby so sweet the guards start to nod, and the band springs!",
+      "blown": "The biggest outlaw is asked to sing. The guards cover their ears. 'No real minstrel sounds like that!'"
+    }
+  }
+}
