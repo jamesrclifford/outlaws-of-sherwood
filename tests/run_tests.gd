@@ -507,6 +507,30 @@ func test_contests_appear_and_pay_out() -> void:
 			check(c.gold == gold_before, "losing pays nothing")
 
 
+func test_scouting_costs_a_day() -> void:
+	var days := []
+	var food := []
+	for scouted in [false, true]:
+		var c = Campaign.new(db, 8, BAND4)
+		c.missions.clear()
+		c.missions[c.location] = MissionGen.new(db).generate("robbery", 30, 77, "", "")
+		for h in c.free_heroes():
+			h.hp = h.max_hp / 2
+		var hp_before: Array = c.free_heroes().map(func(h): return h.hp)
+		var run = c.start_mission()
+		if scouted:
+			run.scout()
+			run.scout()   # asking twice costs nothing more
+		run.result = "success"
+		c.finish_mission(run)
+		days.append(c.day)
+		food.append(c.supplies)
+		if scouted:
+			check(c.free_heroes().map(func(h): return h.hp) == hp_before, "the scouting day is no rest: nobody heals")
+	check(days[1] == days[0] + 1, "scouting costs the band a day (%s)" % [days])
+	check(food[1] < food[0], "and a day's food (%s)" % [food])
+
+
 func _fake_run(c, result: String, captured_ids: Array):
 	var run = c.start_mission()
 	run.result = result

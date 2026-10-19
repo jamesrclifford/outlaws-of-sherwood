@@ -20,6 +20,7 @@ var result := ""              # "", "success", "failed", "called_off"
 var mission_log: Array = []
 var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
+var scouted := false          # scouting takes the band a day, paid when the mission ends
 var _duel_loadouts := {}      # hero id -> [abilities, row, sprite] kept while a duel sets the weapons
 
 
@@ -57,8 +58,9 @@ func is_bait() -> bool:
 ## good chance. Only possible before setting out.
 func scout() -> int:
 	var found := 0
-	if node_index > 0:
+	if node_index > 0 or scouted:
 		return found
+	scouted = true
 	if is_bait() and rng.randf() < 0.6:
 		mission["bait"]["revealed"] = true
 		_log(db.baits[mission["bait"]["by"]]["scout_hint"])

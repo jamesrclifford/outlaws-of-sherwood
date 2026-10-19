@@ -227,13 +227,13 @@ func _show_briefing() -> void:
 			["Call it off", func():
 				run.call_off()
 				_finish()],
-			["Send scouts ahead", _scout],
+			["Send scouts ahead (1 day)", _scout],
 			["Go anyway", _set_out],
 		])
 		return
 	_refresh()
 	_set_buttons([
-		["Send scouts ahead", _scout],
+		["Send scouts ahead (1 day)", _scout],
 		["Set out now", _set_out],
 	])
 
