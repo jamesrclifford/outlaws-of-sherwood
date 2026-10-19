@@ -5,6 +5,10 @@ const GameData = preload("res://core/game_data.gd")
 const Unit = preload("res://core/unit.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
+const Campaign = preload("res://core/campaign.gd")
+
+## The four heroes the older campaign tests were written for (a story campaign starts smaller).
+const BAND4 := ["robin", "little_john", "will", "tuck"]
 
 var failures := 0
 var passed := 0
@@ -320,3 +324,403 @@ func test_missions_finish_and_failures_capture_not_kill() -> void:
 			check(run.gold == 0, "a failed mission pays nothing")
 	print("mission success rate at threat 40 with simple autoplay: %d/40" % wins)
 	check(wins >= 20, "a full party should succeed at most threat-40 missions (got %d/40)" % wins)
+
+
+# --- Campaign / strategic map ------------------------------------------------
+
+func test_map_data_is_consistent() -> void:
+	for n in db.map["nodes"]:
+		var nd: Dictionary = db.map["nodes"][n]
+		check(db.map["regions"].has(nd["region"]), "%s is in a known region" % n)
+		if nd.has("location"):
+			check(db.locations.has(nd["location"]), "%s maps to a known mission location" % n)
+		for l in nd["links"]:
+			check(db.map["nodes"].has(l) and db.map["nodes"][l]["links"].has(n), "road %s-%s goes both ways" % [n, l])
+	check(db.map["nodes"].has(Campaign.DUNGEON), "the dungeon is on the map")
+
+
+func test_travel_takes_a_day_per_road_and_follows_shortest_route() -> void:
+	var c = Campaign.new(db, 1, BAND4)
+	var path: Array = c.route("nottingham")
+	check(path == ["blidworth", "hanged_mans_crossing", "nottingham"], "shortest road from camp to Nottingham, got %s" % [path])
+	c.travel("nottingham")
+	check(c.day == 4 and c.location == "nottingham", "three roads take three days")
+
+
+func test_resting_at_camp_heals() -> void:
+	var c = Campaign.new(db, 2, BAND4)
+	c.heroes["robin"].hp = 5
+	c.rest()
+	check(c.heroes["robin"].hp == c.heroes["robin"].max_hp, "a day at camp heals fully")
+	c.travel("edwinstowe")
+	var before: int = c.day
+	c.rest()
+	check(c.day == before, "you can only rest at camp")
+
+
+func test_villains_plot_and_set_bait() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	for _i in 40:
+		c.rest()
+	var baits: Array = c.missions.values().filter(func(m): return not m["bait"].is_empty())
+	check(c.news.any(func(n): return "Gisborne is hunting" in n), "Guy picks someone to hunt")
+	check(c.news.any(func(n): return "Too rich" in n), "the Sheriff dangles a wagon")
+	check(c.hunted_hero != "" and c.hunted_hero != "robin", "Guy hunts one of Robin's companions")
+	check(c.control.values().all(func(v): return v >= 0 and v <= 100), "control stays within 0-100")
+	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes")), "old jobs expire")
+
+
+func _fake_run(c, result: String, captured_ids: Array):
+	var run = c.start_mission()
+	run.result = result
+	run.captured = captured_ids
+	run.gold = 50 if result == "success" else 0
+	return run
+
+
+func test_capture_creates_rescue_and_rescue_frees() -> void:
+	var c = Campaign.new(db, 4, BAND4)
+	var target: String = c.missions.keys()[0]
+	c.travel(target)
+	c.finish_mission(_fake_run(c, "failed", ["will", "tuck"]))
+	check(c.captured.has("will") and c.captured.has("tuck"), "heroes left behind are captured")
+	check(c.missions[target].get("rescue_heroes", []) == ["will", "tuck"], "one rescue job for both prisoners")
+	check(c.free_heroes().size() == 2, "only two heroes left to send")
+	c.finish_mission(_fake_run(c, "success", []))
+	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_prisoners_moved_to_dungeon_after_deadline() -> void:
+	var c = Campaign.new(db, 5, BAND4)
+	var target: String = c.missions.keys()[0]
+	if target == Campaign.DUNGEON:
+		target = c.missions.keys()[1]
+	c.travel(target)
+	c.finish_mission(_fake_run(c, "failed", ["little_john"]))
+	c.travel("camp")
+	for _i in Campaign.RESCUE_DEADLINE:
+		c.rest()
+	check(c.captured["little_john"]["node"] == Campaign.DUNGEON, "unrescued prisoner ends up in Nottingham's dungeon")
+	check(c.missions[Campaign.DUNGEON].get("rescue_heroes", []).has("little_john"), "the rescue job moves with them")
+	check(not c.missions.has(target) or not c.missions[target].has("rescue_heroes"), "the old rescue job is gone")
+
+
+func test_whole_band_captured_is_not_game_over() -> void:
+	var c = Campaign.new(db, 6, BAND4)
+	c.travel(c.missions.keys()[0])
+	c.finish_mission(_fake_run(c, "failed", ["robin", "little_john", "will", "tuck"]))
+	check(c.captured.is_empty() and c.location == "camp", "friends break the band out; the campaign goes on")
+
+
+func test_save_and_load_round_trip() -> void:
+	var c = Campaign.new(db, 7, BAND4)
+	for _i in 5:
+		c.rest()
+	c.heroes["will"].hp = 9
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(JSON.stringify(copy.to_dict()) == JSON.stringify(c.to_dict()), "saved campaign loads back identically")
+	c.rest()
+	copy.rest()
+	check(JSON.stringify(copy.to_dict()) == JSON.stringify(c.to_dict()), "and carries on identically")
+
+
+func test_long_campaign_with_autoplay_stays_sane() -> void:
+	var c = Campaign.new(db, 8, BAND4)
+	var played := 0
+	for _i in 30:
+		if c.missions.is_empty():
+			c.rest()
+			continue
+		var targets: Array = c.missions.keys()
+		c.travel(targets[0])
+		var run = c.start_mission()
+		if run == null:
+			c.travel("camp")
+			continue
+		autoplay_mission(run, true)
+		c.finish_mission(run)
+		played += 1
+		c.travel("camp")
+		while c.supply_days() < 8 and c.buy_supplies():
+			pass
+		c.rest()
+	print("30-turn campaign: day %d, %d missions, %d gold, %d supplies, infamy %d, control %s" % [c.day, played, c.gold, c.supplies, c.infamy, c.control])
+	check(played > 10, "the band finds plenty to do")
+	check(c.gold >= 0 and c.day > 30, "campaign advanced sensibly")
+
+
+# --- Spending gold -------------------------------------------------------------
+
+func test_item_data_is_valid() -> void:
+	var classes := {}
+	for h in db.heroes:
+		classes[db.heroes[h]["class"]] = true
+	for i in db.items:
+		var it: Dictionary = db.items[i]
+		check(it["slot"] in ["weapon", "armor", "trinket"], "%s has a known slot" % i)
+		check(it["classes"].all(func(c): return classes.has(c)), "%s is for real classes" % i)
+		check(it["bonus"].keys().all(func(k): return k in Campaign.STAT_KEYS), "%s only boosts known stats" % i)
+	for h in db.heroes:
+		check(db.items.values().any(func(it): return it["slot"] == "weapon" and it["classes"].has(db.heroes[h]["class"])), "%s can buy a weapon" % h)
+
+
+func test_giving_to_the_poor() -> void:
+	var c = Campaign.new(db, 20, BAND4)
+	c.gold = 200
+	check(not c.give_to_poor(50), "nobody to give to at camp")
+	c.travel("edwinstowe")
+	var before: int = c.control["sherwood"]
+	check(c.give_to_poor(50), "can give in a village")
+	check(c.gold == 150 and c.reputation == 5, "50 gold buys 5 reputation")
+	check(c.control["sherwood"] == before - 2, "and loosens the Sheriff's grip")
+	check(not c.give_to_poor(500), "can't give gold you don't have")
+
+
+func test_supplies_run_down_and_hunger_hurts() -> void:
+	var c = Campaign.new(db, 21, BAND4)
+	var start: int = c.supplies
+	c.rest()
+	check(c.supplies == start - 4, "four heroes eat four supplies a day")
+	c.supplies = 0
+	var robin = c.heroes["robin"]
+	c.rest()
+	check(robin.hp < robin.max_hp, "a hungry band gets weaker instead of healing")
+	check(robin.hp >= 1, "hunger never knocks anyone out")
+	c.gold = 15
+	check(c.buy_supplies() and c.supplies == 10 and c.gold == 0, "buy a bundle of supplies at camp")
+
+
+func test_buying_gear_boosts_stats_and_respects_class() -> void:
+	var c = Campaign.new(db, 22, BAND4)
+	c.gold = 500
+	var robin = c.heroes["robin"]
+	var atk: int = robin.atk
+	check(not c.buy_item("robin", "ironshod_staff"), "Robin can't buy Little John's staff")
+	check(c.buy_item("robin", "yew_longbow") and robin.atk == atk + 2, "a longbow adds 2 attack")
+	check(c.buy_item("robin", "hunters_recurve") and robin.atk == atk + 3, "a better bow replaces the old one")
+	robin.hp = robin.max_hp - 5
+	check(c.buy_item("robin", "mail_shirt") and robin.max_hp == 38 and robin.hp == 33, "armor raises max HP but keeps the wound")
+	check(not c.buy_item("robin", "mail_shirt"), "can't buy what you're already wearing")
+	c.travel("edwinstowe")
+	check(not c.buy_item("will", "lucky_charm"), "the armory is at camp")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.heroes["robin"].atk == robin.atk and copy.heroes["robin"].max_hp == robin.max_hp, "gear survives save and load")
+
+
+func test_merry_men_fill_gaps() -> void:
+	var c = Campaign.new(db, 23, Campaign.FULL_BAND)
+	c.gold = 500
+	check(not c.hire_merry_man(), "nobody joins a band with no reputation")
+	c.reputation = 10
+	check(c.hire_merry_man(), "hire a Merry Man at camp")
+	var mm_id: String = c.merry_men.keys()[0]
+	check(c.party().size() == Campaign.PARTY_SIZE and not c.party().has(c.heroes[mm_id]), "with everyone free, the named heroes go")
+	c.captured["will"] = {"node": "locksley", "since": c.day}
+	check(c.party().has(c.heroes[mm_id]), "a Merry Man steps in when Will is captured")
+	check(c.buy_item(mm_id, "outlaw_spear"), "Merry Men can be equipped too")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.hero_name(mm_id) == c.hero_name(mm_id) and copy.heroes[mm_id].atk == c.heroes[mm_id].atk, "Merry Men survive save and load")
+	for _i in 5:
+		c.hire_merry_man()
+	check(c.merry_men.size() == int(db.economy["merry_men"]["max"]), "the camp only feeds so many")
+
+
+func test_informant_reveals_bait() -> void:
+	var c = Campaign.new(db, 24, BAND4)
+	c.gold = 500
+	c.missions.clear()
+	var gen = MissionGen.new(db)
+	var m: Dictionary = gen.generate("robbery", 50, 3, "locksley")
+	gen.make_bait(m, "guy", "")
+	m["expires"] = 99
+	c.missions["edwinstowe"] = m
+	c.travel("edwinstowe")
+	var cost: int = c.informant_cost()
+	check(c.pay_informant() and c.gold == 500 - cost, "pay the informant")
+	check(m["bait"]["revealed"], "the informant exposes Guy's bait")
+	check(not c.pay_informant(), "no need to pay twice")
+
+
+func test_bribing_the_jailer_frees_prisoners() -> void:
+	var c = Campaign.new(db, 25, BAND4)
+	c.gold = 1000
+	c.travel("locksley")
+	c.missions.erase("locksley")
+	c.captured["will"] = {"node": "locksley", "since": c.day}
+	c._post_rescue("will", "locksley")
+	var cost: int = c.jailer_cost()
+	check(cost == 70, "one prisoner in a village costs 70")
+	check(c.bribe_jailer() and c.captured.is_empty() and not c.missions.has("locksley"), "the bribe frees Will and clears the rescue job")
+	c.travel("nottingham")
+	c.captured["tuck"] = {"node": "nottingham", "since": c.day}
+	check(c.jailer_cost() == 140, "the dungeon jailer wants twice as much")
+
+
+func test_every_unit_has_a_sprite() -> void:
+	for id in db.heroes:
+		check(ResourceLoader.exists("res://assets/sprites/%s.png" % id), "%s has a sprite" % id)
+	for id in db.enemies:
+		var art: String = db.enemies[id].get("sprite", id)
+		check(ResourceLoader.exists("res://assets/sprites/%s.png" % art), "%s has a sprite" % id)
+
+
+func test_every_battle_place_has_a_backdrop() -> void:
+	for id in db.locations:
+		check(ResourceLoader.exists("res://assets/backdrops/%s.png" % id), "%s has a backdrop" % id)
+	for id in db.encounters:
+		check(db.locations.has(db.encounters[id].get("location", "")), "encounter %s names a real location" % id)
+	check(ResourceLoader.exists("res://assets/map/map.png"), "the strategic map is painted")
+
+
+func test_every_item_and_path_step_has_art() -> void:
+	for id in db.items:
+		check(ResourceLoader.exists("res://assets/items/%s.png" % id), "%s has an icon" % id)
+	for kind in ["approach", "combat", "choice", "hazard", "objective", "escape"]:
+		check(ResourceLoader.exists("res://assets/ui/node_%s.png" % kind), "path step %s has a medallion" % kind)
+	for id in db.abilities:
+		var fx: String = db.abilities[id].get("fx", "")
+		check(fx in ["", "dash"] or ResourceLoader.exists("res://assets/fx/%s.png" % fx), "%s's effect has art" % id)
+
+
+func test_battle_reports_hits_for_animation() -> void:
+	var b = db.make_battle(["robin"], "forest_patrol", 5)
+	var seen := []
+	b.acted.connect(func(u, a, _t): seen.append(a))
+	b.damaged.connect(func(_u, amount, _c): seen.append(amount))
+	var robin = b.next_turn()
+	while robin != null and robin.side != "heroes":
+		b.run_ai_turn()
+		robin = b.next_turn()
+	seen.clear()
+	b.perform(robin, "bow_shot", b.legal_targets(robin, "bow_shot")[0])
+	check(seen.size() == 2 and seen[0] == "bow_shot" and seen[1] is int, "a bow shot reports the action, then the damage")
+
+
+# --- Story missions --------------------------------------------------------------
+
+func test_story_data_is_valid() -> void:
+	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape"]
+	for h in db.stories["start_band"]:
+		check(db.heroes.has(h), "start band hero %s exists" % h)
+	for id in db.stories["stories"]:
+		var st: Dictionary = db.stories["stories"][id]
+		check(db.map["nodes"].has(st["node"]), "story %s is placed on a real map node" % id)
+		check(ResourceLoader.exists("res://assets/backdrops/%s.png" % st["backdrop"]), "story %s has a backdrop" % id)
+		check(st["recruit"] == "" or db.heroes.has(st["recruit"]), "story %s recruits a real hero" % id)
+		for h in st["requires"].get("band", []):
+			check(db.heroes.has(h), "story %s requires a real hero" % id)
+		for n in st["nodes"]:
+			check(kinds.has(n["kind"]), "story %s uses known node kinds" % id)
+			for e in n.get("enemies", []):
+				check(db.enemies.has(e), "story %s uses known enemy %s" % [id, e])
+			for opt in n.get("options", []):
+				check(opt["result"] in ["next", "sneak", "fight"], "story %s choice results are known" % id)
+			if n.get("friendly", false):
+				check(n.has("win") and n.has("lose") and n.has("party"), "story %s duel says who fights and how it ends" % id)
+		check(st["recruit"] == "" or st["nodes"].any(func(n): return n.get("recruit", false)), "story %s has a node where the companion joins" % id)
+
+
+func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
+	var c = Campaign.new(db, 40)
+	check(c.band == db.stories["start_band"], "a new campaign starts with only the start band")
+	check(c.missions.get("sherwood_edge", {}).get("story", "") == "little_john_bridge", "Little John's bridge is waiting on day one")
+	check(not c.missions.values().any(func(m): return m.get("story", "") == "tuck_ford"), "Tuck's story waits until John has joined")
+	c.travel("sherwood_edge")
+	var run = c.start_mission()
+	var step: Dictionary = {}
+	while step.get("type", "") != "battle":
+		step = run.arrive()
+		if step["type"] == "choice":
+			step = run.choose(0)
+		if step["type"] == "continue":
+			run.advance()
+	var b = run.make_battle(step["enemies"])
+	var heroes_in_duel: Array = b.units.filter(func(u): return u.side == "heroes")
+	check(b.friendly and heroes_in_duel.size() == 1 and heroes_in_duel[0].id == "robin", "Robin faces the stranger alone, in a friendly bout")
+	# Lose on purpose: Robin still wins a friend.
+	for u in heroes_in_duel:
+		u.hp = 0
+	b._check_end()
+	check(b.result == "defeat" and b.captured.is_empty(), "losing a bout captures nobody")
+	run.battle_finished(b)
+	check(not run.is_over() and c.heroes["robin"].hp >= 1, "the story goes on after a lost bout")
+	run.advance()
+	while not run.is_over():
+		run.arrive()
+		run.advance()
+	check(run.result == "success" and run.recruited == "little_john", "the bridge story succeeds and John is won over")
+	c.finish_mission(run)
+	check(c.band.has("little_john") and c.heroes.has("little_john"), "Little John joins the band")
+	check(c.stories_done.has("little_john_bridge") and c.missions.get("sherwood_edge", {}).get("type", "") != "story", "the bridge story is done for good")
+	check(c.missions.get("blidworth", {}).get("story", "") == "tuck_ford", "Tuck's ford appears once John has joined")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.band == c.band and copy.stories_done == c.stories_done, "the band and finished stories survive save and load")
+
+
+func test_every_legend_can_be_played_through() -> void:
+	var c = Campaign.new(db, 41)
+	c.reputation = 30
+	var guard := 0
+	while c.stories_done.size() < db.stories["stories"].size() and guard < 40:
+		guard += 1
+		var at := ""
+		for n in c.missions:
+			if c.missions[n]["type"] == "story":
+				at = n
+		if at == "":
+			c.rest()
+			continue
+		c.travel(at)
+		for h in c.heroes.values():
+			h.hp = h.max_hp
+		var run = c.start_mission()
+		autoplay_mission(run)
+		c.finish_mission(run)
+		c.captured.clear()
+		c.travel("camp")
+	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
+	for h in Campaign.FULL_BAND:
+		check(c.band.has(h), "%s has joined by the end of the legends" % h)
+
+
+func test_old_saves_keep_the_whole_band() -> void:
+	var c = Campaign.new(db, 42, BAND4)
+	var data: Dictionary = JSON.parse_string(JSON.stringify(c.to_dict()))
+	data.erase("band")
+	data.erase("stories_done")
+	var copy = Campaign.from_dict(db, data)
+	check(copy.band == BAND4, "a save from before stories keeps Robin, John, Will and Tuck")
+	check(not copy.missions.values().any(func(m): return m.get("recruit", "") in BAND4), "nobody already in the band is offered a recruiting story")
+
+
+## A story campaign from day one, legends first: the small starting band must survive until friends join.
+func test_story_campaign_with_autoplay() -> void:
+	var finished := 0
+	var early_ok := 0
+	var early_jobs := 0
+	for s in 6:
+		var c = Campaign.new(db, 100 + s)
+		for _i in 30:
+			if c.missions.is_empty():
+				c.rest()
+				continue
+			var targets: Array = c.missions.keys()
+			targets.sort_custom(func(a, b): return c.missions[a]["type"] == "story" and c.missions[b]["type"] != "story")
+			c.travel(targets[0])
+			var run = c.start_mission()
+			if run == null:
+				c.travel("camp")
+				continue
+			autoplay_mission(run, true)
+			if c.band.size() <= 2 and run.mission["type"] != "story":
+				early_jobs += 1
+				early_ok += 1 if run.result == "success" else 0
+			c.finish_mission(run)
+			c.travel("camp")
+			while c.supply_days() < 8 and c.buy_supplies():
+				pass
+			c.rest()
+		finished += c.stories_done.size()
+		print("story campaign %d: day %d, band %s, legends %s, gold %d, rep %d" % [s, c.day, c.band, c.stories_done, c.gold, c.reputation])
+	print("ordinary jobs tried with only Robin and Will: %d/%d succeeded" % [early_ok, early_jobs])
+	check(finished >= 6 * 3, "most legends get played within 30 trips (%d of %d)" % [finished, 6 * db.stories["stories"].size()])

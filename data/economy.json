@@ -1,0 +1,13 @@
+{
+  "starting_gold": 40,
+  "give_amounts": [25, 50, 100],
+  "reputation_per_gold": 0.1,
+  "control_per_gold": 0.04,
+  "supplies": {"start": 20, "bundle": 10, "price": 15, "per_member_per_day": 1, "hunger_damage": 0.1},
+  "informant": {"base": 15, "per_threat": 0.3},
+  "jailer": {"base": 50, "per_prisoner": 20, "dungeon_multiplier": 2},
+  "merry_men": {
+    "price": 50, "min_reputation": 10, "max": 4,
+    "names": ["Gilbert Whitehand", "Wat the Tinker", "Midge", "Bartholomew", "Old Reynold", "Simon of the Lea", "Hob o' the Hill", "Ralph Longshanks"]
+  }
+}

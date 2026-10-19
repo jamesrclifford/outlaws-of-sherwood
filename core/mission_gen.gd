@@ -49,6 +49,33 @@ func generate(type: String, threat: int, seed_value: int, location_id := "", hun
 	}
 
 
+## Builds a hand-written story mission from data/stories.json. Story missions have no traps or bait.
+func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
+	var st: Dictionary = db.stories["stories"][story_id]
+	return {
+		"bait": {},
+		"seed": seed_value,
+		"type": "story",
+		"story": story_id,
+		"name": st["name"],
+		"intro": st["intro"],
+		"recruit": st["recruit"],
+		"location": st["backdrop"],
+		"location_name": st["place"],
+		"threat": threat,
+		"nodes": st["nodes"].duplicate(true),
+		"rewards": st["rewards"].duplicate(),
+	}
+
+
+## Turns any generated robbery into bait set by the given villain (used when a villain's plot comes due).
+func make_bait(mission: Dictionary, by: String, hunted_hero: String) -> void:
+	for n in mission["nodes"]:
+		n.erase("trap")
+	mission["bait"] = {"by": by, "revealed": false}
+	_set_bait(mission["nodes"], by, hunted_hero)
+
+
 ## Chance that a robbery is really a trap. Grows with the Sheriff's grip on the region.
 static func bait_chance(threat: int) -> float:
 	return 0.15 + threat / 250.0
