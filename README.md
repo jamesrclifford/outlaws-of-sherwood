@@ -24,3 +24,15 @@ The full design and roadmap are in [docs/design-plan.md](docs/design-plan.md).
 | `assets/fonts/` | The pixel font, a BMFont drawn glyph by glyph in `tools/make_font.py` and set project-wide in `project.godot`. |
 | `assets/items/`, `assets/fx/` | Armory gear icons and the arrows, bolts and nets that fly in battle, from `tools/make_scenery.py`. |
 | `tests/` | Headless tests: `GODOT=/path/to/godot tests/run.sh`. `tests/mission_smoke.gd`, `tests/map_smoke.gd` and `tests/shop_smoke.gd` play through the real UI. |
+
+## Android
+
+`tools/build_android.sh` builds a signed APK you can install on a phone (`build/OutlawsOfSherwood-<version>.apk`).
+It needs Godot 4.7.1 and Java, but no Android SDK: it downloads the export templates and
+[uber-apk-signer](https://github.com/patrickfav/uber-apk-signer) on first run.
+
+    GODOT=/path/to/godot KEYSTORE=/path/to/outlaws-sideload.keystore tools/build_android.sh
+
+Sign every build with the same keystore, or Android refuses to install it over an earlier one.
+The version shown on the phone is `version/name` in `export_presets.cfg`; bump `version/code` with it.
+
