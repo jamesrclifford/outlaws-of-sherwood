@@ -9,6 +9,7 @@ signal event(text: String)
 signal acted(unit, ability_id: String, targets: Array)
 signal damaged(unit, amount: int, is_crit: bool)
 signal healed(unit, amount: int)
+signal status_added(unit, status: String)
 
 var abilities: Dictionary
 var enemy_defs: Dictionary
@@ -175,6 +176,7 @@ func perform(u, ability_id: String, target) -> bool:
 			if t.is_active() and rng.randf() < float(eff.get("chance", 1.0)):
 				t.add_status(eff["status"], int(eff["turns"]))
 				_emit("%s is %s." % [t.name, eff["status"]])
+				status_added.emit(t, eff["status"])
 	if ab.has("summon"):
 		_summon(u, ab["summon"])
 	_check_end()

@@ -596,6 +596,68 @@ func test_battle_reports_hits_for_animation() -> void:
 	check(seen.size() == 2 and seen[0] == "bow_shot" and seen[1] is int, "a bow shot reports the action, then the damage")
 
 
+## Alan's songs must do something you can see: the ballad heals and inspires everyone, the lullaby
+## usually puts its target to sleep, and both report the change for the battle screen.
+func test_alan_songs_heal_inspire_and_stun() -> void:
+	var stuns := 0
+	for s in 40:
+		var b = db.make_battle(["alan", "robin", "little_john"], "forest_patrol", 300 + s)
+		var added := []
+		b.status_added.connect(func(u, st): added.append([u, st]))
+		var alan = b.next_turn()
+		while alan != null and alan.id != "alan":
+			if alan.side == "heroes":
+				b.end_turn()
+			else:
+				b.run_ai_turn()
+			alan = b.next_turn()
+		if alan == null:
+			continue
+		if s == 0:
+			var john = b.units.filter(func(u): return u.id == "little_john")[0]
+			john.hp = 10
+			added.clear()
+			b.perform(alan, "rousing_ballad", alan)
+			check(john.hp >= 10 + 5, "Rousing Ballad heals a hurt friend by at least 5 (%d)" % john.hp)
+			var heroes: Array = b.units.filter(func(u): return u.side == "heroes" and u.is_active())
+			check(heroes.all(func(u): return u.has_status("inspired")), "Rousing Ballad inspires the whole band")
+			check(added.size() == heroes.size(), "each inspired hero is reported to the battle screen")
+		else:
+			var target = b.legal_targets(alan, "lullaby")[0]
+			b.perform(alan, "lullaby", target)
+			stuns += 1 if target.has_status("stunned") else 0
+	check(stuns >= 20, "Lullaby puts its target to sleep most of the time (%d of 39)" % stuns)
+
+
+func test_staff_sweep_hits_hard_and_can_knock_down() -> void:
+	var sweep_hits := []
+	var strike_hits := []
+	var stuns := 0
+	for s in 30:
+		var b = db.make_battle(["little_john", "robin"], "forest_patrol", 500 + s)
+		var john = b.next_turn()
+		while john != null and john.id != "little_john":
+			if john.side == "heroes":
+				b.end_turn()
+			else:
+				b.run_ai_turn()
+			john = b.next_turn()
+		if john == null:
+			continue
+		var targets: Array = b.legal_targets(john, "staff_sweep")
+		var before := targets.map(func(t): return t.hp)
+		if s % 2 == 0:
+			b.perform(john, "staff_sweep", targets[0])
+			for i in targets.size():
+				sweep_hits.append(before[i] - targets[i].hp)
+				stuns += 1 if targets[i].has_status("stunned") else 0
+		else:
+			b.perform(john, "strike", targets[0])
+			strike_hits.append(before[0] - targets[0].hp)
+	var avg := func(a: Array) -> float: return float(a.reduce(func(x, y): return x + y, 0)) / maxi(1, a.size())
+	check(avg.call(sweep_hits) >= 0.8 * avg.call(strike_hits), "Staff Sweep hits each foe nearly as hard as a strike (%.1f vs %.1f)" % [avg.call(sweep_hits), avg.call(strike_hits)])
+	check(stuns >= 2, "Staff Sweep sometimes knocks foes off their feet (%d)" % stuns)
+
 # --- Story missions --------------------------------------------------------------
 
 func test_story_data_is_valid() -> void:
