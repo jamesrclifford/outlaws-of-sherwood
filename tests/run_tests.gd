@@ -54,6 +54,12 @@ func autoplay(b, max_turns := 400) -> void:
 		turns += 1
 
 
+func test_screens_load() -> void:
+	# Screens aren't run headlessly, so at least make sure each one parses.
+	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd"]:
+		check(load(path) != null, "%s loads" % path)
+
+
 func test_data_references_are_valid() -> void:
 	for set in [db.heroes, db.enemies]:
 		for id in set:

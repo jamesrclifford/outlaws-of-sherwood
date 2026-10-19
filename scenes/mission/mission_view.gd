@@ -51,7 +51,9 @@ func _ready() -> void:
 	_show_briefing()
 
 
+## The scene keeps its size; the panel below grows with the phone, and the buttons sit at its foot.
 func _build_layout() -> void:
+	var h := Style.screen_height(self)
 	var bg := ColorRect.new()
 	bg.color = Color("1a140e")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -74,10 +76,10 @@ func _build_layout() -> void:
 	title_label = _label(Vector2(8, 4), Vector2(344, 22), 16)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_color_override("font_color", Color("f0d070"))
-	subtitle_label = _label(Vector2(8, 28), Vector2(344, 12), 8)
+	subtitle_label = _label(Vector2(8, 24), Vector2(344, Style.lines(1)), 16)
 	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	path_box = HBoxContainer.new()
-	path_box.position = Vector2(8, 44)
+	path_box.position = Vector2(8, 46)
 	path_box.size = Vector2(344, 48)
 	path_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	path_box.add_theme_constant_override("separation", 4)
@@ -86,15 +88,17 @@ func _build_layout() -> void:
 	party_box.position = Vector2(0, 112)
 	party_box.size = Vector2(360, 124)
 	add_child(party_box)
-	add_child(Style.panel(Vector2(0, 236), Vector2(360, 404)))
-	party_label = _label(Vector2(10, 240), Vector2(340, 12), 8)
+	add_child(Style.panel(Vector2(0, 236), Vector2(360, h - 236)))
+	party_label = _label(Vector2(10, 242), Vector2(340, Style.lines(1)), 16)
 	party_label.add_theme_color_override("font_color", Color("f0d070"))
-	log_label = _label(Vector2(10, 256), Vector2(340, 176), 8)
-	log_label.add_theme_color_override("font_color", Color("e0d4ac"))
+	# Room for three 40-tall choices; a fourth pushes into the log's last lines.
 	buttons = VBoxContainer.new()
-	buttons.position = Vector2(8, 440)
-	buttons.size = Vector2(344, 190)
+	buttons.position = Vector2(8, h - 6 - 3 * 44)
+	buttons.size = Vector2(344, 3 * 44)
+	buttons.add_theme_constant_override("separation", 4)
 	add_child(buttons)
+	log_label = _label(Vector2(10, 264), Vector2(340, buttons.position.y - 4 - 264), 16)
+	log_label.add_theme_color_override("font_color", Color("e0d4ac"))
 
 
 func _label(pos: Vector2, sz: Vector2, font_size: int) -> Label:
@@ -185,17 +189,15 @@ func _refresh_party() -> void:
 		card.add_child(art)
 		var plate := ColorRect.new()
 		plate.color = Color(0.08, 0.06, 0.04, 0.72)
-		plate.position = Vector2(4, 66)
-		plate.size = Vector2(72, 24)
+		plate.position = Vector2(2, 66)
+		plate.size = Vector2(76, Style.lines(2))
 		card.add_child(plate)
 		var info := Label.new()
-		info.add_theme_font_size_override("font_size", 8)
 		info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		info.add_theme_constant_override("line_spacing", -2)
-		info.position = Vector2(0, 67)
-		info.size = Vector2(80, 24)
-		var state := "CAPTURED" if captured else "%d/%d" % [h.hp, h.max_hp]
-		info.text = "%s\n%s" % [h.name.split(" ")[0], state + (" netted" if h.has_status("netted") else "")]
+		info.position = Vector2(-2, 68)
+		info.size = Vector2(84, Style.lines(2))
+		var state := "Caught" if captured else ("Netted" if h.has_status("netted") else "%d/%d" % [h.hp, h.max_hp])
+		info.text = "%s\n%s" % [h.short_name(), state]
 		card.add_child(info)
 
 

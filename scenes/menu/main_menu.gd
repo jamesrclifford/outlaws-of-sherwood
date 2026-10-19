@@ -12,9 +12,17 @@ const Style = preload("res://scenes/ui/style.gd")
 
 func _ready() -> void:
 	theme = Style.theme()
-	# 180x320 art at 2x; the game's name is painted into it.
+	# 180x320 art at 2x; the game's name is painted into it. On a tall phone it sits at the bottom
+	# and the night sky carries on above it.
+	var lift := Style.screen_height(self) - 640
+	var title_art: Texture2D = preload("res://assets/ui/title.png")
+	var sky := ColorRect.new()
+	sky.color = title_art.get_image().get_pixel(0, 0)
+	sky.size = Vector2(360, lift)
+	add_child(sky)
 	var art := TextureRect.new()
-	art.texture = preload("res://assets/ui/title.png")
+	art.texture = title_art
+	art.position = Vector2(0, lift)
 	art.size = Vector2(360, 640)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_SCALE
@@ -25,11 +33,11 @@ func _ready() -> void:
 		hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		hero.stretch_mode = TextureRect.STRETCH_SCALE
 		hero.size = Vector2(64, 64)
-		hero.position = Vector2([20, 76, 220, 276][i], 506 if i in [0, 3] else 516)
+		hero.position = Vector2([20, 76, 220, 276][i], lift + (506 if i in [0, 3] else 516))
 		hero.flip_h = i >= 2
 		add_child(hero)
 	var box := VBoxContainer.new()
-	box.position = Vector2(60, 132)
+	box.position = Vector2(60, lift + 132)
 	box.size = Vector2(240, 360)
 	box.add_theme_constant_override("separation", 6)
 	add_child(box)

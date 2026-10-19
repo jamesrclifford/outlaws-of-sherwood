@@ -8,7 +8,9 @@ const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
 
-const MAP_TOP := 64
+const MAP_TOP := 80
+## The bottom panel's least height: four lines of place info and five rows of buttons.
+const PANEL_MIN := 300
 const STEP_SECONDS := 0.35
 ## The map art draws each place's icon this far above its node point, leaving room for the name below.
 const ICON_LIFT := 12
@@ -25,7 +27,6 @@ var map_layer: Control
 var band_token: TextureRect
 var info_label: Label
 var buttons: GridContainer
-var news_label: Label
 
 
 ## Optionally hand in a loaded campaign before adding to the tree; otherwise a new one starts.
@@ -49,20 +50,27 @@ func _build_layout() -> void:
 	bg.color = Color("1a140e")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	add_child(Style.panel(Vector2(0, 0), Vector2(360, 62)))
-	status_label = _label(Vector2(8, 4), Vector2(344, 56), 10)
+	var h := Style.screen_height(self)
+	add_child(Style.panel(Vector2(0, 0), Vector2(360, MAP_TOP - 2)))
+	status_label = _label(Vector2(8, 4), Vector2(344, Style.lines(4)), 16)
 
 	# 176x196 pixel art shown at 2x; roads, river, forest and place icons are all in the picture.
+	# A phone too short for the map and the panel shrinks the map rather than the text.
+	var panel_top: float = minf(MAP_TOP + 392 + 2, h - PANEL_MIN)
+	var zoom: float = minf(1.0, (panel_top - 2 - MAP_TOP) / 392.0)
+	var map_pos := Vector2((360 - 352 * zoom) / 2, MAP_TOP)
 	var art := TextureRect.new()
 	art.texture = preload("res://assets/map/map.png")
-	art.position = Vector2(4, MAP_TOP)
+	art.position = map_pos
 	art.size = Vector2(352, 392)
+	art.scale = Vector2(zoom, zoom)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_SCALE
 	add_child(art)
 	map_layer = Control.new()
-	map_layer.position = Vector2(4, MAP_TOP)
+	map_layer.position = map_pos
 	map_layer.size = Vector2(352, 392)
+	map_layer.scale = Vector2(zoom, zoom)
 	add_child(map_layer)
 	for id in campaign.map["nodes"]:
 		_add_node_button(id)
@@ -73,15 +81,14 @@ func _build_layout() -> void:
 	map_layer.add_child(band_token)
 	_place_token(campaign.location)
 
-	add_child(Style.panel(Vector2(0, 458), Vector2(360, 182)))
-	info_label = _label(Vector2(8, 462), Vector2(344, 64), 9)
+	add_child(Style.panel(Vector2(0, panel_top), Vector2(360, h - panel_top)))
+	info_label = _label(Vector2(8, panel_top + 6), Vector2(344, Style.lines(4)), 16)
 	buttons = GridContainer.new()
 	buttons.columns = 2
-	buttons.position = Vector2(8, 528)
-	buttons.size = Vector2(344, 108)
+	buttons.position = Vector2(8, panel_top + 8 + Style.lines(4))
+	buttons.size = Vector2(344, h - buttons.position.y - 4)
+	buttons.add_theme_constant_override("v_separation", 4)
 	add_child(buttons)
-	news_label = _label(Vector2(8, 462), Vector2(344, 0), 9)
-	news_label.visible = false
 
 
 func _label(pos: Vector2, sz: Vector2, font_size: int) -> Label:
@@ -136,8 +143,9 @@ func _place_token(id: String) -> void:
 
 func _refresh() -> void:
 	var c = campaign
-	status_label.text = "Day %d   Gold %d   Supplies %d (%d days)\nReputation %d   Infamy %d   Sheriff's plot %d%%   Guy's plot %d%%%s" % [
-		c.day, c.gold, c.supplies, c.supply_days(), c.reputation, c.infamy, c.plots["sheriff"], c.plots["guy"],
+	# The traps fill up as the villains plot; at 100% one of them baits a job.
+	status_label.text = "Day %d   Gold %d   Rep %d\nSupplies %d (%d days)  Infamy %d\nTraps: Sheriff %d%%   Guy %d%%%s" % [
+		c.day, c.gold, c.reputation, c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
 		("\nGuy is hunting %s" % c.hero_name(c.hunted_hero)) if c.hunted_hero != "" else ""]
 	for id in c.map["nodes"]:
 		var b: Button = map_layer.get_node(id)
@@ -164,9 +172,9 @@ func _select(id: String) -> void:
 	var lines := ["%s  (%s, threat %d)" % [n["name"], c.map["regions"][n["region"]]["name"], c.threat(id)]]
 	var heroes_line := []
 	for h in c.free_heroes():
-		heroes_line.append("%s %d/%d" % [h.name.split(" ")[0], h.hp, h.max_hp])
+		heroes_line.append("%s %d/%d" % [h.short_name(), h.hp, h.max_hp])
 	for h in c.captured:
-		heroes_line.append("%s CAPTURED" % c.hero_name(h).split(" ")[0])
+		heroes_line.append("%s caught" % (c.heroes[h].short_name() if c.heroes.has(h) else c.hero_name(h).split(" ")[0]))
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
@@ -186,14 +194,14 @@ func _select(id: String) -> void:
 		if c.missions.has(id):
 			opts.append(["Start the job", _start_job])
 		if c.can_pay_informant():
-			opts.append(["Ask an informant (%dg)" % c.informant_cost(), _act.bind(c.pay_informant)])
+			opts.append(["Informant (%dg)" % c.informant_cost(), _act.bind(c.pay_informant)])
 		if not c.prisoners_here().is_empty():
-			opts.append(["Bribe the jailer (%dg)" % c.jailer_cost(), _act.bind(c.bribe_jailer)])
+			opts.append(["Bribe jailer (%dg)" % c.jailer_cost(), _act.bind(c.bribe_jailer)])
 		if c.can_give():
-			opts.append(["Give to the poor...", _show_giving])
+			opts.append(["Give to the poor", _show_giving])
 		if c.can_buy_supplies():
 			var sup: Dictionary = c.econ["supplies"]
-			opts.append(["Buy %d supplies (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
+			opts.append(["Supplies %d (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
 		if id == "camp":
 			opts.append(["Rest a day", func():
 				c.rest()
@@ -201,11 +209,11 @@ func _select(id: String) -> void:
 			opts.append(["Armory", _show_armory])
 			var mm: Dictionary = c.econ["merry_men"]
 			if c.can_hire():
-				opts.append(["Hire a Merry Man (%dg)" % mm["price"], _act.bind(c.hire_merry_man)])
+				opts.append(["Hire man (%dg)" % mm["price"], _act.bind(c.hire_merry_man)])
 			elif c.merry_men.size() < int(mm["max"]):
-				opts.append(["Merry Men join at %d rep" % mm["min_reputation"], func(): pass])
+				opts.append(["Men join: %d rep" % mm["min_reputation"], func(): pass])
 	else:
-		opts.append(["Travel here (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
+		opts.append(["Travel (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
 	opts.append(["News", _show_news])
 	_set_buttons(opts)
 
@@ -216,9 +224,8 @@ func _set_buttons(options: Array) -> void:
 	for o in options:
 		var b := Button.new()
 		b.text = o[0]
-		b.custom_minimum_size = Vector2(168, 24)
+		b.custom_minimum_size = Vector2(170, 36)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", 9)
 		b.pressed.connect(o[1])
 		buttons.add_child(b)
 
@@ -281,15 +288,15 @@ func _show_armory(hero_id := "") -> void:
 	panel.color = Color("1a140e")
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(panel)
-	panel.add_child(Style.panel(Vector2(0, 0), Vector2(360, 640)))
+	var screen_h := Style.screen_height(self)
+	panel.add_child(Style.panel(Vector2(0, 0), Vector2(360, screen_h)))
 	var title := Label.new()
 	title.position = Vector2(8, 8)
-	title.size = Vector2(344, 40)
-	title.add_theme_font_size_override("font_size", 11)
+	title.size = Vector2(344, Style.lines(2))
 	panel.add_child(title)
 	var scroll := ScrollContainer.new()
-	scroll.position = Vector2(8, 56)
-	scroll.size = Vector2(344, 530)
+	scroll.position = Vector2(8, 52)
+	scroll.size = Vector2(344, screen_h - 60)
 	panel.add_child(scroll)
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -308,11 +315,11 @@ func _show_armory(hero_id := "") -> void:
 		title.text = "Armory    Gold %d\nChoose who to equip." % c.gold
 		for h in c.free_heroes():
 			var gear: Array = c.equipment.get(h.id, {}).values().map(func(i): return db.items[i]["name"])
-			var row := _list_button(list, "%s (%s)  ATK %d DEF %d SPD %d HP %d\n%s" % [h.name, h.cls, h.atk, h.def, h.spd, h.max_hp, ", ".join(gear) if not gear.is_empty() else "No gear"], reopen.bind(h.id))
+			var row := _list_button(list, "%s (%s)\nATK %d DEF %d SPD %d HP %d\n%s" % [h.name, h.cls, h.atk, h.def, h.spd, h.max_hp, ", ".join(gear) if not gear.is_empty() else "No gear"], reopen.bind(h.id))
 			row.icon = BattleView.sprite_for(h)
 	else:
 		var h = c.heroes[hero_id]
-		title.text = "%s    Gold %d\nATK %d  DEF %d  SPD %d  HP %d  CRIT %d%%" % [h.name, c.gold, h.atk, h.def, h.spd, h.max_hp, int(h.crit * 100)]
+		title.text = "%s    Gold %d\nATK %d DEF %d SPD %d HP %d CRIT %d%%" % [h.name, c.gold, h.atk, h.def, h.spd, h.max_hp, int(h.crit * 100)]
 		for item_id in c.items_for(hero_id):
 			var it: Dictionary = db.items[item_id]
 			var bonus := []
@@ -320,7 +327,7 @@ func _show_armory(hero_id := "") -> void:
 				var v = it["bonus"][k]
 				bonus.append("%s%s %s" % ["+" if v > 0 else "", str(int(v * 100)) + "%" if k == "crit" else str(int(v)), k.to_upper()])
 			var worn: bool = c.equipment.get(hero_id, {}).get(it["slot"], "") == item_id
-			var label := "%s  [%s]  %s\n%s" % [it["name"], it["slot"], "EQUIPPED" if worn else "%d gold" % it["price"], ", ".join(bonus)]
+			var label := "%s\n%s, %s\n%s" % [it["name"], it["slot"].capitalize(), "worn" if worn else "%d gold" % it["price"], ", ".join(bonus)]
 			var row := _list_button(list, label, func():
 				if c.buy_item(hero_id, item_id):
 					c.save()
@@ -346,8 +353,8 @@ func _list_button(list: VBoxContainer, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.custom_minimum_size = Vector2(330, 40)
-	b.add_theme_font_size_override("font_size", 9)
 	b.pressed.connect(cb)
 	list.add_child(b)
 	return b
