@@ -178,7 +178,10 @@ func _select(id: String) -> void:
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
-		if m["type"] == "story":
+		if m["type"] == "contest":
+			var prize: Dictionary = m["nodes"][1]["prize"]
+			lines.append("Archery contest: %s. Purse %d gold, until day %d." % [m["name"], prize["gold"], m["expires"]])
+		elif m["type"] == "story":
 			var joins: String = " %s may join the band." % db.heroes[m["recruit"]]["name"] if m["recruit"] != "" else ""
 			lines.append("Legend: %s.%s" % [m["name"], joins])
 		else:
@@ -192,7 +195,7 @@ func _select(id: String) -> void:
 	var days: int = c.route(id).size()
 	if id == c.location:
 		if c.missions.has(id):
-			opts.append(["Start the job", _start_job])
+			opts.append(["Enter contest" if c.missions[id]["type"] == "contest" else "Start the job", _start_job])
 		if c.can_pay_informant():
 			opts.append(["Informant (%dg)" % c.informant_cost(), _act.bind(c.pay_informant)])
 		if not c.prisoners_here().is_empty():

@@ -56,7 +56,7 @@ func autoplay(b, max_turns := 400) -> void:
 
 func test_screens_load() -> void:
 	# Screens aren't run headlessly, so at least make sure each one parses.
-	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd"]:
+	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd", "res://scenes/minigame/minigame_view.gd"]:
 		check(load(path) != null, "%s loads" % path)
 
 
@@ -194,6 +194,11 @@ func autoplay_mission(run, use_scouts := false) -> void:
 			var b = run.make_battle(step["enemies"])
 			autoplay(b)
 			run.battle_finished(b)
+		if step["type"] == "archery":
+			var round = run.make_archery()
+			while not round.done():
+				round.tap(0.4 * round.shots.size())
+			run.archery_finished(round)
 		run.advance()
 
 
@@ -374,6 +379,132 @@ func test_villains_plot_and_set_bait() -> void:
 	check(c.hunted_hero != "" and c.hunted_hero != "robin", "Guy hunts one of Robin's companions")
 	check(c.control.values().all(func(v): return v >= 0 and v <= 100), "control stays within 0-100")
 	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes") or m["type"] == "story"), "old jobs expire")
+
+
+func test_archery_rules() -> void:
+	const Archery = preload("res://core/archery.gd")
+	check(Archery.score_at(Vector2.ZERO) == 10 and Archery.score_at(Vector2(0.55, 0)) == 5 and Archery.score_at(Vector2(0, 1.2)) == 0, "rings score 10 in the gold down to 0 off the target")
+	var a = Archery.new(5, 3, 0.7, "The champion")
+	var b = Archery.new(5, 3, 0.7, "The champion")
+	for i in 3:
+		check(a.wind == b.wind and a.aim_at(0.8) == b.aim_at(0.8), "the same seed sways and blows the same way")
+		check(a.aim_at(0.3).y == 0.0, "the first tap fixes the sight left and right")
+		check(a.tap(0.3) == -1 and b.tap(0.3) == -1, "the first tap doesn't loose the arrow")
+		var x: float = a.locked_x
+		var expect: int = Archery.score_at(Vector2(x + a.wind * Archery.WIND_PUSH, a.aim_at(1.1).y))
+		check(a.tap(1.1) == expect and b.tap(1.1) == expect, "the second tap looses it, and the wind carries it sideways")
+	check(a.done() and a.total() == b.total() and a.rival_total() == b.rival_total(), "a round is three arrows each and replays exactly")
+	check(a.won() == (a.total() >= a.rival_total()), "the higher score wins, ties to Robin")
+	var weak := 0
+	var strong := 0
+	for s in 200:
+		weak += Archery.new(s, 3, 0.3, "x").rival_total()
+		strong += Archery.new(s, 3, 0.9, "x").rival_total()
+	check(strong > weak, "a skilled rival outshoots a poor one (%d vs %d)" % [strong, weak])
+	# Good timing hits the gold: fix the sight just into the wind, then loose it as it crosses the middle.
+	for s in 20:
+		var c = Archery.new(s, 1)
+		var best_x := 0.0
+		var best := 99.0
+		for k in 300:
+			var off := absf(c.landing(k * 0.01).x)
+			if off < best:
+				best = off
+				best_x = k * 0.01
+		c.tap(best_x)
+		var best_y := 0.0
+		best = 99.0
+		for k in 300:
+			if absf(c.aim_at(k * 0.01).y) < best:
+				best = absf(c.aim_at(k * 0.01).y)
+				best_y = k * 0.01
+		check(c.tap(best_y) >= 9, "well-timed taps hit the gold (seed %d)" % s)
+
+
+func test_timing_meter() -> void:
+	const Timing = preload("res://core/timing.gd")
+	check(Timing.quality_at(0.5) == 1.0 and Timing.quality_at(0.1) == 0.0 and Timing.quality_at(0.7) > 0.4, "a tap is judged by how near the middle it lands")
+	var m = Timing.new(3, 3, 1.6)
+	var n = Timing.new(3, 3, 1.6)
+	for t in [0.2, 0.5, 0.9]:
+		check(m.tap(t) == n.tap(t), "the same seed and timing judge the same")
+	check(m.done() and m.qualities.size() == 3, "a flourish is three taps")
+
+
+func test_minigames_reward_good_play() -> void:
+	var dealt := {}
+	for q in [0.0, 0.5, 1.0]:
+		var b = db.make_battle(["robin"], "forest_patrol", 41)
+		var hits := []
+		b.damaged.connect(func(u, amount, crit): hits.append([amount, crit]))
+		var robin = b.next_turn()
+		while robin != null and robin.id != "robin":
+			b.run_ai_turn()
+			robin = b.next_turn()
+		robin.ap = 2
+		var target = b.legal_targets(robin, "split_arrow")[0]
+		target.hp = 999
+		hits.clear()
+		b.perform(robin, "split_arrow", target, [q])
+		dealt[q] = hits[0]
+	check(dealt[0.0][0] < dealt[0.5][0] and dealt[0.5][0] < dealt[1.0][0], "a better aimed shot hits harder (%s)" % [dealt])
+	check(dealt[1.0][1] and not dealt[0.5][1], "a perfect shot is a sure critical, a middling one isn't")
+	# Will's flourish judges each of its three cuts on its own.
+	var b2 = db.make_battle(["will"], "forest_patrol", 41)
+	var cuts := []
+	b2.damaged.connect(func(u, amount, crit): cuts.append(crit))
+	var will = b2.next_turn()
+	while will != null and will.id != "will":
+		b2.run_ai_turn()
+		will = b2.next_turn()
+	will.ap = 2
+	var foe = b2.legal_targets(will, "flourish")[0]
+	foe.hp = 999
+	cuts.clear()
+	b2.perform(will, "flourish", foe, [1.0, 0.2, 1.0])
+	check(cuts == [true, false, true], "each flourish cut is judged on its own tap (%s)" % [cuts])
+	for id in ["bow_shot", "split_arrow", "pinning_shot", "staff_sweep", "flourish"]:
+		check(db.abilities[id].get("minigame", "") in ["aim", "swing", "rhythm"], "%s has a mini-game" % id)
+
+
+func test_contests_appear_and_pay_out() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	var seen := 0
+	for _d in 60:
+		c.rest()
+		var held: Array = c.missions.values().filter(func(m): return m["type"] == "contest")
+		check(held.size() <= 1, "never more than one contest at a time")
+		seen += held.size()
+	check(seen > 0, "contests turn up now and then")
+	var gen = MissionGen.new(db)
+	for won in [true, false]:
+		c.missions.clear()
+		c.location = "nottingham"
+		c.missions["nottingham"] = gen.contest("market_arrow", "Nottingham", 12)
+		c.missions["nottingham"]["expires"] = c.day + 3
+		var save: Dictionary = JSON.parse_string(JSON.stringify(c.to_dict()))
+		check(Campaign.from_dict(db, save).missions["nottingham"] == c.missions["nottingham"], "a waiting contest saves and loads unchanged")
+		var gold_before: int = c.gold
+		var run = c.start_mission()
+		check(run.arrive()["type"] == "continue", "the band arrives at the contest")
+		run.advance()
+		check(run.arrive()["type"] == "archery", "then Robin shoots")
+		var round = run.make_archery()
+		while not round.done():
+			round.tap(0.0)
+		if won:
+			round.rival_scores = [0, 0, 0]
+		else:
+			round.rival_scores = [10, 10, 10]
+			round.scores = [0, 0, 0]
+		run.archery_finished(round)
+		run.advance()
+		c.finish_mission(run)
+		check(run.result == "success", "a contest is never a failed mission")
+		if won:
+			check(c.gold == gold_before + 60, "winning the Golden Arrow pays its purse (%d)" % (c.gold - gold_before))
+		else:
+			check(c.gold == gold_before, "losing pays nothing")
 
 
 func _fake_run(c, result: String, captured_ids: Array):
@@ -689,7 +820,7 @@ func test_bridge_duel_is_staffs_only() -> void:
 
 
 func test_story_data_is_valid() -> void:
-	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape"]
+	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape", "archery"]
 	for h in db.stories["start_band"]:
 		check(db.heroes.has(h), "start band hero %s exists" % h)
 	for id in db.stories["stories"]:

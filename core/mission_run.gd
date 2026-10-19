@@ -2,6 +2,7 @@
 ## (the UI, or a test's autoplay), which hands the finished battle back via battle_finished().
 extends RefCounted
 
+const Archery = preload("res://core/archery.gd")
 const MAX_ENEMIES := 6
 
 var db
@@ -73,6 +74,7 @@ func scout() -> int:
 ##   {"type": "trap_choice"}  a known trap: call decide_trap(avoid)
 ##   {"type": "choice", "options": [...]}  call choose(i)
 ##   {"type": "battle", "enemies": [...]}  fight, then call battle_finished(battle)
+##   {"type": "archery"}  shoot a round from make_archery(), then call archery_finished(round)
 ##   {"type": "continue"}  nothing to resolve: call advance()
 func arrive() -> Dictionary:
 	var node := current_node()
@@ -84,6 +86,8 @@ func arrive() -> Dictionary:
 		_spring_trap(node)
 	if node["kind"] == "choice":
 		return {"type": "choice", "options": node["options"]}
+	if node["kind"] == "archery":
+		return {"type": "archery"}
 	return _battle_or_continue(node.get("enemies", []))
 
 
@@ -148,6 +152,35 @@ func _disarm_after_duel() -> void:
 			h.sprite = _duel_loadouts[h.id][2]
 			h.fixed_abilities = false
 	_duel_loadouts.clear()
+
+
+## The archery round at the current node, against its rival.
+func make_archery():
+	var node := current_node()
+	return Archery.new(rng.randi(), int(node.get("arrows", 3)), float(node.get("skill", 0.5)), node.get("rival", "The champion"))
+
+
+## Who shoots in a contest: Robin if he's here, otherwise the first of the band.
+func archer():
+	for h in active_heroes():
+		if h.id == "robin":
+			return h
+	return active_heroes()[0] if not active_heroes().is_empty() else null
+
+
+## Win or lose, a contest goes on; winning takes the node's prize.
+func archery_finished(round) -> void:
+	var node := current_node()
+	var who: String = archer().name if archer() else "The band"
+	_log("%s scores %d. %s scores %d." % [who, round.total(), round.rival_name, round.rival_total()])
+	if round.won():
+		_log(node.get("win", "The crowd roars!"))
+		var prize: Dictionary = node.get("prize", {})
+		gold += int(prize.get("gold", 0))
+		reputation += int(prize.get("reputation", 0))
+	else:
+		_log(node.get("lose", "So close!"))
+		reputation += 1
 
 
 func active_heroes() -> Array:
@@ -215,7 +248,7 @@ func _objective_met() -> bool:
 	match mission["type"]:
 		"robbery":
 			return loot_taken
-		"story":
+		"story", "contest":
 			return true
 	return prisoner_freed
 

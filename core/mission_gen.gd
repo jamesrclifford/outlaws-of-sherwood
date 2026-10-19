@@ -58,10 +58,7 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 		rewards[k] = int(st["rewards"][k])
 	var nodes: Array = st["nodes"].duplicate(true)
 	for n in nodes:
-		for opt in n.get("options", []):
-			for k in ["gold", "reputation"]:
-				if opt.has(k):
-					opt[k] = int(opt[k])
+		fix_node_ints(n)
 	return {
 		"bait": {},
 		"seed": seed_value,
@@ -171,3 +168,44 @@ func _trap_fits(trap_id: String, node: Dictionary) -> bool:
 		"ambush":
 			return node.has("enemies") and not node["enemies"].is_empty()
 	return true
+
+
+## An archery contest (data/contests.json) at a village or town: the band walks up, Robin shoots
+## against the local champion, and wins the purse if he scores more. Nobody gets hurt.
+func contest(contest_id: String, place_name: String, seed_value: int) -> Dictionary:
+	var ct: Dictionary = db.contests["contests"][contest_id]
+	return {
+		"bait": {},
+		"seed": seed_value,
+		"type": "contest",
+		"name": ct["name"],
+		"location": "archery_contest",
+		"location_name": place_name,
+		"threat": 0,
+		"nodes": [
+			{"kind": "approach", "text": ct["intro"]},
+			{
+				"kind": "archery",
+				"text": "%s steps up to the mark. Three arrows each, and the best score takes the purse." % ct["rival"],
+				"rival": ct["rival"],
+				"skill": float(ct["skill"]),
+				"arrows": 3,
+				"prize": {"gold": int(ct["gold"]), "reputation": int(ct["reputation"])},
+				"win": "The crowd roars! The hooded stranger takes the purse.",
+				"lose": "%s wins by a whisker. The crowd cheers you both all the same." % ct["rival"],
+			},
+		],
+		"rewards": {"gold": 0, "reputation": 0},
+	}
+
+
+## JSON numbers load as floats; keep a node's counts as ints so a saved mission reloads identically.
+static func fix_node_ints(n: Dictionary) -> void:
+	for opt in n.get("options", []):
+		for k in ["gold", "reputation"]:
+			if opt.has(k):
+				opt[k] = int(opt[k])
+	if n.has("arrows"):
+		n["arrows"] = int(n["arrows"])
+	for k in n.get("prize", {}):
+		n["prize"][k] = int(n["prize"][k])

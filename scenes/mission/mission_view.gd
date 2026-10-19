@@ -10,6 +10,7 @@ const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const TRAP_MARK := preload("res://assets/ui/trap_mark.png")
@@ -276,6 +277,8 @@ func _handle(step: Dictionary) -> void:
 			_set_buttons(opts)
 		"battle":
 			_fight(step["enemies"])
+		"archery":
+			_shoot()
 		"continue":
 			_set_buttons([["Onward", _next]])
 
@@ -294,6 +297,20 @@ func _fight(enemy_ids: Array) -> void:
 			_refresh()
 			_set_buttons([["Onward", _next]]))
 	add_child(view)
+
+
+## An archery round against the node's rival, on its own screen.
+func _shoot() -> void:
+	var r = run.make_archery()
+	var who = run.archer()
+	var game := MinigameView.new()
+	game.start_contest(r, who.short_name() if who else "Robin", who.sprite if who else "robin", run.current_node().get("rival", "The champion") + " shoots against you")
+	game.finished.connect(func(done_round):
+		game.queue_free()
+		run.archery_finished(done_round)
+		_refresh()
+		_set_buttons([["Onward", _next]]))
+	add_child(game)
 
 
 func _next() -> void:

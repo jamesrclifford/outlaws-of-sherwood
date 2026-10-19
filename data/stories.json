@@ -77,11 +77,10 @@
       "intro": "The Sheriff announces an archery contest. The prize is an arrow of pure silver. Everyone knows it's a trap to catch Robin, and Robin goes anyway.",
       "nodes": [
         {"kind": "approach", "text": "Robin pulls a patched brown hood low and joins the crowd of archers. The rest of the band hides among the townsfolk."},
-        {"kind": "choice", "text": "The target is set at a hundred paces. The Sheriff's own champion shoots first: a fine shot, right in the middle.",
-          "options": [
-            {"label": "Split his arrow", "result": "next", "log": "Robin's arrow splits the champion's arrow clean in two! The crowd roars."},
-            {"label": "Shoot through the ring of the prize", "result": "next", "log": "Robin's arrow flies through the silver arrow's own ring and pins it to the target. The crowd goes wild."}
-          ]},
+        {"kind": "archery", "text": "The target is set at a hundred paces. The Sheriff's own champion steps up to shoot against the hooded stranger.",
+          "rival": "The Sheriff's champion", "skill": 0.8, "arrows": 3,
+          "win": "Robin's last arrow splits the champion's arrow clean in two! The crowd roars.",
+          "lose": "The champion wins by a hair, but the crowd roars for the hooded stranger, and the Sheriff looks hard at him."},
         {"kind": "combat", "text": "The Sheriff hands over the silver arrow, peers under the hood, and shouts: 'It's him! Seize Robin Hood!'", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "crossbowman", "knight"]},
         {"kind": "combat", "text": "Over the town wall and away! Riders give chase.", "enemies": ["knight", "man_at_arms"], "is_escape": true}
       ]

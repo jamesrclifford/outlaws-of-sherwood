@@ -7,6 +7,7 @@ signal finished(battle)
 
 const GameData = preload("res://core/game_data.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const COLUMN_X := {"heroes": {"back": 8, "front": 92}, "enemies": {"front": 188, "back": 272}}
@@ -362,6 +363,9 @@ func _on_unit_pressed(u) -> void:
 	if selected_ability == "" and u.has_status("netted") and u.side == "heroes" and u != cur:
 		battle.free_ally(cur, u)
 	elif selected_ability != "" and battle.legal_targets(cur, selected_ability).has(u):
+		if db.abilities[selected_ability].has("minigame"):
+			_play_minigame(cur, selected_ability, u)
+			return
 		battle.perform(cur, selected_ability, u)
 	else:
 		# Not a target: say who this is and what is wrong with them.
@@ -371,6 +375,21 @@ func _on_unit_pressed(u) -> void:
 		return
 	_inspected = null
 	_after_hero_action()
+
+
+## Arrow moves are aimed, Little John's sweep and Will's flourish are timed: how well the player
+## does sets how hard the move lands.
+func _play_minigame(cur, ability_id: String, target) -> void:
+	animating = true
+	var game := MinigameView.new()
+	game.start_move(battle.rng.randi(), db.abilities[ability_id]["minigame"], db.abilities[ability_id], cur.short_name(), cur.sprite)
+	game.finished.connect(func(r):
+		game.queue_free()
+		animating = false
+		_inspected = null
+		battle.perform(cur, ability_id, target, MinigameView.skill_of(r))
+		_after_hero_action())
+	add_child(game)
 
 
 func _after_hero_action() -> void:

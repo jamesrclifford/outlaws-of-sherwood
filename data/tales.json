@@ -671,9 +671,7 @@
             {"label": "Ask the King for safety first", "result": "next", "log": "'Whoever shoots on my side,' says the Queen, 'may go home safe.' The King agrees, chuckling."},
             {"label": "Just shoot", "result": "next", "log": "Robin steps up to the mark without a word."}
           ]},
-        {"kind": "duel", "text": "The Queen's archers against the King's!", "party": ["robin", "little_john", "will"], "enemies": ["kings_archer", "kings_archer", "kings_archer"], "friendly": true,
-          "win": "Robin's last arrow splits the King's champion's arrow. The Queen claps with delight.",
-          "lose": "The King's champions edge it by a whisker, but the Queen says she's never seen finer shooting."},
+        {"kind": "archery", "text": "The Queen's archers against the King's!", "rival": "The King's champion", "skill": 0.85, "arrows": 3, "prize": {"gold": 0, "reputation": 2}, "win": "Robin's last arrow splits the King's champion's arrow. The Queen claps with delight.", "lose": "The King's champions edge it by a whisker, but the Queen says she's never seen finer shooting."},
         {"kind": "objective", "text": "Robin kneels and gives his name. The King frowns, but a promise is a promise: forty days to go home safe."}
       ]
     },

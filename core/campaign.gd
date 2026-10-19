@@ -159,6 +159,8 @@ func finish_mission(run) -> void:
 			if m["type"] == "robbery" and not run.is_bait():
 				infamy = mini(100, infamy + 6)
 				control[region] = maxi(0, control[region] - 8)
+			elif m["type"] == "contest":
+				_news("%s: the band comes home with %d gold." % [m["name"], run.gold] if run.gold > 0 else "%s: Robin shot well, but the purse went to another." % m["name"])
 			elif run.is_bait():
 				infamy = mini(100, infamy + 3)
 				plots[m["bait"]["by"]] = maxi(0, plots[m["bait"]["by"]] - 30)
@@ -357,6 +359,7 @@ func _end_day(resting: bool) -> void:
 	_post_stories()
 	if rng.randf() < 0.6 or missions.size() < 2:
 		_spawn_mission()
+	_maybe_post_contest()
 
 
 func _sheriff_acts() -> void:
@@ -420,6 +423,27 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 		m["expires"] = day + MISSION_LIFETIME
 		missions[n] = m
 		return
+
+
+## Now and then a village or town holds an archery contest, never more than one at a time.
+func _maybe_post_contest() -> void:
+	if missions.values().any(func(m): return m["type"] == "contest"):
+		return
+	if rng.randf() >= float(db.contests["chance"]):
+		return
+	var places: Array = map["nodes"].keys().filter(func(n): return not missions.has(n) and node(n).has("location"))
+	var options := []
+	for n in places:
+		for id in db.contests["contests"]:
+			if db.contests["contests"][id]["places"].has(node(n)["kind"]):
+				options.append([n, id])
+	if options.is_empty():
+		return
+	var pick: Array = options[rng.randi_range(0, options.size() - 1)]
+	var m: Dictionary = MissionGen.new(db).contest(pick[1], node(pick[0])["name"], rng.randi())
+	m["expires"] = day + int(db.contests["lifetime"])
+	missions[pick[0]] = m
+	_news("Archers wanted! %s at %s." % [m["name"], node(pick[0])["name"]])
 
 
 ## Puts each story whose requirements are met on the map at its place, taking over any ordinary
@@ -539,10 +563,7 @@ static func _fix_ints(m: Dictionary) -> void:
 	for k in m["rewards"]:
 		m["rewards"][k] = int(m["rewards"][k])
 	for n in m["nodes"]:
-		for opt in n.get("options", []):
-			for k in ["gold", "reputation"]:
-				if opt.has(k):
-					opt[k] = int(opt[k])
+		MissionGen.fix_node_ints(n)
 
 
 const SAVE_PATH := "user://campaign.json"

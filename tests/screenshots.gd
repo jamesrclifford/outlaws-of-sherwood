@@ -2,6 +2,8 @@
 ## xvfb-run godot --path . --rendering-driver opengl3 -s tests/screenshots.gd -- out_dir
 extends SceneTree
 
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
+const Archery = preload("res://core/archery.gd")
 const MapView = preload("res://scenes/map/map_view.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
@@ -89,4 +91,37 @@ func _init() -> void:
 	var hero = battle.battle.current()
 	battle._on_ability_pressed(battle.db.heroes[hero.id]["abilities"][2] if battle.db.heroes.has(hero.id) else "strike")
 	await _snap(dir, "battle_hint")
+	await _clear()
+
+	# Skill games: a contest after one arrow, an arrow move in battle, and Little John's sweep.
+	var contest := MinigameView.new()
+	contest.start_contest(Archery.new(4, 3, 0.7, "The Sheriff's archer"), "Robin", "robin", "The Sheriff's archer shoots against you")
+	root.add_child(contest)
+	await process_frame
+	contest.t = 0.35
+	contest.tap()
+	contest.t = 0.6
+	contest.tap()
+	contest._paused = 0.0
+	contest._flash = ""
+	contest.t = 0.2
+	contest.tap()
+	contest.t = 0.3
+	await _snap(dir, "contest")
+	await _clear()
+	var shot_db = GameData.new()
+	for kind in ["aim", "swing", "rhythm"]:
+		var move: String = {"aim": "split_arrow", "swing": "staff_sweep", "rhythm": "flourish"}[kind]
+		var who: String = {"aim": "robin", "swing": "little_john", "rhythm": "will"}[kind]
+		var game := MinigameView.new()
+		game.start_move(7, kind, shot_db.abilities[move], who.capitalize(), who)
+		root.add_child(game)
+		await process_frame
+		game.t = 0.4
+		if kind == "rhythm":
+			game.tap()
+			game._paused = 0.0
+			game._flash = ""
+		await _snap(dir, "move_" + kind)
+		await _clear()
 	quit()

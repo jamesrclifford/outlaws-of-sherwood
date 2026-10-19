@@ -1,0 +1,26 @@
+{
+  "chance": 0.2,
+  "lifetime": 4,
+  "contests": {
+    "fair_match": {
+      "name": "The Fair's Archery Match", "places": ["village"],
+      "intro": "It's fair day! Archers gather on the green to shoot for a fat purse, and nobody looks twice at a hooded stranger with a bow.",
+      "rival": "The village champion", "skill": 0.45, "gold": 30, "reputation": 3
+    },
+    "wand_shoot": {
+      "name": "Shooting at the Wand", "places": ["village"],
+      "intro": "The foresters have set up a peeled willow wand at a hundred paces and dare anyone to beat them.",
+      "rival": "The head forester", "skill": 0.6, "gold": 40, "reputation": 4
+    },
+    "market_arrow": {
+      "name": "The Golden Arrow", "places": ["town"],
+      "intro": "Heralds cry it through the market: a golden arrow for the finest archer in Nottingham. The Sheriff's own bowmen will shoot.",
+      "rival": "The Sheriff's archer", "skill": 0.7, "gold": 60, "reputation": 5
+    },
+    "midsummer_butts": {
+      "name": "The Midsummer Butts", "places": ["town", "village"],
+      "intro": "Midsummer, and the butts are set up for the great match. Gilbert of the White Hand, the best bow in the shire, has come to shoot.",
+      "rival": "Gilbert of the White Hand", "skill": 0.8, "gold": 80, "reputation": 6
+    }
+  }
+}
