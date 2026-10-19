@@ -13,6 +13,9 @@ var mission_templates: Dictionary
 var traps: Dictionary
 var baits: Dictionary
 var map: Dictionary
+var items: Dictionary
+var economy: Dictionary
+var stories: Dictionary
 
 
 func _init() -> void:
@@ -25,6 +28,9 @@ func _init() -> void:
 	traps = _load("res://data/traps.json")
 	baits = _load("res://data/baits.json")
 	map = _load("res://data/map.json")
+	items = _load("res://data/items.json")
+	economy = _load("res://data/economy.json")
+	stories = _load("res://data/stories.json")
 
 
 static func _load(path: String) -> Dictionary:

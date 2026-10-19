@@ -1,0 +1,19 @@
+{
+  "yew_longbow":      {"name": "Yew Longbow",          "slot": "weapon",  "classes": ["Archer"],  "price": 60,  "bonus": {"atk": 2}},
+  "hunters_recurve":  {"name": "Hunter's Recurve",     "slot": "weapon",  "classes": ["Archer"],  "price": 130, "bonus": {"atk": 3, "crit": 0.05}},
+  "ironshod_staff":   {"name": "Iron-shod Quarterstaff","slot": "weapon", "classes": ["Tank"],    "price": 60,  "bonus": {"atk": 2}},
+  "great_oak_staff":  {"name": "Great Oak Staff",      "slot": "weapon",  "classes": ["Tank"],    "price": 130, "bonus": {"atk": 3, "hp": 6}},
+  "duelling_sword":   {"name": "Duelling Sword",       "slot": "weapon",  "classes": ["Duelist"], "price": 70,  "bonus": {"atk": 2, "crit": 0.05}},
+  "fine_arming_sword":{"name": "Fine Arming Sword",    "slot": "weapon",  "classes": ["Duelist"], "price": 140, "bonus": {"atk": 4}},
+  "blackthorn_cudgel":{"name": "Blackthorn Cudgel",    "slot": "weapon",  "classes": ["Healer"],  "price": 50,  "bonus": {"atk": 2}},
+  "friars_staff":     {"name": "Friar's Walking Staff","slot": "weapon",  "classes": ["Healer"],  "price": 110, "bonus": {"atk": 3, "hp": 4}},
+  "outlaw_spear":     {"name": "Outlaw's Spear",       "slot": "weapon",  "classes": ["Outlaw"],  "price": 40,  "bonus": {"atk": 2}},
+  "padded_jerkin":    {"name": "Padded Jerkin",        "slot": "armor",   "classes": [],          "price": 40,  "bonus": {"def": 1, "hp": 4}},
+  "leather_brigandine":{"name": "Leather Brigandine",  "slot": "armor",   "classes": [],          "price": 90,  "bonus": {"def": 2, "hp": 6}},
+  "mail_shirt":       {"name": "Mail Shirt",           "slot": "armor",   "classes": [],          "price": 150, "bonus": {"def": 3, "hp": 8, "spd": -1}},
+  "lucky_charm":      {"name": "Lucky Charm",          "slot": "trinket", "classes": [],          "price": 50,  "bonus": {"crit": 0.05}},
+  "hunters_boots":    {"name": "Hunter's Boots",       "slot": "trinket", "classes": [],          "price": 60,  "bonus": {"spd": 2}},
+  "herb_satchel":     {"name": "Herb Satchel",         "slot": "trinket", "classes": [],          "price": 50,  "bonus": {"hp": 6}},
+  "ash_lute":           {"name": "Ash Lute",            "slot": "weapon",  "classes": ["Minstrel"], "price": 60,  "bonus": {"atk": 2}},
+  "silver_harp":        {"name": "Silver-strung Harp",  "slot": "weapon",  "classes": ["Minstrel"], "price": 120, "bonus": {"atk": 2, "spd": 2}}
+}
