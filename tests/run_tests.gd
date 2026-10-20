@@ -940,7 +940,7 @@ func band_for_story(id: String) -> Array:
 	var deepest := -1
 	for h in need:
 		deepest = maxi(deepest, order.find(h))
-	return order.slice(0, maxi(2, deepest + 1))
+	return order.slice(0, maxi(1, deepest + 1))
 
 
 ## Each tale should be winnable most of the time by the band you'd have when it first appears.
@@ -969,6 +969,7 @@ func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
 	var c = Campaign.new(db, 40)
 	check(c.band == db.stories["start_band"], "a new campaign starts with only the start band")
 	check(c.missions.get("sherwood_edge", {}).get("story", "") == "little_john_bridge", "Little John's bridge is waiting on day one")
+	check(c.missions.get("locksley", {}).get("story", "") == "will_meets_robin", "so is the stranger in scarlet, and Will isn't in the band yet")
 	check(not c.missions.values().any(func(m): return m.get("story", "") == "tuck_ford"), "Tuck's story waits until John has joined")
 	c.travel("sherwood_edge")
 	var run = c.start_mission()

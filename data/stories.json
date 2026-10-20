@@ -1,6 +1,28 @@
 {
-  "start_band": ["robin", "will"],
+  "start_band": ["robin"],
   "stories": {
+    "will_meets_robin": {
+      "name": "The Stranger in Scarlet",
+      "node": "locksley",
+      "backdrop": "sherwood_edge",
+      "place": "A glade near Locksley",
+      "requires": {},
+      "recruit": "will",
+      "rewards": {"gold": 0, "reputation": 3},
+      "intro": "Folk near Locksley speak of a young dandy in fine scarlet who strolls the glades as if he owned them. Robin goes to see for himself.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, newly outlawed, sees a young man in fine scarlet strolling through the glade, sniffing a rose."},
+        {"kind": "choice", "text": "'Stand!' says Robin. The stranger yawns. 'Must I?'",
+          "options": [
+            {"label": "Ask for a toll", "result": "next", "log": "'A toll? From me?' The stranger draws his sword with a flourish."},
+            {"label": "Challenge him to a bout", "result": "next", "log": "'A bout? Delightful.' The stranger draws his sword with a flourish."}
+          ]},
+        {"kind": "duel", "text": "Bow against blade in the glade!", "party": ["robin"], "enemies": ["rival_will"], "friendly": true,
+          "win": "Robin trips the stranger into a gorse bush. 'Ow! All right, all right!'",
+          "lose": "The stranger flicks Robin's hood over his eyes. 'Shall we call it a draw?'"},
+        {"kind": "objective", "text": "'Will Gamwell is my name, Robin. I'm your own cousin, come to find you. May I join your band?' Ever after, the outlaws call him Will Scarlet.", "recruit": true}
+      ]
+    },
     "little_john_bridge": {
       "name": "The Stranger on the Bridge",
       "node": "sherwood_edge",
@@ -91,7 +113,7 @@
       "backdrop": "locksley",
       "place": "The square at Edwinstowe",
       "arc": true,
-      "requires": {"infamy": 25},
+      "requires": {"band": ["will"], "infamy": 25},
       "recruit": "",
       "rewards": {"gold": 30, "reputation": 5},
       "intro": "The Sheriff hits back. Wanted posters are going up in every village, and the villagers are made to pay a 'bounty tax' to fund the reward.",

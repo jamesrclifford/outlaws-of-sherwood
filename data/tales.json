@@ -5,7 +5,7 @@
       "node": "locksley",
       "backdrop": "locksley",
       "place": "The green at Locksley",
-      "requires": {},
+      "requires": {"band": ["will"]},
       "rewards": {"gold": 20, "reputation": 3},
       "intro": "An old tale the band likes to tell: how young Robin of Locksley first crossed the King's foresters, and why he lives in the greenwood now.",
       "nodes": [
@@ -17,27 +17,6 @@
           ]},
         {"kind": "combat", "text": "'Seize the cheeky pup!' Two of the foresters come at him.", "enemies": ["forester", "forester"]},
         {"kind": "objective", "text": "The foresters run for Nottingham, dropping their purse. Robin buys supper for the whole village, and from that day he is an outlaw of Sherwood."}
-      ]
-    },
-    "will_meets_robin": {
-      "name": "The Stranger in Scarlet",
-      "node": "locksley",
-      "backdrop": "sherwood_edge",
-      "place": "A glade near Locksley",
-      "requires": {},
-      "rewards": {"gold": 0, "reputation": 3},
-      "intro": "Around the fire, Will Scarlet tells how he and Robin first met, and both of them insist they won.",
-      "nodes": [
-        {"kind": "approach", "text": "Robin, newly outlawed, sees a young man in fine scarlet strolling through the glade, sniffing a rose."},
-        {"kind": "choice", "text": "'Stand!' says Robin. The stranger yawns. 'Must I?'",
-          "options": [
-            {"label": "Ask for a toll", "result": "next", "log": "'A toll? From me?' The stranger draws his sword with a flourish."},
-            {"label": "Challenge him to a bout", "result": "next", "log": "'A bout? Delightful.' The stranger draws his sword with a flourish."}
-          ]},
-        {"kind": "duel", "text": "Bow against blade in the glade!", "party": ["robin"], "enemies": ["rival_will"], "friendly": true,
-          "win": "Robin trips the stranger into a gorse bush. 'Ow! All right, all right!'",
-          "lose": "The stranger flicks Robin's hood over his eyes. 'Shall we call it a draw?'"},
-        {"kind": "objective", "text": "'Will Gamwell is my name, Robin. I'm your own cousin, come to find you!' Ever after, the band calls him Will Scarlet."}
       ]
     },
     "gamwell_christmas": {
@@ -145,7 +124,7 @@
       "node": "blidworth",
       "backdrop": "locksley",
       "place": "Blidworth mill",
-      "requires": {"reputation": 3},
+      "requires": {"band": ["will"], "reputation": 3},
       "rewards": {"gold": 20, "reputation": 4},
       "intro": "The miller of Blidworth grinds the poor folk's corn for free. Now the Sheriff has fined him, and his son Much has sent for Robin.",
       "nodes": [
