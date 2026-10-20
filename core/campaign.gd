@@ -11,6 +11,7 @@ const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
+const RESCUE_GRIP := 5           # how much a freed prisoner (or any other honest job) loosens the Sheriff's grip
 const HEAL_AT_CAMP := 1.0          # fraction of max HP restored per day resting at camp
 const HEAL_ON_ROAD := 0.15
 const PARTY_SIZE := 5
@@ -199,6 +200,8 @@ func start_mission():
 	run.known_disguises = known_disguises()
 	run.purse = gold
 	run.flags = flags.duplicate()
+	var region: String = node(location)["region"]
+	run.grip = {"region": map["regions"][region]["name"], "control": int(control[region]), "drop": RESCUE_GRIP}
 	return run
 
 
@@ -252,7 +255,7 @@ func finish_mission(run) -> void:
 				plots[m["bait"]["by"]] = maxi(0, plots[m["bait"]["by"]] - 30)
 				_news("The band escaped %s's trap." % db.baits[m["bait"]["by"]]["name"])
 			else:
-				control[region] = maxi(0, control[region] - 5)
+				control[region] = maxi(0, control[region] - RESCUE_GRIP)
 		"failed":
 			control[region] = mini(100, control[region] + 5)
 			reputation = maxi(0, reputation - 2)

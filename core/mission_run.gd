@@ -32,6 +32,7 @@ var known_disguises = null    # disguise ids the band has learned from the legen
 var purse := -1               # the band's gold at home, for choices that cost some; -1 means no limit
 var spent := 0                # gold paid out of the band's purse by choices (kept even if the job fails)
 var flags: Array = []         # story flags set by choices (Sir Richard's loan), kept by the campaign
+var grip := {}                # set by the campaign: region name, Sheriff's control there and how much a win loosens it
 
 
 func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
@@ -366,10 +367,26 @@ func advance() -> void:
 			reputation += int(mission["rewards"]["reputation"])
 			result = "success"
 			_log("Success! The band returns with %d gold." % gold)
+			if mission["type"] == "rescue":
+				_log(_rescue_impact())
 			if recruited != "":
 				_log("%s joins the band!" % db.heroes[recruited]["name"])
 		else:
 			_fail("The objective was not achieved.")
+
+
+## What freeing the prisoner did, spelled out for the player.
+func _rescue_impact() -> String:
+	var who: String = "The villager is home safe"
+	if mission.has("rescue_heroes"):
+		var names: Array = mission["rescue_heroes"].map(func(h): return db.heroes[h]["name"])
+		who = "%s is back with the band" % " and ".join(names)
+	var text := "%s! The tale spreads: +%d reputation" % [who, reputation]
+	if grip.is_empty():
+		return text + "."
+	var before: int = int(grip["control"])
+	var after: int = maxi(0, before - int(grip["drop"]))
+	return text + ", and the Sheriff's grip on %s loosens from %d%% to %d%%." % [grip["region"], before, after]
 
 
 func _objective_met() -> bool:

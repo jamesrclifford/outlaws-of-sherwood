@@ -567,6 +567,32 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.captured.is_empty(), "rescue frees everyone held there")
 
 
+func test_freeing_a_villager_says_what_it_did() -> void:
+	for seed in range(40, 140):
+		var c = Campaign.new(db, seed, BAND4)
+		var target := ""
+		for id in c.missions:
+			if c.missions[id]["type"] == "rescue" and not c.missions[id].has("rescue_heroes"):
+				target = id
+		if target == "":
+			continue
+		go(c, target)
+		var run = c.start_mission()
+		if run == null or c.location != target:
+			continue
+		var region: String = c.node(target)["region"]
+		var before: int = c.control[region]
+		autoplay_mission(run, true)
+		if run.result != "success":
+			continue
+		var line: String = run.mission_log.filter(func(l): return l.begins_with("The villager is home safe")).front()
+		c.finish_mission(run)
+		check(line.contains("+%d reputation" % run.reputation), "the rescue text names the reputation gained")
+		check(line.contains("from %d%% to %d%%" % [before, c.control[region]]), "and how far the Sheriff's grip loosened")
+		return
+	check(false, "found a villager rescue to win")
+
+
 func test_prisoners_moved_to_dungeon_after_deadline() -> void:
 	var c = Campaign.new(db, 5, BAND4)
 	var target: String = c.missions.keys()[0]
