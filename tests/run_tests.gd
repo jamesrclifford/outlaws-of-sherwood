@@ -1366,3 +1366,32 @@ func test_contests_are_winnable() -> void:
 	for s in 400:
 		sharp += 1 if _sim_round(0.85, 9000 + s, 0.0) else 0
 	check(sharp >= 360, "perfect timing nearly always wins, even the hardest match (%d/400)" % sharp)
+
+
+func test_sneaking_past_is_a_gamble() -> void:
+	var tried := 0
+	var slipped := 0
+	var bigger_fights := 0
+	for s in 2000:
+		var m: Dictionary = MissionGen.new(db).generate("robbery", 40, s, "great_north_road")
+		for i in m["nodes"].size():
+			if m["nodes"][i]["kind"] != "choice":
+				continue
+			var run = MissionRun.new(db, m, BAND4.map(func(h): return db.make_hero(h)))
+			run.node_index = i
+			run.arrive()
+			var step: Dictionary = run.choose(0)
+			tried += 1
+			if step["type"] == "continue":
+				slipped += 1
+			elif step["enemies"].size() > m["nodes"][i]["options"][1]["enemies"].size():
+				bigger_fights += 1
+	var rate := float(slipped) / tried
+	check(rate > 0.35 and rate < 0.65, "sneaking past works about half the time for the band (%d/%d)" % [slipped, tried])
+	check(bigger_fights == tried - slipped, "getting caught brings the guards and one more (%d of %d)" % [bigger_fights, tried - slipped])
+	var m2: Dictionary = MissionGen.new(db).generate("robbery", 0, 1, "great_north_road")
+	var pair = MissionRun.new(db, m2, [db.make_hero("robin"), db.make_hero("will")])
+	var crowd = MissionRun.new(db, m2, BAND4.map(func(h): return db.make_hero(h)) + [db.make_hero("alan")])
+	check(pair.sneak_chance() > crowd.sneak_chance(), "two can sneak more quietly than five")
+	m2["threat"] = 90
+	check(pair.sneak_chance() < 0.75, "alert guards are harder to sneak past")

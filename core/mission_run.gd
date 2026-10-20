@@ -4,6 +4,9 @@ extends RefCounted
 
 const Archery = preload("res://core/archery.gd")
 const MAX_ENEMIES := 6
+const SNEAK_BASE := 0.75       # chance for one or two heroes to creep past where nobody is on guard
+const SNEAK_PER_HERO := 0.04   # each extra hero makes more noise
+const SNEAK_MIN := 0.3
 
 var db
 var mission: Dictionary
@@ -170,12 +173,22 @@ func choose(option_index: int) -> Dictionary:
 	gold += int(opt.get("gold", 0))
 	reputation += int(opt.get("reputation", 0))
 	if opt["result"] == "sneak":
-		if rng.randf() < 0.7:
+		if rng.randf() < sneak_chance():
 			_log("The band slips past unseen.")
 			return {"type": "continue"}
+		# Caught creeping: the guards the band hoped to avoid, and one more who heard the alarm.
 		_log("A twig snaps. The sentry raises the alarm!")
-		return _battle_or_continue(["man_at_arms"])
+		var fight: Array = current_node()["options"].filter(func(o): return o["result"] == "fight")
+		var guards: Array = fight[0].get("enemies", []).duplicate() if not fight.is_empty() else ["man_at_arms"]
+		return _battle_or_continue(guards + ["man_at_arms"])
 	return _battle_or_continue(opt.get("enemies", []))
+
+
+## Sneaking works about half the time: less often where the Sheriff's men are alert (high threat)
+## and when more of the band are trying to creep past together.
+func sneak_chance() -> float:
+	var extra := maxi(0, active_heroes().size() - 2)
+	return clampf(SNEAK_BASE - int(mission["threat"]) / 250.0 - SNEAK_PER_HERO * extra, SNEAK_MIN, SNEAK_BASE)
 
 
 func _battle_or_continue(enemy_ids: Array) -> Dictionary:
