@@ -13,6 +13,7 @@ const Style = preload("res://scenes/ui/style.gd")
 ## Target ring colours from the outside in: white, black, blue, red, gold, two rings each.
 const RINGS := ["f0ece0", "f0ece0", "2a2a2a", "2a2a2a", "3a7ad0", "3a7ad0", "d04030", "d04030", "f0c030", "f0c030"]
 const PAUSE := 0.8            # seconds to show where an arrow landed or how a blow went
+const MIN_GAP := 0.15         # the shortest wait between fixing the aim and loosing the arrow
 
 var round                     # an Archery or a Timing
 var mode := "aim"             # "aim", "swing" or "rhythm"
@@ -137,10 +138,11 @@ func _process(delta: float) -> void:
 	_board.queue_redraw()
 
 
+## A finger tap arrives as a mouse click (the project turns touches into clicks), so only clicks
+## count. Listening for the touch as well made every tap count twice: the second one loosed the
+## arrow the instant the aim was fixed, wherever the sight happened to start.
 func _gui_input(event: InputEvent) -> void:
-	var pressed: bool = (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT) \
-		or (event is InputEventScreenTouch and event.pressed)
-	if pressed:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		tap()
 		accept_event()
 
@@ -150,6 +152,8 @@ func tap() -> void:
 	if _over or _paused > 0.0:
 		return
 	if mode == "aim":
+		if round.locked_x != null and t < MIN_GAP:
+			return    # a double tap: the sight has only just been fixed
 		var s: int = round.tap(t)
 		t = 0.0
 		if s >= 0:
@@ -181,6 +185,8 @@ static func skill_of(r) -> Array:
 
 
 func _refresh_text() -> void:
+	if _hint_label == null:
+		return    # not on screen yet (tests tap before the screen is built)
 	if mode == "aim":
 		var w: float = round.wind
 		var arrows := ""

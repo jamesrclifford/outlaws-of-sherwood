@@ -6,6 +6,7 @@ const Unit = preload("res://core/unit.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const Campaign = preload("res://core/campaign.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 ## The four heroes the older campaign tests were written for (a story campaign starts smaller).
 const BAND4 := ["robin", "little_john", "will", "tuck"]
@@ -1283,3 +1284,25 @@ func test_a_bad_disguise_brings_an_attack_at_once() -> void:
 	check(first["kind"] == "combat" and not first["enemies"].is_empty(), "the band is attacked straight away")
 	check(run.arrive()["type"] == "battle", "the fight starts before the approach")
 	check(run.mission_log.any(func(l): return l == db.disguises[run.disguise]["blown"].format({"place": run.mission["location_name"]})), "the log tells how the disguise was seen through")
+
+
+## On a phone one tap sends a touch and a click. It must fix the aim, not also loose the arrow.
+func test_one_tap_on_a_phone_counts_once() -> void:
+	var game = MinigameView.new()
+	game.start_contest(preload("res://core/archery.gd").new(3, 3, 0.5, "Rival"), "Robin", "robin", "Test")
+	root.add_child(game)
+	game.t = 0.5
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+	click.button_index = MOUSE_BUTTON_LEFT
+	game._gui_input(touch)
+	game._gui_input(click)
+	check(game.round.locked_x != null and game.round.shots.is_empty(), "a tap fixes the aim without shooting")
+	game._gui_input(click)
+	check(game.round.shots.is_empty(), "a second tap straight after is ignored")
+	game.t = 0.5
+	game._gui_input(click)
+	check(game.round.shots.size() == 1, "the next real tap looses the arrow")
+	game.free()
