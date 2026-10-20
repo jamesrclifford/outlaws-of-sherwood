@@ -145,8 +145,8 @@ func _place_token(id: String) -> void:
 
 func _refresh() -> void:
 	var c = campaign
-	# The traps fill up as the villains plot; at 100% one of them baits a job.
-	status_label.text = "Day %d  Gold %d  Rep %d%s\nSupplies %d (%d days)  Infamy %d\nTraps: Sheriff %d%%   Guy %d%%%s" % [
+	# The villains' plots fill up each day: at 100% the Sheriff baits a job and Guy raids the band.
+	status_label.text = "Day %d  Gold %d  Rep %d%s\nSupplies %d (%d days)  Infamy %d\nSheriff's trap %d%%  Guy's raid %d%%%s" % [
 		c.day, c.gold, c.reputation, ("  Bounty %d" % c.bounty()) if c.wanted_level() > 0 else "", c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
 		("\nGuy is hunting %s" % c.hero_name(c.hunted_hero)) if c.hunted_hero != "" else ""]
 	for id in c.map["nodes"]:

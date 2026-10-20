@@ -4,7 +4,9 @@
     "reveal": "The wagon's cover is thrown back. Sir Guy of Gisborne was waiting inside! It's a trap!",
     "ambush": ["guy", "forester", "man_at_arms"],
     "pursuers": ["hound", "hound", "forester"],
-    "scout_hint": "Hoofprints of a heavy warhorse circle the road. This smells like one of Gisborne's traps."
+    "scout_hint": "Hoofprints of a heavy warhorse circle the road. This smells like one of Gisborne's traps.",
+    "raid": ["guy", "knight", "knight", "crossbowman", "crossbowman", "hound"],
+    "raid_intro": "Hooves thunder through the trees. Sir Guy of Gisborne and his best riders burst upon the band near {place}! 'Today I take one of you back to Nottingham!'"
   },
   "sheriff": {
     "name": "The Sheriff of Nottingham",

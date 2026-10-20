@@ -129,7 +129,7 @@ func travel(to: String) -> Array:
 		location = step
 		visited.append(step)
 		_end_day(false)
-		if _maybe_ambush():
+		if not ambush.is_empty() or _maybe_ambush():
 			break
 	return visited
 
@@ -241,7 +241,10 @@ func finish_mission(run) -> void:
 				infamy = mini(100, infamy + 6)
 				control[region] = maxi(0, control[region] - 8)
 			elif m["type"] == "ambush":
-				_news("The bounty hunters limp home with sore heads." if run.gold > 0 else "The band gives the bounty hunters the slip.")
+				if m.has("raid"):
+					_news("Sir Guy's raid is beaten off! The whole shire is talking about it.")
+				else:
+					_news("The bounty hunters limp home with sore heads." if run.gold > 0 else "The band gives the bounty hunters the slip.")
 			elif m["type"] == "contest":
 				_news("%s: the band comes home with %d gold." % [m["name"], run.gold] if run.gold > 0 else "%s: Robin shot well, but the purse went to another." % m["name"])
 			elif run.is_bait():
@@ -254,10 +257,11 @@ func finish_mission(run) -> void:
 			control[region] = mini(100, control[region] + 5)
 			reputation = maxi(0, reputation - 2)
 	_update_wanted()
+	var held_at: String = m.get("prison", location)
 	for h in run.captured:
-		captured[h] = {"node": location, "since": day}
-		_news("%s was captured at %s." % [hero_name(h), node(location)["name"]])
-		_post_rescue(h, location)
+		captured[h] = {"node": held_at, "since": day}
+		_news("%s was captured and is held at %s." % [hero_name(h), node(held_at)["name"]])
+		_post_rescue(h, held_at)
 	if free_heroes().is_empty():
 		_news("The whole band is captured! Friends in Sherwood break them out by night.")
 		for h in captured.keys():
@@ -496,7 +500,11 @@ func _guy_acts() -> void:
 		if not targets.is_empty():
 			hunted_hero = targets[rng.randi_range(0, targets.size() - 1)].id
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
-		_spawn_mission("robbery", "guy")
+		if ambush.is_empty() and not free_heroes().is_empty():
+			var n: Dictionary = node(location)
+			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi())
+			ambush["hunted"] = hunted_hero
+			_news("Sir Guy of Gisborne rides out to raid the band!")
 
 
 ## Prisoners left too long are taken to Nottingham's dungeon, which is much harder to break into.

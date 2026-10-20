@@ -218,6 +218,20 @@ func ambush(hunters: Array, place_name: String, backdrop: String, bounty: int, s
 	}
 
 
+## Sir Guy rides out in force when his plot comes due: one very hard fight. Losing or running
+## means he carries off one hero to Nottingham's dungeon.
+func guy_raid(place_name: String, backdrop: String, seed_value: int) -> Dictionary:
+	var g: Dictionary = db.baits["guy"]
+	var m := ambush(g["raid"], place_name, backdrop, 0, seed_value)
+	m["name"] = "Gisborne's raid!"
+	m["raid"] = "guy"
+	m["prison"] = "nottingham"
+	m["intro"] = g["raid_intro"].format({"place": place_name})
+	m["nodes"][0]["text"] = "Sir Guy draws his great sword. His riders fan out around the band."
+	m["rewards"] = {"gold": 0, "reputation": 0}
+	return m
+
+
 ## JSON numbers load as floats; keep a node's counts as ints so a saved mission reloads identically.
 static func fix_node_ints(n: Dictionary) -> void:
 	for opt in n.get("options", []):

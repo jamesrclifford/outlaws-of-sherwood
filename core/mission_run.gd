@@ -7,6 +7,7 @@ const MAX_ENEMIES := 6
 const SNEAK_BASE := 0.75       # chance for one or two heroes to creep past where nobody is on guard
 const SNEAK_PER_HERO := 0.04   # each extra hero makes more noise
 const SNEAK_MIN := 0.3
+const RAID_GLORY := 8          # reputation for beating Sir Guy's raid
 
 var db
 var mission: Dictionary
@@ -298,6 +299,9 @@ func fighters() -> Array:
 func battle_finished(battle) -> void:
 	_sprung.clear()
 	_disarm_after_duel()
+	if mission.has("raid"):
+		_raid_finished(battle)
+		return
 	var node := current_node()
 	if battle.friendly:
 		# A sporting bout: win or lose, the story goes on.
@@ -321,6 +325,29 @@ func battle_finished(battle) -> void:
 		node_index = mission["nodes"].size() - 1
 		return
 	_fail("The mission has failed." if battle.result == "defeat" else "The band falls back to Sherwood.")
+
+
+## Beating Sir Guy's raid wins glory; losing or running away, he takes one hero (the one he is
+## hunting if they're here, otherwise anyone) and the rest get away.
+func _raid_finished(battle) -> void:
+	if battle.result == "victory":
+		gold += battle.gold_won
+		reputation += RAID_GLORY
+		_log("Sir Guy is beaten! He limps back to his horse, swearing revenge.")
+		return
+	var pool := active_heroes()
+	var taken = null
+	for h in pool:
+		if h.id == mission.get("hunted", ""):
+			taken = h
+	if taken == null and not pool.is_empty():
+		taken = pool[rng.randi_range(0, pool.size() - 1)]
+	for h in pool:
+		h.hp = maxi(h.hp, 1)
+	captured = [taken.id] if taken else []
+	if taken:
+		_log("Sir Guy throws %s over his saddle and gallops for Nottingham!" % taken.name)
+	_fail("The rest of the band escapes into the greenwood.")
 
 
 func advance() -> void:

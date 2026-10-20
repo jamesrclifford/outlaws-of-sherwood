@@ -1442,3 +1442,61 @@ func test_lending_to_the_knight_costs_gold_and_is_repaid() -> void:
 	var old: Dictionary = JSON.parse_string(JSON.stringify(mean.to_dict()))
 	old.erase("flags")
 	check(Campaign.from_dict(db, old).flags.has("knight_loan"), "older saves that played the tale keep the knight's story going")
+
+
+# --- Gisborne's raid ---------------------------------------------------------------
+
+func test_guy_raids_when_his_plot_is_full() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	c.plots["guy"] = 99
+	c.rest()
+	check(not c.ambush.is_empty() and c.ambush.get("raid", "") == "guy", "at 100 Sir Guy rides out to raid the band")
+	check(c.ambush["nodes"][0]["enemies"].has("guy"), "and he comes himself")
+	check(c.plots["guy"] < 20, "his plot starts again")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.ambush.get("raid", "") == "guy", "a waiting raid survives a save")
+	# On the road it stops the band where it catches them.
+	var t = Campaign.new(db, 4, BAND4)
+	t.plots["guy"] = 99
+	var visited: Array = t.travel("nottingham")
+	check(visited.size() == 1 and not t.ambush.is_empty(), "the raid catches the band on the road")
+
+
+func test_guy_raid_is_hard_and_takes_one_hero() -> void:
+	var wins := 0
+	var one_taken := 0
+	var losses := 0
+	for s in 40:
+		var c = Campaign.new(db, 600 + s, BAND4)
+		c.hunted_hero = "tuck"
+		c.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 900 + s)
+		c.ambush["hunted"] = "tuck"
+		c.location = "great_north_road"
+		var rep_before: int = c.reputation
+		var run = c.start_ambush()
+		autoplay_mission(run)
+		c.finish_mission(run)
+		if run.result == "success":
+			wins += 1
+			check(c.reputation >= rep_before + MissionRun.RAID_GLORY, "beating Guy wins glory")
+			check(c.captured.is_empty(), "and nobody is taken")
+		else:
+			losses += 1
+			one_taken += 1 if c.captured.keys() == ["tuck"] else 0
+			check(c.captured.get("tuck", {}).get("node", "") == "nottingham", "Guy takes his prisoner to Nottingham")
+			check(c.missions.get("nottingham", {}).get("rescue_heroes", []) == ["tuck"], "a rescue is posted there")
+			check(c.free_heroes().size() == 3 and c.free_heroes().all(func(h): return h.hp >= 1), "the rest of the band gets away")
+	print("Guy's raid against four heroes: won %d/40" % wins)
+	check(wins <= 20, "Guy's raid is a very hard fight (%d/40 won)" % wins)
+	check(wins >= 2, "but it can be won (%d/40)" % wins)
+	check(one_taken == losses, "losing always costs exactly the hero Guy is hunting (%d/%d)" % [one_taken, losses])
+	# Running away counts as losing.
+	var c2 = Campaign.new(db, 7, BAND4)
+	c2.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 1)
+	c2.location = "great_north_road"
+	var run2 = c2.start_ambush()
+	var step: Dictionary = run2.arrive()
+	var b = run2.make_battle(step["enemies"])
+	b.result = "retreated"
+	run2.battle_finished(b)
+	check(run2.result == "failed" and run2.captured.size() == 1, "running from Guy still costs one hero")
