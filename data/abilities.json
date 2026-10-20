@@ -1,6 +1,6 @@
 {
   "strike":        {"name": "Strike",          "ap": 1, "target": "enemy",       "range": "melee", "power": 1.0, "desc": "A blow at a foe in reach."},
-  "bow_shot":      {"fx": "arrow", "name": "Bow Shot",        "ap": 1, "target": "enemy",       "range": "any",   "power": 0.8, "minigame": "aim", "desc": "An arrow at any foe, even from the back row."},
+  "bow_shot":      {"fx": "arrow", "name": "Bow Shot",        "ap": 1, "target": "enemy",       "range": "any",   "power": 0.8, "desc": "An arrow at any foe, even from the back row."},
   "defend":        {"name": "Defend",          "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}], "desc": "Brace: take less harm until your next turn."},
   "split_arrow":   {"fx": "arrow", "name": "Split the Arrow", "ap": 2, "target": "enemy",       "range": "any",   "power": 1.7, "bonus_crit": 0.35, "minigame": "aim", "desc": "A mighty aimed shot at any foe. Hit the gold for a critical."},
   "pinning_shot":  {"fx": "arrow", "name": "Pinning Shot",    "ap": 1, "target": "enemy",       "range": "any",   "power": 0.6, "effects": [{"status": "pinned", "turns": 2}], "minigame": "aim", "desc": "A light shot that pins a foe: slower, can't swap rows."},

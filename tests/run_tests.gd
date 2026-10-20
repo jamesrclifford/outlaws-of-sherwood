@@ -478,8 +478,9 @@ func test_minigames_reward_good_play() -> void:
 	cuts.clear()
 	b2.perform(will, "flourish", foe, [1.0, 0.2, 1.0])
 	check(cuts == [true, false, true], "each flourish cut is judged on its own tap (%s)" % [cuts])
-	for id in ["bow_shot", "split_arrow", "pinning_shot", "staff_sweep", "flourish"]:
+	for id in ["split_arrow", "pinning_shot", "staff_sweep", "flourish"]:
 		check(db.abilities[id].get("minigame", "") in ["aim", "swing", "rhythm"], "%s has a mini-game" % id)
+	check(not db.abilities["bow_shot"].has("minigame"), "a plain bow shot just shoots")
 
 
 func test_contests_appear_and_pay_out() -> void:
