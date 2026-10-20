@@ -16,6 +16,8 @@ const STEP_SECONDS := 0.35
 const ICON_LIFT := 12
 const TOKEN_OFFSET := Vector2(12, -44)
 const INK := Color("3a2a1a")
+## Map labels for jobs whose type name alone doesn't say what they are.
+const TAGS := {"rescue": "FREE VILLAGERS"}
 
 var db
 var campaign
@@ -157,7 +159,7 @@ func _refresh() -> void:
 			elif m["type"] == "story":
 				tag = "\n[LEGEND]"
 			else:
-				tag = "\n[%s]" % m["type"].to_upper()
+				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 

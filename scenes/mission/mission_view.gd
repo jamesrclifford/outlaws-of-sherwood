@@ -224,7 +224,14 @@ func _show_briefing() -> void:
 		_refresh()
 		_set_buttons([["Fight!", _set_out]])
 		return
-	run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [run.mission["type"].capitalize(), run.mission["location_name"], run.mission["rewards"]["gold"]])
+	var m: Dictionary = run.mission
+	if m.has("rescue_heroes"):
+		var names: Array = m["rescue_heroes"].map(func(h): return db.heroes[h]["name"] if db.heroes.has(h) else "a Merry Man")
+		run.mission_log.append("Briefing: %s held at %s. Break them out!" % [" and ".join(names), m["location_name"]])
+	elif m["type"] == "rescue":
+		run.mission_log.append("Briefing: the Sheriff has locked up a villager at %s. Free them! Reward: %d gold and %d reputation." % [m["location_name"], m["rewards"]["gold"], m["rewards"]["reputation"]])
+	else:
+		run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [m["type"].capitalize(), m["location_name"], m["rewards"]["gold"]])
 	if run.is_bait() and run.mission["bait"]["revealed"]:
 		run.mission_log.append("You already know this job is %s's trap." % db.baits[run.mission["bait"]["by"]]["name"])
 		_refresh()
