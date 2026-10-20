@@ -257,6 +257,14 @@ func _disarm_after_duel() -> void:
 	_duel_loadouts.clear()
 
 
+## The scenery for where the band is now: a legend's node may move the scene (the Potter's fight
+## is deep in Sherwood, though the tale is told at Nottingham market).
+func backdrop() -> String:
+	if node_index < mission["nodes"].size():
+		return current_node().get("backdrop", mission["location"])
+	return mission["location"]
+
+
 ## The archery round at the current node, against its rival.
 func make_archery():
 	var node := current_node()

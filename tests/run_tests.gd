@@ -19,7 +19,7 @@ var db
 func _init() -> void:
 	db = GameData.new()
 	for m in get_method_list():
-		if m["name"].begins_with("test_"):
+		if m["name"].begins_with("test_") and (OS.get_environment("ONLY") == "" or m["name"].contains(OS.get_environment("ONLY"))):
 			call(m["name"])
 	print("\n%d passed, %d failed" % [passed, failures])
 	quit(1 if failures > 0 else 0)
@@ -52,6 +52,71 @@ func autoplay(b, max_turns := 400) -> void:
 				targets.sort_custom(func(x, y): return x.hp < y.hp)
 				b.perform(u, opts[0], targets[0])
 			b.end_turn()
+		turns += 1
+
+
+## Plays a hero's turn the way a sharp player would: patch up whoever is hurt, put the boss to
+## sleep, sweep crowds, then pour the strongest blows into one foe, with mini-games played well.
+func smart_turn(b, u, skill := 0.85) -> void:
+	while not b.is_over() and u.ap > 0:
+		var opts: Array = b.usable_abilities(u).filter(func(a): return a != "defend")
+		if opts.is_empty():
+			break
+		var heroes: Array = b.active("heroes")
+		var foes: Array = b.active("enemies")
+		var hurt: Array = heroes.filter(func(h): return h.hp < h.max_hp * 0.45)
+		var pick := ""
+		var target = null
+		for a in opts:
+			var ab: Dictionary = db.abilities[a]
+			if pick == "" and ab.has("heal") and not hurt.is_empty():
+				pick = a
+				hurt.sort_custom(func(x, y): return x.hp < y.hp)
+				target = hurt[0] if ab["target"] == "ally" else u
+		if pick == "" and opts.has("lullaby"):
+			for f in foes:
+				if f.tags.has("boss") and not f.has_status("stunned"):
+					pick = "lullaby"
+					target = f
+		if pick == "" and opts.has("bridge_hold") and not u.has_status("taunt") and foes.size() >= 3:
+			pick = "bridge_hold"
+			target = u
+		if pick == "" and opts.has("staff_sweep") and b.legal_targets(u, "staff_sweep").size() >= 2:
+			pick = "staff_sweep"
+			target = b.legal_targets(u, "staff_sweep")[0]
+		if pick == "":
+			var best := 0.0
+			for a in opts:
+				var ab: Dictionary = db.abilities[a]
+				var punch: float = float(ab.get("power", 0.0)) * int(ab.get("hits", 1)) / maxf(1.0, float(ab["ap"]))
+				if punch > best and ab["target"] == "enemy" and int(ab["ap"]) <= u.ap:
+					best = punch
+					pick = a
+			if pick == "":
+				pick = opts[0]
+			var ts: Array = b.legal_targets(u, pick)
+			ts.sort_custom(func(x, y): return x.hp < y.hp)
+			target = ts[0] if not ts.is_empty() else u
+		var hits: int = int(db.abilities[pick].get("hits", 1))
+		var sk: Array = []
+		if db.abilities[pick].has("minigame"):
+			for _i in hits:
+				sk.append(skill)
+		if not b.perform(u, pick, target, sk):
+			break
+	b.end_turn()
+
+
+func smart_battle(b, skill := 0.85) -> void:
+	var turns := 0
+	while not b.is_over() and turns < 400:
+		var u = b.next_turn()
+		if u == null:
+			break
+		if u.side == "enemies":
+			b.run_ai_turn()
+		else:
+			smart_turn(b, u, skill)
 		turns += 1
 
 
@@ -574,6 +639,20 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.free_heroes().size() == 2, "only two heroes left to send")
 	c.finish_mission(_fake_run(c, "success", []))
 	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_legend_scenes_move_with_the_story() -> void:
+	var stories: Dictionary = db.stories["stories"]
+	for id in stories:
+		for n in stories[id].get("nodes", []):
+			if n.has("backdrop"):
+				check(ResourceLoader.exists("res://assets/backdrops/%s.png" % n["backdrop"]), "%s has scenery %s" % [id, n["backdrop"]])
+	var run = MissionRun.new(db, MissionGen.new(db).story("potter", 1, 5), [db.make_hero("robin"), db.make_hero("little_john")])
+	check(run.backdrop() == "sherwood_edge", "the Potter is stopped on the road through Sherwood")
+	run.node_index = 2
+	check(run.backdrop() == "nottingham_market", "the pots are sold at Nottingham market")
+	run.node_index = 3
+	check(run.backdrop() == "sherwood_edge", "and the Sheriff is caught deep in Sherwood")
 
 
 func test_freeing_a_villager_says_what_it_did() -> void:
@@ -1489,7 +1568,7 @@ func test_guy_raids_when_his_plot_is_full() -> void:
 	c.plots["guy"] = 99
 	c.rest()
 	check(not c.ambush.is_empty() and c.ambush.get("raid", "") == "guy", "at 100 Sir Guy rides out to raid the band")
-	check(c.ambush["nodes"][0]["enemies"].has("guy"), "and he comes himself")
+	check(c.ambush["nodes"][0]["enemies"].has("guy_raider"), "and he comes himself")
 	check(c.plots["guy"] < 20, "his plot starts again")
 	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
 	check(copy.ambush.get("raid", "") == "guy", "a waiting raid survives a save")
@@ -1526,7 +1605,9 @@ func test_guy_raid_is_hard_and_takes_one_hero() -> void:
 			check(c.free_heroes().size() == 3 and c.free_heroes().all(func(h): return h.hp >= 1), "the rest of the band gets away")
 	print("Guy's raid against four heroes: won %d/40" % wins)
 	check(wins <= 20, "Guy's raid is a very hard fight (%d/40 won)" % wins)
-	check(wins >= 2, "but it can be won (%d/40)" % wins)
+	# Played well, the whole band beats him some of the time; four heroes alone almost never.
+	var full: Array = _raid_odds(BAND4 + ["alan"], 0.85, 60)
+	check(full[0] >= 12 and full[0] <= 36, "a sharp player with the full band wins about a third of raids (%d/60)" % full[0])
 	check(one_taken == losses, "losing always costs exactly the hero Guy is hunting (%d/%d)" % [one_taken, losses])
 	# Running away counts as losing.
 	var c2 = Campaign.new(db, 7, BAND4)
@@ -1562,3 +1643,25 @@ func test_guy_may_raid_before_his_plot_is_full() -> void:
 				early += 1 if before + 5 < 100 else 0
 				break
 	check(early > 40 and early < 190, "Guy often strikes before the meter fills, but not always (%d/200)" % early)
+
+
+func _raid_odds(band: Array, skill: float, n: int) -> Array:
+	var wins := 0
+	var rounds := 0
+	for s in n:
+		var c = Campaign.new(db, 600 + s, band)
+		c.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 900 + s)
+		c.location = "great_north_road"
+		var run = c.start_ambush()
+		var b = run.make_battle(run.arrive()["enemies"])
+		smart_battle(b, skill)
+		rounds += b.round_number
+		wins += 1 if b.result == "victory" else 0
+	return [wins, rounds / float(n)]
+
+
+func _raid_odds_print() -> void:   # rename to test_ to print the odds while balancing
+	for band in [BAND4, BAND4 + ["alan"]]:
+		for skill in [0.6, 0.85, 1.0]:
+			var r: Array = _raid_odds(band, skill, 100)
+			print("raid, %d heroes played well (skill %.2f): won %d/100, %.1f rounds" % [band.size(), skill, r[0], r[1]])

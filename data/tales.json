@@ -9,13 +9,13 @@
       "rewards": {"gold": 20, "reputation": 3},
       "intro": "An old tale the band likes to tell: how young Robin of Locksley first crossed the King's foresters, and why he lives in the greenwood now.",
       "nodes": [
-        {"kind": "approach", "text": "Young Robin walks to Nottingham fair with his bow. Under a tree sit fifteen foresters, eating pies and boasting."},
-        {"kind": "choice", "text": "'Ho, boy! That toy bow couldn't hit a barn door!' The foresters laugh at him.",
+        {"kind": "approach", "backdrop": "great_north_road", "text": "Young Robin walks to Nottingham fair with his bow. Under a tree sit fifteen foresters, eating pies and boasting."},
+        {"kind": "choice", "backdrop": "great_north_road", "text": "'Ho, boy! That toy bow couldn't hit a barn door!' The foresters laugh at him.",
           "options": [
             {"label": "Wager he can hit the far oak", "result": "next", "log": "Robin bets them twenty shillings, draws, and splits a knot on an oak a hundred paces off."},
             {"label": "Shrug and walk on", "result": "next", "log": "Robin walks on, but the foresters follow, jeering. He turns, shoots, and knocks the cap off the loudest one."}
           ]},
-        {"kind": "combat", "text": "'Seize the cheeky pup!' Two of the foresters come at him.", "enemies": ["forester", "forester"]},
+        {"kind": "combat", "backdrop": "great_north_road", "text": "'Seize the cheeky pup!' Two of the foresters come at him.", "enemies": ["forester", "forester"]},
         {"kind": "objective", "text": "The foresters run for Nottingham, dropping their purse. Robin buys supper for the whole village, and from that day he is an outlaw of Sherwood."}
       ]
     },
@@ -292,8 +292,8 @@
             {"label": "'Hundreds! Come and see.'", "result": "next", "log": "The Sheriff brings three hundred pounds and follows Robin into Sherwood, rubbing his hands."},
             {"label": "Give meat free to widows first", "result": "next", "reputation": 2, "log": "Every widow in Nottingham goes home with a roast. Then Robin leads the greedy Sheriff into Sherwood."}
           ]},
-        {"kind": "approach", "text": "A herd of deer bounds across the glade. 'There are my horned beasts!' says Robin, and blows his horn."},
-        {"kind": "combat", "text": "'It's Robin Hood!' The Sheriff's guards draw their swords.", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "approach", "backdrop": "sherwood_edge", "text": "A herd of deer bounds across the glade. 'There are my horned beasts!' says Robin, and blows his horn."},
+        {"kind": "combat", "backdrop": "sherwood_edge", "text": "'It's Robin Hood!' The Sheriff's guards draw their swords.", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
         {"kind": "objective", "text": "The Sheriff pays for his dinner with his three hundred pounds and rides home very grumpy."}
       ]
     },
@@ -306,8 +306,8 @@
       "rewards": {"gold": 40, "reputation": 5},
       "intro": "A potter has driven his cart through Sherwood for three years without paying Robin a penny of toll. Little John bets Robin can't make him pay.",
       "nodes": [
-        {"kind": "approach", "text": "Robin steps into the road and grabs the potter's horse. The potter jumps down with a staff."},
-        {"kind": "duel", "text": "Robin against the potter, with Little John watching and grinning.", "party": ["robin"], "enemies": ["rival_potter"], "friendly": true,
+        {"kind": "approach", "backdrop": "sherwood_edge", "text": "Robin steps into the road and grabs the potter's horse. The potter jumps down with a staff."},
+        {"kind": "duel", "backdrop": "sherwood_edge", "text": "Robin against the potter, with Little John watching and grinning.", "party": ["robin"], "enemies": ["rival_potter"], "friendly": true,
           "win": "Robin knocks the potter's staff away. They shake hands, laughing.",
           "lose": "The potter knocks Robin flat. Little John wins his bet."},
         {"kind": "choice", "text": "Robin trades clothes with the potter and drives the pots to Nottingham. He sells them so cheap that the Sheriff's wife buys the last five, and asks him to dinner!",
@@ -315,7 +315,7 @@
             {"label": "Shoot with the Sheriff's men", "result": "next", "log": "After dinner Robin out-shoots every archer at the Sheriff's butts. 'Who taught you?' 'Robin Hood himself. I could take you to him...'"},
             {"label": "Give the lady a gift", "result": "next", "reputation": 1, "log": "Robin gives the Sheriff's wife a pot of honey. She likes him far better than her husband. 'I could take you to Robin Hood,' he tells the Sheriff."}
           ]},
-        {"kind": "combat", "text": "Deep in Sherwood, the Sheriff and his guards realise who the potter really is!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
+        {"kind": "combat", "backdrop": "sherwood_edge", "text": "Deep in Sherwood, the Sheriff and his guards realise who the potter really is!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
         {"kind": "objective", "text": "The Sheriff walks home without his horse. Robin sends the lady a white pony 'from the potter', and pays the real potter ten pounds for his pots."}
       ]
     },

@@ -5,7 +5,7 @@
     "ambush": ["guy", "forester", "man_at_arms"],
     "pursuers": ["hound", "hound", "forester"],
     "scout_hint": "Hoofprints of a heavy warhorse circle the road. This smells like one of Gisborne's traps.",
-    "raid": ["guy", "knight", "knight", "crossbowman", "crossbowman", "hound"],
+    "raid": ["guy_raider", "gisborne_rider", "gisborne_rider", "crossbowman", "crossbowman", "hound"],
     "raid_from": 50,
     "raid_chance_near_full": 0.5,
     "raid_intro": "Hooves thunder through the trees. Sir Guy of Gisborne and his best riders burst upon the band near {place}! 'Today I take one of you back to Nottingham!'"
