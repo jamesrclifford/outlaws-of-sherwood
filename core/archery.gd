@@ -8,6 +8,11 @@ extends RefCounted
 
 const SWAY := 0.9             # how far the sight swings from the centre
 const WIND_PUSH := 0.35       # how far a full-strength wind carries an arrow
+## Tuned with a simulated player whose taps land within about 60ms (tests/run_tests.gd): they beat
+## a village champion almost always, the best rivals about two times in three.
+const SWING_RATE := 1.8       # radians per second at speed 1
+const RIVAL_SPREAD := 6.0     # how far a rival's arrows stray, falling as their skill rises
+const RIVAL_MIN_SPREAD := 1.2 # even the best rival is not perfect
 
 var rng := RandomNumberGenerator.new()
 var arrows := 3               # arrows each archer shoots
@@ -25,11 +30,11 @@ var _phase := 0.0
 func _init(seed_value: int, arrow_count := 3, rival_skill := 0.0, rival := "") -> void:
 	rng.seed = seed_value
 	arrows = arrow_count
-	speed = 1.0 + rival_skill * 0.6
+	speed = 1.0 + rival_skill * 0.3
 	rival_name = rival
 	if rival != "":
 		for i in arrows:
-			var miss: float = absf(rng.randfn(0.0, (1.0 - rival_skill) * 5.0 + 0.6))
+			var miss: float = absf(rng.randfn(0.0, (1.0 - rival_skill) * RIVAL_SPREAD + RIVAL_MIN_SPREAD))
 			rival_scores.append(clampi(10 - int(miss), 0, 10))
 	_next_arrow()
 
@@ -42,7 +47,7 @@ func _next_arrow() -> void:
 
 ## Where the sight is t seconds after this tap's swing began.
 func aim_at(t: float) -> Vector2:
-	var swing: float = sin(t * 2.4 * speed + _phase) * SWAY
+	var swing: float = sin(t * SWING_RATE * speed + _phase) * SWAY
 	return Vector2(swing, 0) if locked_x == null else Vector2(locked_x, swing)
 
 

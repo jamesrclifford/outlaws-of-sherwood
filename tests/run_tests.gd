@@ -1337,3 +1337,32 @@ func test_disguises_are_learned_from_the_legends() -> void:
 	var offered: Array = run.disguise_options().map(func(o): return o["id"])
 	offered.sort()
 	check(offered == ["beggar", "butcher", "potter"], "only learned disguises are offered (%s)" % [offered])
+
+
+## A simulated archer who reads the wind from the screen's arrows and taps with a timing error.
+func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
+	var r = preload("res://core/archery.gd").new(seed_value, 3, skill, "Rival")
+	var hand := RandomNumberGenerator.new()
+	hand.seed = seed_value * 7 + 1
+	var rate: float = r.SWING_RATE * r.speed
+	while not r.done():
+		# The screen shows up to three wind arrows; the archer aims into the wind by that much.
+		var shown: float = ceil(absf(r.wind) * 3) / 3.0 * signf(r.wind) if absf(r.wind) >= 0.05 else 0.0
+		var guess: float = shown - 0.17 * signf(shown)
+		for target in [-guess * r.WIND_PUSH, 0.0]:
+			var t: float = fposmod(asin(clampf(target / r.SWAY, -1, 1)) - r._phase, TAU) / rate
+			r.tap(maxf(0.0, t + hand.randfn(0.0, tap_error)))
+	return r.won()
+
+
+func test_contests_are_winnable() -> void:
+	for row in [[0.45, 0.06, 0.85], [0.6, 0.06, 0.75], [0.8, 0.06, 0.55], [0.85, 0.06, 0.5], [0.45, 0.09, 0.7], [0.8, 0.09, 0.3]]:
+		var wins := 0
+		for s in 400:
+			wins += 1 if _sim_round(row[0], 5000 + s, row[1]) else 0
+		print("contest vs skill %.2f, taps within %dms: won %d/400" % [row[0], row[1] * 1000, wins])
+		check(wins >= int(400 * row[2]), "an archer tapping within %dms beats a skill %.2f rival often (%d/400)" % [row[1] * 1000, row[0], wins])
+	var sharp := 0
+	for s in 400:
+		sharp += 1 if _sim_round(0.85, 9000 + s, 0.0) else 0
+	check(sharp >= 360, "perfect timing nearly always wins, even the hardest match (%d/400)" % sharp)
