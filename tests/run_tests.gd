@@ -257,7 +257,8 @@ func party() -> Array:
 
 
 ## Plays a whole mission: walks into known traps, takes the first option, autoplays fights.
-func autoplay_mission(run, use_scouts := false) -> void:
+## smart plays fights like a sharp player (see smart_battle); otherwise the plain button-masher.
+func autoplay_mission(run, use_scouts := false, smart := false) -> void:
 	if use_scouts:
 		run.scout()
 	var guard := 0
@@ -272,7 +273,10 @@ func autoplay_mission(run, use_scouts := false) -> void:
 			step = run.choose(picks.filter(func(i): return i < step["options"].size() and run.can_choose(i))[0])
 		if step["type"] == "battle":
 			var b = run.make_battle(step["enemies"])
-			autoplay(b)
+			if smart:
+				smart_battle(b, 0.7)
+			else:
+				autoplay(b)
 			run.battle_finished(b)
 		if step["type"] == "archery":
 			var round = run.make_archery()
@@ -638,6 +642,23 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.free_heroes().size() == 2, "only two heroes left to send")
 	c.finish_mission(_fake_run(c, "success", []))
 	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_guy_hunts_someone_new_each_time() -> void:
+	var c = Campaign.new(db, 77, BAND4)
+	c.infamy = 40
+	var picks: Array = []
+	for _d in 120:
+		var before: String = c.hunted_hero
+		c.rest()
+		c.ambush = {}
+		if c.hunted_hero != before:
+			picks.append(c.hunted_hero)
+	check(picks.size() >= 4, "Guy picks a quarry several times (%s)" % [picks])
+	var repeats := 0
+	for i in range(1, picks.size()):
+		repeats += 1 if picks[i] == picks[i - 1] else 0
+	check(repeats == 0 and picks.has("will") and picks.has("tuck") and picks.has("little_john"), "and turns on a different hero each time (%s)" % [picks])
 
 
 func test_a_lost_contest_legend_comes_round_again() -> void:
@@ -1110,7 +1131,7 @@ func test_every_tale_is_winnable_by_its_band() -> void:
 			c.missions[at]["expires"] = 0
 			c.location = at
 			var run = c.start_mission()
-			autoplay_mission(run)
+			autoplay_mission(run, false, true)
 			wins += 1 if run.result == "success" else 0
 		if wins < tries / 2:
 			weak.append("%s %d/%d" % [id, wins, tries])
@@ -1178,7 +1199,9 @@ func test_every_legend_can_be_played_through() -> void:
 		for h in c.heroes.values():
 			h.hp = h.max_hp
 		var run = c.start_mission()
-		autoplay_mission(run)
+		if run == null:
+			continue    # a raid on the road left nobody free to go; the loop frees them and tries again
+		autoplay_mission(run, false, true)
 		c.finish_mission(run)
 		c.captured.clear()
 		c._remove_rescues()
@@ -1354,7 +1377,7 @@ func test_storming_the_castle_frees_sherwood() -> void:
 		check(not c.finale_won(), "the Sheriff still holds the castle")
 		var run = c.start_mission()
 		check(run.mission["location"] == "castle_courtyard", "the finale is fought in the castle courtyard")
-		autoplay_mission(run)
+		autoplay_mission(run, false, true)
 		c.finish_mission(run)
 		if run.result != "success":
 			continue
@@ -1709,3 +1732,24 @@ func _raid_odds_print() -> void:   # rename to test_ to print the odds while bal
 		for skill in [0.6, 0.85, 1.0]:
 			var r: Array = _raid_odds(band, skill, 100)
 			print("raid, %d heroes played well (skill %.2f): won %d/100, %.1f rounds" % [band.size(), skill, r[0], r[1]])
+
+
+func _tale_odds(id: String, tough_scale: float) -> int:
+	var wins := 0
+	for s in 12:
+		var c = Campaign.new(db, 500 + s, band_for_story(id))
+		c.missions.clear()
+		var at: String = db.stories["stories"][id]["node"]
+		c.missions[at] = MissionGen.new(db).story(id, 10, 900 + s)
+		c.missions[at]["toughness"] = int(c.missions[at]["toughness"] * tough_scale)
+		c.missions[at]["expires"] = 0
+		c.location = at
+		var run = c.start_mission()
+		autoplay_mission(run, false, true)
+		wins += 1 if run.result == "success" else 0
+	return wins
+
+
+func _tale_odds_print() -> void:   # rename to test_ to print legend odds while balancing
+	for id in db.stories["stories"]:
+		print("%-22s rep %2d band %d: plain %2d/12  tough %2d/12" % [id, int(db.stories["stories"][id]["requires"].get("reputation", 0)), band_for_story(id).size(), _tale_odds(id, 0.0), _tale_odds(id, 1.0)])

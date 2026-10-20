@@ -422,6 +422,7 @@
       ]
     },
     "noble_fisherman": {
+      "toughness": 0,
       "name": "The Noble Fisherman",
       "node": "great_north_road",
       "backdrop": "harbour",

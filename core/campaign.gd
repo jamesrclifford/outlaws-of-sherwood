@@ -526,6 +526,9 @@ func _guy_acts() -> void:
 	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
+		# He turns on someone new each time, when there is anyone else to hunt.
+		if targets.size() > 1:
+			targets = targets.filter(func(h): return h.id != hunted_hero)
 		if not targets.is_empty():
 			hunted_hero = targets[rng.randi_range(0, targets.size() - 1)].id
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
@@ -725,7 +728,7 @@ static func from_dict(game_data, data: Dictionary):
 
 ## JSON turns every number into a float; mission code expects ints for these keys.
 static func _fix_ints(m: Dictionary) -> void:
-	for k in ["seed", "threat", "expires"]:
+	for k in ["seed", "threat", "expires", "toughness"]:
 		if m.has(k):
 			m[k] = int(m[k])
 	for k in m["rewards"]:

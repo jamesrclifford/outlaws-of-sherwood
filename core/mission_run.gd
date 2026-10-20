@@ -8,6 +8,8 @@ const SNEAK_BASE := 0.75       # chance for one or two heroes to creep past wher
 const SNEAK_PER_HERO := 0.04   # each extra hero makes more noise
 const SNEAK_MIN := 0.3
 const RAID_GLORY := 8          # reputation for beating Sir Guy's raid
+const TOUGH_HP := 0.02         # a legend's foes gain this much health per point of reputation it asks for
+const TOUGH_ATK := 0.005       # and this much bite
 
 var db
 var mission: Dictionary
@@ -227,6 +229,14 @@ func make_battle(enemy_ids: Array):
 		_arm_for_duel(node["abilities"], node.get("sprites", {}))
 	var b = db.make_custom_battle(fighters(), enemy_ids, rng.randi())
 	b.friendly = node.get("friendly", false)
+	# Legends that ask for a big reputation are told of bigger, tougher foes.
+	var tough: int = int(mission.get("toughness", 0))
+	if tough > 0:
+		for u in b.units:
+			if u.side == "enemies":
+				u.max_hp = int(round(u.max_hp * (1.0 + tough * TOUGH_HP)))
+				u.hp = u.max_hp
+				u.atk = int(round(u.atk * (1.0 + tough * TOUGH_ATK)))
 	if surprise:
 		surprise = false
 		_log("Surprise attack! The enemy is caught flat-footed.")

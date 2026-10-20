@@ -34,6 +34,14 @@ func _init() -> void:
 	var map := MapView.new()
 	root.add_child(map)
 	await _snap(dir, "map")
+	map.campaign.stories_done = ["will_meets_robin", "little_john_bridge", "potter", "tinker", "beggar"]
+	map._show_legends()
+	await _snap(dir, "legends")
+	for ch in map.get_children():
+		if ch is Control and ch.mouse_filter == Control.MOUSE_FILTER_STOP and ch.get_child_count() > 0 and ch.get_child(0) is ColorRect:
+			ch.queue_free()
+	map.busy = false
+	map.campaign.stories_done = []
 	map._show_armory("robin")
 	await _snap(dir, "armory")
 	await _clear()

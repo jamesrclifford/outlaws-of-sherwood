@@ -346,12 +346,15 @@ func _show_legends() -> void:
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
-	for l in told + all.filter(func(x): return not x[2]):
+	var rows: Array = told.map(func(l): return [l[1], INK])
+	if told.size() < all.size():
+		rows.append(["%d more still to discover..." % (all.size() - told.size()), Color("8a7a5a")])
+	for r in rows:
 		var row := Label.new()
-		row.text = ("+ " + l[1]) if l[2] else "? A tale not yet told"
+		row.text = r[0]
 		row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.custom_minimum_size = Vector2(270, 0)
-		row.add_theme_color_override("font_color", INK if l[2] else Color("8a7a5a"))
+		row.add_theme_color_override("font_color", r[1])
 		row.add_theme_constant_override("shadow_offset_x", 0)
 		row.add_theme_constant_override("shadow_offset_y", 0)
 		list.add_child(row)

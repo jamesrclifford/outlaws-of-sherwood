@@ -73,6 +73,9 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 		"threat": threat,
 		"nodes": nodes,
 		"rewards": rewards,
+		# How much tougher its foes are: the reputation it asks for, unless the legend sets its own
+		# (Robin alone on the fishing boat; the finale, already a long hard fight).
+		"toughness": int(st.get("toughness", st["requires"].get("reputation", 0))),
 	}
 
 
