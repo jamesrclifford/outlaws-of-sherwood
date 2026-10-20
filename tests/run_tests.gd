@@ -1500,3 +1500,27 @@ func test_guy_raid_is_hard_and_takes_one_hero() -> void:
 	b.result = "retreated"
 	run2.battle_finished(b)
 	check(run2.result == "failed" and run2.captured.size() == 1, "running from Guy still costs one hero")
+
+
+func test_guy_may_raid_before_his_plot_is_full() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	c.plots["guy"] = 40
+	check(c.raid_chance() == 0.0, "no raid while his plot is under half")
+	c.plots["guy"] = 70
+	var mid: float = c.raid_chance()
+	c.plots["guy"] = 95
+	var late: float = c.raid_chance()
+	check(mid > 0.0 and late > mid * 3, "the chance grows quickly near the top (%.2f then %.2f)" % [mid, late])
+	c.plots["guy"] = 100
+	check(c.raid_chance() == 1.0, "at 100 he always comes")
+	var early := 0
+	for s in 200:
+		var r = Campaign.new(db, 1000 + s, BAND4)
+		r.plots["guy"] = 50
+		for _d in 15:
+			var before: int = r.plots["guy"]
+			r.rest()
+			if not r.ambush.is_empty():
+				early += 1 if before + 5 < 100 else 0
+				break
+	check(early > 40 and early < 190, "Guy often strikes before the meter fills, but not always (%d/200)" % early)

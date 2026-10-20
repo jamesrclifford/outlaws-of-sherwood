@@ -492,9 +492,20 @@ func _sheriff_acts() -> void:
 		_spawn_mission("robbery", "sheriff")
 
 
+## The chance each day that Sir Guy raids before his plot is full: nothing below raid_from, then
+## rising faster and faster toward 100, when he always comes.
+func raid_chance() -> float:
+	var g: Dictionary = db.baits["guy"]
+	var from := float(g["raid_from"])
+	if plots["guy"] >= 100:
+		return 1.0
+	var t := clampf((plots["guy"] - from) / (100.0 - from), 0.0, 1.0)
+	return t * t * float(g["raid_chance_near_full"])
+
+
 func _guy_acts() -> void:
 	plots["guy"] = mini(100, plots["guy"] + 5 + infamy / 8)
-	if plots["guy"] >= 100:
+	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
 		if not targets.is_empty():
