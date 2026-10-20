@@ -96,6 +96,14 @@ func _init() -> void:
 	var hero = battle.battle.current()
 	battle._on_ability_pressed(battle.db.heroes[hero.id]["abilities"][2] if battle.db.heroes.has(hero.id) else "strike")
 	await _snap(dir, "battle_hint")
+	# Tuck in the back row has five abilities: three rows, clear of the commands.
+	for i in 3000:
+		if not battle.animating and battle.battle.current() != null and battle.battle.current().id == "tuck" and battle.actions_box.get_child_count() > 0:
+			break
+		if not battle.animating and battle.battle.current() != null and battle.battle.current().side == "heroes":
+			battle._end_hero_turn()
+		await process_frame
+	await _snap(dir, "battle_tuck")
 	await _clear()
 
 	# Skill games: a contest after one arrow, an arrow move in battle, and Little John's sweep.

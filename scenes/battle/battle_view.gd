@@ -12,6 +12,7 @@ const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const COLUMN_X := {"heroes": {"back": 8, "front": 92}, "enemies": {"front": 188, "back": 272}}
 const DEFAULT_BACKDROP := "sherwood_edge"
+const ROW_H := 38            # height of an ability or command button
 const SHADOW := preload("res://assets/ui/shadow.png")
 const RING_TURN := preload("res://assets/ui/ring_turn.png")
 const RING_TARGET := preload("res://assets/ui/ring_target.png")
@@ -269,9 +270,9 @@ func _refresh() -> void:
 	if cur != null and cur.side == "heroes" and not battle.is_over():
 		turn = "%s: %d AP   %s" % [cur.short_name(), cur.ap, turn]
 	Style.fit_text(timeline_label, "%s\nNext: %s" % [turn, " > ".join(names)])
+	_refresh_actions()    # first: the number of ability rows sets how tall the log can be
 	_refresh_log()
 	_refresh_hint()
-	_refresh_actions()
 
 
 func _refresh_log() -> void:
@@ -282,6 +283,7 @@ func _refresh_log() -> void:
 func _refresh_actions() -> void:
 	for c in actions_box.get_children() + commands_box.get_children():
 		c.queue_free()
+	_fit_action_rows(0)
 	if battle.is_over() and _external:
 		_add_button(commands_box, "Continue", func(): finished.emit(battle))
 		return
@@ -301,6 +303,7 @@ func _refresh_actions() -> void:
 		btn.disabled = not battle.usable_abilities(cur).has(a)
 		if a == selected_ability:
 			btn.modulate = Color("9fe0ff")
+	_fit_action_rows(cur.available_abilities().size())
 	_add_button(commands_box, "End turn", _end_hero_turn)
 	_add_button(commands_box, "Swap row", func():
 		battle.swap_row(cur)
@@ -308,6 +311,22 @@ func _refresh_actions() -> void:
 	_add_button(commands_box, "Retreat", func():
 		battle.retreat(cur)
 		_after_hero_action())
+
+
+## Two rows of abilities fit by default; a hero with more (Tuck in the back row has five) pushes the
+## rows, the hint and the bottom of the log upward instead of spilling onto the commands.
+func _fit_action_rows(count: int) -> void:
+	var h := Style.screen_height(self)
+	var rows := maxi(2, ceili(count / 2.0))
+	var height := rows * ROW_H + (rows - 1) * 4
+	actions_box.position.y = h - 48 - height
+	actions_box.size.y = height
+	hint_label.position.y = actions_box.position.y - 40
+	# Style.fit_text keeps the box it first saw; give it the new one (_refresh_log refills the text).
+	var box := maxf(Style.lines(1), hint_label.position.y - 4 - log_label.position.y)
+	log_label.text = ""
+	log_label.set_meta("box_height", box)
+	log_label.size.y = box
 
 
 ## The line above the abilities explains the chosen ability, or the unit last tapped.
@@ -335,7 +354,7 @@ func _acts_at_once(ability_id: String) -> bool:
 func _add_button(box: Container, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 38)
+	b.custom_minimum_size = Vector2(0, ROW_H)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.pressed.connect(cb)
 	box.add_child(b)
