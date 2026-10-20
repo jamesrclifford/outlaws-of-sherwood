@@ -24,6 +24,7 @@ var scouted := false          # scouting takes the band a day, paid when the mis
 var _duel_loadouts := {}      # hero id -> [abilities, row, sprite] kept while a duel sets the weapons
 var disguise := ""            # the disguise the band wore, if any
 var surprise := false         # the next battle opens with the enemy caught flat-footed
+var known_disguises = null    # disguise ids the band has learned from the legends; null means all
 
 
 func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
@@ -81,7 +82,7 @@ func disguise_options() -> Array:
 	if not mission.has("disguises"):
 		var pick := RandomNumberGenerator.new()
 		pick.seed = int(mission["seed"]) + 31
-		var ids: Array = db.disguises.keys()
+		var ids: Array = known()
 		var fates := ["slip", "surprise", "blown"]
 		var options := []
 		for i in 3:
@@ -91,8 +92,14 @@ func disguise_options() -> Array:
 	return mission["disguises"]
 
 
+## The disguises the band can choose from.
+func known() -> Array:
+	return db.disguises.keys() if known_disguises == null else known_disguises.duplicate()
+
+
 func can_disguise() -> bool:
-	return node_index == 0 and disguise == "" and not scouted and mission["type"] in ["robbery", "rescue"]
+	return node_index == 0 and disguise == "" and not scouted and mission["type"] in ["robbery", "rescue"] \
+		and (mission.has("disguises") or known().size() >= 3)
 
 
 ## Puts on the chosen disguise and tells how it went. Returns its fate.

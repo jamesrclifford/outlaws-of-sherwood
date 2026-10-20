@@ -194,7 +194,14 @@ func start_ambush():
 func start_mission():
 	if not missions.has(location) or free_heroes().is_empty():
 		return null
-	return MissionRun.new(db, missions[location], party())
+	var run = MissionRun.new(db, missions[location], party())
+	run.known_disguises = known_disguises()
+	return run
+
+
+## Disguises the band has learned by playing their legends (the potter, the beggar...).
+func known_disguises() -> Array:
+	return db.disguises.keys().filter(func(id): return stories_done.has(db.disguises[id]["legend"]))
 
 
 ## Applies a finished mission's results to the campaign.
@@ -211,6 +218,9 @@ func finish_mission(run) -> void:
 			reputation += run.reputation
 			if m["type"] == "story":
 				stories_done.append(m["story"])
+				for id in db.disguises:
+					if db.disguises[id]["legend"] == m["story"]:
+						_news("New disguise learned from the legend: %s." % db.disguises[id]["name"])
 				_news("%s: the band's legend grows." % m["name"])
 				if run.recruited != "":
 					_join(run.recruited)

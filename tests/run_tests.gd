@@ -1231,8 +1231,9 @@ func test_disguises_offer_one_of_each_fate() -> void:
 		var again = MissionRun.new(db, MissionGen.new(db).generate(m["type"], 30, s, "great_north_road"), [])
 		check(JSON.stringify(again.disguise_options()) == JSON.stringify(opts), "the same job always offers the same disguises")
 	for id in db.disguises:
-		for k in ["name", "wear", "slip", "surprise", "blown"]:
+		for k in ["name", "legend", "wear", "slip", "surprise", "blown"]:
 			check(db.disguises[id].has(k), "disguise %s says %s" % [id, k])
+		check(db.stories["stories"].has(db.disguises[id]["legend"]), "disguise %s comes from a real legend" % id)
 	var story = MissionRun.new(db, MissionGen.new(db).story("wanted_posters", 10, 1), [])
 	check(not story.can_disguise(), "legends are played as told, without disguises")
 
@@ -1307,3 +1308,32 @@ func test_one_tap_on_a_phone_counts_once() -> void:
 	game._gui_input(click)
 	check(game.round.shots.size() == 1, "the next real tap looses the arrow")
 	game.free()
+
+
+func test_disguises_are_learned_from_the_legends() -> void:
+	var c = Campaign.new(db, 75, BAND4)
+	check(c.known_disguises().is_empty(), "a new band knows no disguises")
+	c.missions.clear()
+	c.missions["great_north_road"] = MissionGen.new(db).generate("robbery", 20, 9, "great_north_road")
+	c.location = "great_north_road"
+	var run = c.start_mission()
+	check(not run.can_disguise(), "no disguises until three are learned")
+	for tale in ["potter", "beggar"]:
+		c.stories_done.append(tale)
+	check(c.known_disguises() == ["potter", "beggar"], "playing the Potter and the Beggar teaches those two disguises")
+	check(not c.start_mission().can_disguise(), "two are not enough to choose from")
+	# Finishing a third legend's mission teaches its disguise and says so.
+	c.missions["sherwood_edge"] = MissionGen.new(db).story("butcher", 10, 2)
+	c.missions["sherwood_edge"]["expires"] = 0
+	c.location = "sherwood_edge"
+	var tale_run = c.start_mission()
+	tale_run.result = "success"
+	c.finish_mission(tale_run)
+	check(c.known_disguises().has("butcher"), "the Butcher teaches the butcher's disguise")
+	check(c.news.any(func(n): return n.contains("Butcher")), "the news says a disguise was learned")
+	c.location = "great_north_road"
+	run = c.start_mission()
+	check(run.can_disguise(), "with three learned, the band can go in disguise")
+	var offered: Array = run.disguise_options().map(func(o): return o["id"])
+	offered.sort()
+	check(offered == ["beggar", "butcher", "potter"], "only learned disguises are offered (%s)" % [offered])

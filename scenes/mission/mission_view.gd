@@ -240,6 +240,10 @@ func _show_briefing() -> void:
 	var opts := [["Send scouts ahead (1 day)", _scout]]
 	if run.can_disguise():
 		opts.append(["Go in disguise", _pick_disguise])
+	elif run.mission["type"] in ["robbery", "rescue"]:
+		var learned: Array = run.known().map(func(id): return db.disguises[id]["name"].to_lower())
+		run.mission_log.append("Disguises are learned from the legends. Known: %s (three are needed)." % (", ".join(learned) if not learned.is_empty() else "none yet"))
+		_refresh()
 	opts.append(["Set out now", _set_out])
 	_set_buttons(opts)
 

@@ -1,54 +1,77 @@
 {
-  "_note": "Disguises picked before a job. Each mission offers three, and which one works is decided by the mission's seed: one slips the band past a fight, one lets them strike first, one gets them spotted. {place} is the job's location.",
+  "_note": "Disguises picked before a job, each learned from its legend (\"legend\" is a story or tale id). A job offers three of the known ones, and the mission's seed decides their fates: one slips the band past a fight, one lets them strike first, one gets them spotted. {place} is the job's location.",
   "disguises": {
     "potter": {
       "name": "Potter",
-      "wear": "Robin buys a potter's cart, pots and all, and cries his wares at half price.",
+      "legend": "potter",
+      "wear": "Like the time he swapped clothes with the potter, Robin drives a cart of pots and cries them at half price.",
       "slip": "The guards are so busy haggling over cheap pots that the band rolls straight past them into {place}.",
       "surprise": "While the guards squabble over a cracked jug, the band tips the cart over and charges!",
       "blown": "A guard picks up a pot. 'This is a bucket with a hole in it!' He looks closer. 'And you're Robin Hood!'"
     },
     "beggar": {
       "name": "Beggar",
-      "wear": "The band puts on rags and patched cloaks, and Robin limps along on a crutch.",
+      "legend": "beggar",
+      "wear": "Remembering the sturdy old beggar at the crossroads, Robin puts on a patched cloak and a heavy meal-bag.",
       "slip": "Nobody looks twice at a crowd of beggars. The band shuffles right past the guards at {place}.",
       "surprise": "A guard tosses Robin a coin. Robin catches it, throws off his rags, and the beggars leap into action!",
-      "blown": "A soldier kicks the crutch away, and Robin forgets to limp. 'That beggar runs like an outlaw!'"
-    },
-    "monk": {
-      "name": "Monks",
-      "wear": "The band borrows brown habits from a friendly abbey. Everyone pulls their hoods low and hums a hymn.",
-      "slip": "The guards bow their heads for the holy brothers, and the band walks solemnly past them at {place}.",
-      "surprise": "The 'monks' ask the guards to kneel for a blessing, and then the blessing turns into a scuffle!",
-      "blown": "One monk's habit is far too short, and his muddy boots stick out. 'Since when do monks carry longbows?'"
+      "blown": "A soldier kicks the meal-bag over, and out roll Robin's arrows. 'That's no beggar!'"
     },
     "butcher": {
       "name": "Butcher",
-      "wear": "Robin borrows a butcher's apron and cart and sells his meat so cheap the whole market crowds round.",
+      "legend": "butcher",
+      "wear": "Just as he did at Nottingham market, Robin puts on a butcher's apron and sells his meat so cheap the whole street crowds round.",
       "slip": "The guards are too busy buying sausages to notice the band slipping into {place}.",
       "surprise": "Robin hands out free sausages, and while the guards munch, the band jumps them!",
       "blown": "The real butcher storms up, red in the face. 'That's MY cart! Guards, seize that thief!'"
     },
     "tinker": {
       "name": "Tinker",
-      "wear": "Robin hangs pots and kettles off a pack and bangs his hammer, calling for things to mend.",
+      "legend": "tinker",
+      "wear": "Robin borrows the tinker's bag and hammer, the very ones the tinker once brought to arrest him, and calls for pots to mend.",
       "slip": "The guards wave the noisy tinker through just to be rid of the racket, and the band follows him into {place}.",
       "surprise": "Robin offers to mend a guard's helmet, then claps it down over his eyes. Now!",
       "blown": "Robin tries to mend a sergeant's kettle and knocks a hole right through it. 'You're no tinker!'"
     },
-    "pilgrims": {
-      "name": "Pilgrims",
-      "wear": "The band dresses as pilgrims on the road to the shrine, with scallop shells on their hats.",
-      "slip": "The guards wish the pilgrims a safe journey, and the band strolls right through {place}.",
-      "surprise": "The pilgrims stop to ask the way, and while the guards point down the road, the band pounces!",
-      "blown": "A guard asks which shrine they're going to. Three outlaws answer at once, with three different shrines."
+    "friar": {
+      "name": "Poor friar",
+      "legend": "golden_prize",
+      "wear": "As on the day of the golden prize, Robin pulls on a friar's robe and hobbles along begging pennies.",
+      "slip": "The guards bow their heads for the holy brother, and the band walks solemnly past them at {place}.",
+      "surprise": "The 'friar' asks the guards to kneel for a blessing, and the blessing turns into a scuffle!",
+      "blown": "A guard notices the friar's muddy green boots. 'Since when do friars carry longbows?'"
     },
-    "minstrels": {
-      "name": "Minstrels",
-      "wear": "Robin tunes a borrowed lute, and the band dresses in bright motley as travelling players.",
-      "slip": "The guards stop to listen to a merry song, and the rest of the band tiptoes past behind them at {place}.",
-      "surprise": "Robin plays a lullaby so sweet the guards start to nod, and the band springs!",
-      "blown": "The biggest outlaw is asked to sing. The guards cover their ears. 'No real minstrel sounds like that!'"
+    "old_woman": {
+      "name": "Old woman",
+      "legend": "bishop_old_woman",
+      "wear": "Robin puts on a grey dress and bonnet, just like the day he hid from the Bishop in the old woman's cottage.",
+      "slip": "Who would stop a little old woman? Robin totters past the guards, and the band slips into {place} behind.",
+      "surprise": "The old woman whacks a guard with her basket, and the band charges in after her!",
+      "blown": "A gust of wind lifts the bonnet. 'That old woman has a beard!'"
+    },
+    "palmer": {
+      "name": "Palmer",
+      "legend": "four_beggars",
+      "wear": "Like Little John among the four beggars, the band wraps up in palmers' robes, with staffs and scallop shells.",
+      "slip": "The guards wish the holy travellers a safe road, and the band strolls right through {place}.",
+      "surprise": "The palmers stop to ask the way, and while the guards point down the road, the band pounces!",
+      "blown": "A guard asks which shrine they're bound for. Three outlaws answer at once, with three different shrines."
+    },
+    "fisherman": {
+      "name": "Fisherman",
+      "legend": "noble_fisherman",
+      "wear": "Robin becomes 'Simon' the fisherman again, with a basket of herring and a very fishy smell.",
+      "slip": "The smell alone clears the road. The guards hold their noses and wave the band through {place}.",
+      "surprise": "Robin slaps a guard with a herring, and the band piles in while he's still blinking!",
+      "blown": "Robin tangles his net round the sergeant's boots, just like on the boat. 'Worst fisherman I ever saw. Wait a minute...'"
+    },
+    "greenleaf": {
+      "name": "Sheriff's servant",
+      "legend": "reynold_greenleaf",
+      "wear": "Little John puts on the Sheriff's livery from his days as 'Reynold Greenleaf', and marches the band along as his prisoners.",
+      "slip": "'Prisoners for the Sheriff!' booms John, and the guards let the whole band through {place}.",
+      "surprise": "John marches his 'prisoners' right up to the guards. Then the prisoners drop their ropes!",
+      "blown": "The Sheriff's steward squints at John. 'Reynold Greenleaf! You stole the Sheriff's silver plate!'"
     }
   }
 }
