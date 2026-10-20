@@ -5,6 +5,7 @@
 extends RefCounted
 
 const SWEET := 0.4            # how far from the middle a tap still counts for something
+const WINDOW := 1.5           # seconds for each tap; the marker crosses the middle at least once in that time
 
 var rng := RandomNumberGenerator.new()
 var taps := 1
@@ -28,6 +29,7 @@ func pos(t: float) -> float:
 func tap(t: float) -> float:
 	if done():
 		return 0.0
+	t = minf(t, WINDOW)    # too slow: the blow lands wherever the marker was when time ran out
 	var q := quality_at(pos(t))
 	qualities.append(q)
 	_phase = rng.randf_range(0, TAU)

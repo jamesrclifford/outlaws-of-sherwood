@@ -421,7 +421,7 @@ func test_archery_rules() -> void:
 		var c = Archery.new(s, 1)
 		var best_x := 0.0
 		var best := 99.0
-		for k in 300:
+		for k in int(c.WINDOW * 100):
 			var off := absf(c.landing(k * 0.01).x)
 			if off < best:
 				best = off
@@ -429,11 +429,20 @@ func test_archery_rules() -> void:
 		c.tap(best_x)
 		var best_y := 0.0
 		best = 99.0
-		for k in 300:
+		for k in int(c.WINDOW * 100):
 			if absf(c.aim_at(k * 0.01).y) < best:
 				best = absf(c.aim_at(k * 0.01).y)
 				best_y = k * 0.01
 		check(c.tap(best_y) >= 9, "well-timed taps hit the gold (seed %d)" % s)
+	# Waiting does not help: a late tap lands where the sight was when the window closed.
+	var slow = Archery.new(3, 1)
+	var quick = Archery.new(3, 1)
+	slow.tap(30.0)
+	quick.tap(Archery.WINDOW)
+	check(slow.tap(30.0) == quick.tap(Archery.WINDOW), "a late arrow is loosed when time runs out")
+	var m1 = preload("res://core/timing.gd").new(4, 1)
+	var m2 = preload("res://core/timing.gd").new(4, 1)
+	check(m1.tap(30.0) == m2.tap(preload("res://core/timing.gd").WINDOW), "a late blow lands when time runs out")
 
 
 func test_timing_meter() -> void:
@@ -1380,7 +1389,9 @@ func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
 		var shown: float = ceil(absf(r.wind) * 3) / 3.0 * signf(r.wind) if absf(r.wind) >= 0.05 else 0.0
 		var guess: float = shown - 0.17 * signf(shown)
 		for target in [-guess * r.WIND_PUSH, 0.0]:
-			var t: float = fposmod(asin(clampf(target / r.SWAY, -1, 1)) - r._phase, TAU) / rate
+			# The sight passes the target twice a swing; take the first pass, as a player would.
+			var a: float = asin(clampf(target / r.SWAY, -1, 1))
+			var t: float = minf(fposmod(a - r._phase, TAU), fposmod(PI - a - r._phase, TAU)) / rate
 			r.tap(maxf(0.0, t + hand.randfn(0.0, tap_error)))
 	return r.won()
 

@@ -27,6 +27,7 @@ var _flash := ""              # the last tap's verdict, shown for a moment
 var _over := false
 
 var _board: Control           # where the target or the meter is drawn
+var _late := false            # this tap was forced because time ran out
 var _title_label: Label
 var _hint_label: Label
 var _score_label: Label
@@ -135,6 +136,9 @@ func _process(delta: float) -> void:
 			_refresh_text()
 	else:
 		t += delta
+		if t >= round.WINDOW:
+			_late = true
+			tap()
 	_board.queue_redraw()
 
 
@@ -159,11 +163,17 @@ func tap() -> void:
 		if s >= 0:
 			_flash = "Gold! %d" % s if s >= 9 else ("%d points" % s if s > 0 else "Missed!")
 			_paused = PAUSE
+		if _late:
+			_flash = ("Too slow! " + _flash).strip_edges()
+			_paused = PAUSE
 	else:
 		var q: float = round.tap(t)
 		t = 0.0
 		_flash = "Perfect!" if q >= 0.9 else ("Good" if q >= 0.6 else ("Weak" if q > 0.0 else "Wild swing!"))
+		if _late:
+			_flash = "Too slow! " + _flash
 		_paused = PAUSE * (0.5 if mode == "rhythm" and not round.done() else 1.0)
+	_late = false
 	_refresh_text()
 
 
@@ -216,6 +226,12 @@ func _draw_board() -> void:
 		_draw_target()
 	else:
 		_draw_meter()
+	# The time left for this tap, draining away under the board.
+	if not _over and _paused <= 0.0:
+		var left: float = clampf(1.0 - t / round.WINDOW, 0.0, 1.0)
+		var x0 := 84.0 if mode == "aim" else 30.0    # clear of the archer in the corner
+		_board.draw_rect(Rect2(x0, 288, 330 - x0, 8), Color("2a1a10"))
+		_board.draw_rect(Rect2(x0, 288, (330 - x0) * left, 8), Color("5ac04a") if left > 0.35 else Color("d04a3a"))
 
 
 func _draw_target() -> void:

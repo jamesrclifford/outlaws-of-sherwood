@@ -96,6 +96,9 @@ func _init() -> void:
 	var hero = battle.battle.current()
 	battle._on_ability_pressed(battle.db.heroes[hero.id]["abilities"][2] if battle.db.heroes.has(hero.id) else "strike")
 	await _snap(dir, "battle_hint")
+	battle._on_ability_pressed(battle.battle.usable_abilities(hero).filter(func(a): return battle.db.abilities[a]["target"] == "enemy")[0])
+	await _snap(dir, "battle_aim")
+	battle.selected_ability = ""
 	# Tuck in the back row has five abilities: three rows, clear of the commands.
 	for i in 3000:
 		if not battle.animating and battle.battle.current() != null and battle.battle.current().id == "tuck" and battle.actions_box.get_child_count() > 0:

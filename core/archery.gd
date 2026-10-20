@@ -13,6 +13,7 @@ const WIND_PUSH := 0.35       # how far a full-strength wind carries an arrow
 const SWING_RATE := 1.8       # radians per second at speed 1
 const RIVAL_SPREAD := 6.0     # how far a rival's arrows stray, falling as their skill rises
 const RIVAL_MIN_SPREAD := 1.2 # even the best rival is not perfect
+const WINDOW := 2.0           # seconds for each tap; the sight passes the middle at least once in that time
 
 var rng := RandomNumberGenerator.new()
 var arrows := 3               # arrows each archer shoots
@@ -61,6 +62,7 @@ func landing(t: float) -> Vector2:
 func tap(t: float) -> int:
 	if done():
 		return 0
+	t = minf(t, WINDOW)    # too slow: the arrow goes wherever the sight was when time ran out
 	if locked_x == null:
 		locked_x = aim_at(t).x
 		_phase = rng.randf_range(0, TAU)

@@ -47,6 +47,7 @@ var actions_box: GridContainer
 var commands_box: HBoxContainer
 ## What a tap on a unit last asked about, shown in the hint line until the next action.
 var _inspected = null
+var _aimed = null              # the highlighted target a second tap on the ability hits
 
 
 func _ready() -> void:
@@ -247,6 +248,7 @@ func _refresh() -> void:
 	var targets: Array = []
 	if cur != null and selected_ability != "":
 		targets = battle.legal_targets(cur, selected_ability)
+	var aim = _aim()
 	for u in unit_buttons:
 		var b: Button = unit_buttons[u]
 		# One capital per status (S for stunned...); tapping the unit spells them out.
@@ -261,7 +263,7 @@ func _refresh() -> void:
 		bar.size.x = 68 * frac
 		bar.color = Color("6ac04a") if frac > 0.5 else (Color("e0b040") if frac > 0.25 else Color("d04a3a"))
 		var ring: TextureRect = b.get_node("Ring")
-		ring.texture = RING_TURN if u == cur else (RING_TARGET if targets.has(u) else SHADOW)
+		ring.texture = RING_TURN if u == cur else (RING_TARGET if u == aim else SHADOW)
 		b.modulate = Color(1, 1, 1, 0.4) if not u.is_active() else Color.WHITE
 		var art: TextureRect = b.get_node("Art")
 		art.modulate = Color("b8e8ff") if targets.has(u) and u != cur else Color.WHITE
@@ -335,7 +337,10 @@ func _refresh_hint() -> void:
 	var text := ""
 	if selected_ability != "" and cur != null:
 		var ab: Dictionary = db.abilities[selected_ability]
-		var how := "Tap it again to use it." if _acts_at_once(selected_ability) else "Tap a glowing target."
+		var how := "Tap it again to use it."
+		if not _acts_at_once(selected_ability):
+			var aim = _aim()
+			how = "Tap again to hit the ringed %s." % aim.short_name() if aim != null else "Nobody is in reach."
 		text = "%s %s" % [ab.get("desc", ab["name"]), how]
 	elif _inspected != null:
 		var u = _inspected
@@ -344,6 +349,23 @@ func _refresh_hint() -> void:
 	elif cur != null and cur.side == "heroes" and not battle.is_over():
 		text = "Pick an ability to see what it does."
 	Style.fit_text(hint_label, text)
+
+
+## Who a second tap on the chosen ability hits: the enemy last tapped or hit if it is still in reach,
+## otherwise the first one that is (or, for help, the friend worst hurt).
+func _aim():
+	var cur = battle.current()
+	if cur == null or selected_ability == "" or _acts_at_once(selected_ability):
+		return null
+	var targets: Array = battle.legal_targets(cur, selected_ability)
+	if targets.has(_aimed):
+		return _aimed
+	if targets.is_empty():
+		return null
+	if targets[0].side == cur.side:
+		# Healing and help go to whoever is worst hurt.
+		targets.sort_custom(func(a, b): return float(a.hp) / a.max_hp < float(b.hp) / b.max_hp)
+	return targets[0]
 
 
 ## Abilities on yourself or the whole band need no target, so a second tap uses them.
@@ -366,11 +388,16 @@ func _on_ability_pressed(ability_id: String) -> void:
 		return
 	var cur = battle.current()
 	_inspected = null
-	if ability_id == selected_ability and _acts_at_once(ability_id):
-		battle.perform(cur, ability_id, cur)
-		_after_hero_action()
-		return
-	# The first tap explains; a second tap on a targeted ability puts it away again.
+	if ability_id == selected_ability:
+		if _acts_at_once(ability_id):
+			battle.perform(cur, ability_id, cur)
+			_after_hero_action()
+			return
+		var aim = _aim()
+		if aim != null:
+			_use_on(cur, aim)
+			return
+	# The first tap explains and highlights a target; a second tap uses it on that target.
 	selected_ability = "" if ability_id == selected_ability else ability_id
 	_refresh()
 
@@ -381,18 +408,26 @@ func _on_unit_pressed(u) -> void:
 		return
 	if selected_ability == "" and u.has_status("netted") and u.side == "heroes" and u != cur:
 		battle.free_ally(cur, u)
+		_inspected = null
+		_after_hero_action()
 	elif selected_ability != "" and battle.legal_targets(cur, selected_ability).has(u):
-		if db.abilities[selected_ability].has("minigame"):
-			_play_minigame(cur, selected_ability, u)
-			return
-		battle.perform(cur, selected_ability, u)
+		_use_on(cur, u)
 	else:
-		# Not a target: say who this is and what is wrong with them.
+		# Not a target: say who this is and what is wrong with them, and aim at them if they are a foe.
 		_inspected = u
+		if u.side != cur.side:
+			_aimed = u
 		selected_ability = ""
 		_refresh()
-		return
+
+
+func _use_on(cur, u) -> void:
+	_aimed = u
 	_inspected = null
+	if db.abilities[selected_ability].has("minigame"):
+		_play_minigame(cur, selected_ability, u)
+		return
+	battle.perform(cur, selected_ability, u)
 	_after_hero_action()
 
 
