@@ -20,7 +20,7 @@ var prisoner_freed := false
 var loot_taken := false
 var recruited := ""           # a story mission's new companion, once won over
 var captured: Array = []
-var result := ""              # "", "success", "failed", "called_off"
+var result := ""              # "", "success", "failed", "called_off", "outshot" (a legend's contest lost)
 var mission_log: Array = []
 var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
@@ -292,6 +292,10 @@ func archery_finished(round) -> void:
 	else:
 		_log(node.get("lose", "So close!"))
 		reputation += 1
+		if mission["type"] == "story":
+			# A legend lost at the butts is not over: the band will hear of another match.
+			result = "outshot"
+			_log("This legend is not finished. Another match will come round before long.")
 
 
 func active_heroes() -> Array:

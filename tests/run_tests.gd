@@ -276,8 +276,7 @@ func autoplay_mission(run, use_scouts := false) -> void:
 			run.battle_finished(b)
 		if step["type"] == "archery":
 			var round = run.make_archery()
-			while not round.done():
-				round.tap(0.4 * round.shots.size())
+			shoot_well(round, 0.06, run.node_index + 1)
 			run.archery_finished(round)
 		run.advance()
 
@@ -639,6 +638,43 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.free_heroes().size() == 2, "only two heroes left to send")
 	c.finish_mission(_fake_run(c, "success", []))
 	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_a_lost_contest_legend_comes_round_again() -> void:
+	var c = Campaign.new(db, 21, BAND4 + ["alan"])
+	var st: Dictionary = db.stories["stories"]["silver_arrow"]
+	c.reputation = 200
+	c.infamy = 60
+	c.stories_done = c.legends().map(func(l): return l[0]).filter(func(id): return id != "silver_arrow")
+	for n in c.missions.keys():
+		if c.missions[n]["type"] == "story":
+			c.missions.erase(n)    # tales posted before the book was filled in
+	c.missions[st["node"]] = MissionGen.new(db).story("silver_arrow", 10, 3)
+	c.missions[st["node"]]["expires"] = 0
+	go(c, st["node"])
+	var run = c.start_mission()
+	var step: Dictionary = run.arrive()
+	while step["type"] != "archery":
+		run.advance()
+		step = run.arrive()
+	var round = run.make_archery()
+	while not round.done():
+		round.tap(0.0)
+		round.tap(0.0)
+	if round.won():
+		check(false, "the test archer should miss")
+		return
+	run.archery_finished(round)
+	check(run.result == "outshot", "losing a legend's match ends the outing")
+	c.finish_mission(run)
+	check(not c.stories_done.has("silver_arrow"), "the legend is not counted as told")
+	check(not c.missions.has(st["node"]) or c.missions[st["node"]].get("story", "") != "silver_arrow", "it is not straight back on the map")
+	go(c, "camp")
+	while c.day < int(c.story_retry["silver_arrow"]):
+		c.rest()
+	c.missions.erase(st["node"])    # tales wait for a free spot at their place
+	c._post_stories()
+	check(c.missions.get(st["node"], {}).get("story", "") == "silver_arrow", "it comes round again a few days later")
 
 
 func test_legend_scenes_move_with_the_story() -> void:
@@ -1128,6 +1164,9 @@ func test_every_legend_can_be_played_through() -> void:
 	var guard := 0
 	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
+		c.reputation = maxi(c.reputation, 60)    # Gisborne's raids, lost by the plain autoplayer, cost reputation
+		c.captured.clear()                       # and leave heroes in the dungeon, blocking the castle
+		c._remove_rescues()
 		var at := ""
 		for n in c.missions:
 			if c.missions[n]["type"] == "story":
@@ -1144,7 +1183,7 @@ func test_every_legend_can_be_played_through() -> void:
 		c.captured.clear()
 		c._remove_rescues()
 		go(c, "camp")
-	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
+	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (missing %s, retry %s, day %d)" % [db.stories["stories"].keys().filter(func(id): return not c.stories_done.has(id)), c.story_retry, c.day])
 	for h in Campaign.FULL_BAND:
 		check(c.band.has(h), "%s has joined by the end of the legends" % h)
 
@@ -1460,6 +1499,12 @@ func test_disguises_are_learned_from_the_legends() -> void:
 ## A simulated archer who reads the wind from the screen's arrows and taps with a timing error.
 func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
 	var r = preload("res://core/archery.gd").new(seed_value, 3, skill, "Rival")
+	shoot_well(r, tap_error, seed_value)
+	return r.won()
+
+
+## Shoots a round as a player who reads the wind and taps within about tap_error seconds.
+func shoot_well(r, tap_error: float, seed_value: int) -> void:
 	var hand := RandomNumberGenerator.new()
 	hand.seed = seed_value * 7 + 1
 	var rate: float = r.SWING_RATE * r.speed
@@ -1472,7 +1517,6 @@ func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
 			var a: float = asin(clampf(target / r.SWAY, -1, 1))
 			var t: float = minf(fposmod(a - r._phase, TAU), fposmod(PI - a - r._phase, TAU)) / rate
 			r.tap(maxf(0.0, t + hand.randfn(0.0, tap_error)))
-	return r.won()
 
 
 func test_contests_are_winnable() -> void:

@@ -220,6 +220,7 @@ func _select(id: String) -> void:
 	else:
 		opts.append(["Travel (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
 	opts.append(["News", _show_news])
+	opts.append(["Legends %d/%d" % [campaign.stories_done.size(), campaign.legends().size()], _show_legends])
 	_set_buttons(opts)
 
 
@@ -295,6 +296,74 @@ func _show_finale() -> void:
 	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt, and the people", "of the shire are free.", "",
 		"Your legend will be sung", "for a hundred years.", "", "(The greenwood still needs you.)"]
 	_notice("VICTORY", "SHERWOOD IS FREE", lines, "robin", "Play on")
+
+
+## The book of legends: how many the band has lived, the told ones by name, the rest still a mystery.
+func _show_legends() -> void:
+	busy = true
+	var h := Style.screen_height(self)
+	var all: Array = campaign.legends()
+	var told: Array = all.filter(func(l): return l[2])
+	var layer := Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(layer)
+	var shade := ColorRect.new()
+	shade.color = Color(0.05, 0.03, 0.02, 0.75)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(shade)
+	var tall: float = minf(h - 32, 640)
+	var top: float = (h - tall) / 2
+	var edge := ColorRect.new()
+	edge.color = Color("6a4a2c")
+	edge.position = Vector2(26, top)
+	edge.size = Vector2(308, tall)
+	layer.add_child(edge)
+	var paper := ColorRect.new()
+	paper.color = Color("e8d8a8")
+	paper.position = Vector2(30, top + 4)
+	paper.size = Vector2(300, tall - 8)
+	layer.add_child(paper)
+	var y := top + 14
+	for row in [["LEGENDS", 32, Color("8a1f1f")], ["%d of %d told" % [told.size(), all.size()], 16, INK]]:
+		var l := Label.new()
+		l.text = row[0]
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.add_theme_font_size_override("font_size", row[1])
+		l.add_theme_color_override("font_color", row[2])
+		l.add_theme_constant_override("shadow_offset_x", 0)
+		l.add_theme_constant_override("shadow_offset_y", 0)
+		l.position = Vector2(30, y)
+		l.size = Vector2(300, row[1] + 4)
+		layer.add_child(l)
+		y += row[1] + 10
+	# Told legends by name; the rest stay a mystery until the band lives them.
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(40, y)
+	scroll.size = Vector2(280, top + tall - 64 - y)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	layer.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+	for l in told + all.filter(func(x): return not x[2]):
+		var row := Label.new()
+		row.text = ("+ " + l[1]) if l[2] else "? A tale not yet told"
+		row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row.custom_minimum_size = Vector2(270, 0)
+		row.add_theme_color_override("font_color", INK if l[2] else Color("8a7a5a"))
+		row.add_theme_constant_override("shadow_offset_x", 0)
+		row.add_theme_constant_override("shadow_offset_y", 0)
+		list.add_child(row)
+	var close := Button.new()
+	close.text = "Back"
+	close.position = Vector2(80, top + tall - 52)
+	close.size = Vector2(200, 40)
+	close.pressed.connect(func():
+		layer.queue_free()
+		busy = false
+		_select(selected))
+	layer.add_child(close)
 
 
 ## A parchment notice over the map with a picture, closed with one button.
