@@ -5,7 +5,7 @@
       "node": "locksley",
       "backdrop": "locksley",
       "place": "The green at Locksley",
-      "requires": {},
+      "requires": {"band": ["will"]},
       "rewards": {"gold": 20, "reputation": 3},
       "intro": "An old tale the band likes to tell: how young Robin of Locksley first crossed the King's foresters, and why he lives in the greenwood now.",
       "nodes": [
@@ -17,27 +17,6 @@
           ]},
         {"kind": "combat", "text": "'Seize the cheeky pup!' Two of the foresters come at him.", "enemies": ["forester", "forester"]},
         {"kind": "objective", "text": "The foresters run for Nottingham, dropping their purse. Robin buys supper for the whole village, and from that day he is an outlaw of Sherwood."}
-      ]
-    },
-    "will_meets_robin": {
-      "name": "The Stranger in Scarlet",
-      "node": "locksley",
-      "backdrop": "sherwood_edge",
-      "place": "A glade near Locksley",
-      "requires": {},
-      "rewards": {"gold": 0, "reputation": 3},
-      "intro": "Around the fire, Will Scarlet tells how he and Robin first met, and both of them insist they won.",
-      "nodes": [
-        {"kind": "approach", "text": "Robin, newly outlawed, sees a young man in fine scarlet strolling through the glade, sniffing a rose."},
-        {"kind": "choice", "text": "'Stand!' says Robin. The stranger yawns. 'Must I?'",
-          "options": [
-            {"label": "Ask for a toll", "result": "next", "log": "'A toll? From me?' The stranger draws his sword with a flourish."},
-            {"label": "Challenge him to a bout", "result": "next", "log": "'A bout? Delightful.' The stranger draws his sword with a flourish."}
-          ]},
-        {"kind": "duel", "text": "Bow against blade in the glade!", "party": ["robin"], "enemies": ["rival_will"], "friendly": true,
-          "win": "Robin trips the stranger into a gorse bush. 'Ow! All right, all right!'",
-          "lose": "The stranger flicks Robin's hood over his eyes. 'Shall we call it a draw?'"},
-        {"kind": "objective", "text": "'Will Gamwell is my name, Robin. I'm your own cousin, come to find you!' Ever after, the band calls him Will Scarlet."}
       ]
     },
     "gamwell_christmas": {
@@ -145,7 +124,7 @@
       "node": "blidworth",
       "backdrop": "locksley",
       "place": "Blidworth mill",
-      "requires": {"reputation": 3},
+      "requires": {"band": ["will"], "reputation": 3},
       "rewards": {"gold": 20, "reputation": 4},
       "intro": "The miller of Blidworth grinds the poor folk's corn for free. Now the Sheriff has fined him, and his son Much has sent for Robin.",
       "nodes": [
@@ -254,11 +233,12 @@
         {"kind": "approach", "text": "Robin invites the knight to dinner under the greenwood tree. He eats like a man who hasn't had a good meal in weeks."},
         {"kind": "choice", "text": "'I am Sir Richard at the Lee. I owe the Abbot of St Mary's four hundred pounds. If I can't pay by Midsummer, he takes my lands.'",
           "options": [
-            {"label": "Lend him the money", "result": "next", "log": "'Who will stand surety for you?' 'Only Our Lady.' 'Then she is surety enough.' Robin counts out four hundred pounds."},
-            {"label": "Lend him the money, and a horse", "result": "next", "log": "Robin lends him the money, a good grey horse and Will as his squire for the road."}
+            {"label": "Lend him 60 gold", "result": "next", "pay": 60, "flag": "knight_loan", "reputation": 2, "log": "'Who will stand surety for you?' 'Only Our Lady.' 'Then she is surety enough.' Robin counts out sixty gold from the band's own chest."},
+            {"label": "Lend 80 gold and a horse", "result": "next", "pay": 80, "flag": "knight_loan", "reputation": 4, "log": "Robin lends him eighty gold from the band's chest, a good grey horse, and Will as his squire for the road."},
+            {"label": "Wish him luck", "result": "next", "reputation": -2, "log": "Robin sends the knight on with a good dinner and kind words, but no gold. Sir Richard rides off sadder than ever, and the tale of the Abbot's greed ends here."}
           ]},
         {"kind": "combat", "text": "Two of the Abbot's spies have been watching from the bushes. They mean to report to the Abbot!", "enemies": ["forester", "monk"]},
-        {"kind": "objective", "text": "Sir Richard rides away a happier man. 'Within a year I will repay you,' he swears."}
+        {"kind": "objective", "text": "Sir Richard rides away. Whatever the band gave him, he swears to remember it."}
       ]
     },
     "robins_larder": {
@@ -465,7 +445,7 @@
       "node": "great_north_road",
       "backdrop": "abbey",
       "place": "St Mary's Abbey, York",
-      "requires": {"stories": ["poor_knight"], "band": ["little_john"], "reputation": 9},
+      "requires": {"stories": ["poor_knight"], "flags": ["knight_loan"], "band": ["little_john"], "reputation": 9},
       "rewards": {"gold": 30, "reputation": 5},
       "intro": "It's Midsummer. Sir Richard rides to St Mary's Abbey to pay his debt, and the band comes along in disguise.",
       "nodes": [
@@ -504,7 +484,7 @@
       "backdrop": "locksley",
       "place": "The wrestling green at Wentbridge",
       "requires": {"stories": ["cellarer"], "reputation": 14},
-      "rewards": {"gold": 60, "reputation": 5},
+      "rewards": {"gold": 160, "reputation": 5},
       "intro": "A year has passed. Sir Richard rides to Sherwood to repay Robin, bringing a hundred fine bows as a gift. On the way, he passes a wrestling match.",
       "nodes": [
         {"kind": "approach", "text": "A poor yeoman has won the wrestling, but the bad losers are trying to cheat him out of his prize."},
@@ -517,7 +497,7 @@
           "win": "Little John flips the champion head over heels. The crowd roars.",
           "lose": "The champion pins Little John, but shakes his hand. 'The yeoman won fair.'"},
         {"kind": "combat", "text": "The bad losers set their hired men on Sir Richard!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman"]},
-        {"kind": "objective", "text": "Sir Richard arrives in Sherwood late, with four hundred pounds and a hundred bows. Robin won't take the money: Our Lady already paid it!"}
+        {"kind": "objective", "text": "Sir Richard arrives in Sherwood late, with a hundred fine bows and a heavy purse: the band's loan back, and as much again for their kindness."}
       ]
     },
     "widows_sons": {
@@ -671,9 +651,7 @@
             {"label": "Ask the King for safety first", "result": "next", "log": "'Whoever shoots on my side,' says the Queen, 'may go home safe.' The King agrees, chuckling."},
             {"label": "Just shoot", "result": "next", "log": "Robin steps up to the mark without a word."}
           ]},
-        {"kind": "duel", "text": "The Queen's archers against the King's!", "party": ["robin", "little_john", "will"], "enemies": ["kings_archer", "kings_archer", "kings_archer"], "friendly": true,
-          "win": "Robin's last arrow splits the King's champion's arrow. The Queen claps with delight.",
-          "lose": "The King's champions edge it by a whisker, but the Queen says she's never seen finer shooting."},
+        {"kind": "archery", "text": "The Queen's archers against the King's!", "rival": "The King's champion", "skill": 0.85, "arrows": 3, "prize": {"gold": 0, "reputation": 2}, "win": "Robin's last arrow splits the King's champion's arrow. The Queen claps with delight.", "lose": "The King's champions edge it by a whisker, but the Queen says she's never seen finer shooting."},
         {"kind": "objective", "text": "Robin kneels and gives his name. The King frowns, but a promise is a promise: forty days to go home safe."}
       ]
     },

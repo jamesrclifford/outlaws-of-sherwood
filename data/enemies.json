@@ -31,5 +31,7 @@
   "rival_scot": {"name": "The Scotsman", "sprite": "tradesman", "hp": 40, "atk": 8, "def": 5, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "staff_sweep"]},
   "rival_cook": {"name": "The Sheriff's Cook", "short": "Cook", "sprite": "tradesman", "hp": 36, "atk": 7, "def": 5, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},
   "rival_wrestler": {"name": "The Champion Wrestler", "short": "Wrestler", "sprite": "tradesman", "hp": 40, "atk": 8, "def": 5, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},
-  "rival_king": {"name": "The Tall Abbot", "short": "Abbot", "sprite": "king", "hp": 56, "atk": 9, "def": 6, "spd": 6, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]}
+  "rival_king": {"name": "The Tall Abbot", "short": "Abbot", "sprite": "king", "hp": 56, "atk": 9, "def": 6, "spd": 6, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},
+  "bounty_hunter": {"name": "Bounty Hunter", "short": "Hunter", "hp": 24, "atk": 8, "def": 3, "spd": 7, "crit": 0.08, "row": "front", "tags": ["hunter"], "abilities": ["strike", "throw_net"], "carries_gold": 15},
+  "black_hob": {"name": "Black Hob", "short": "Hob", "sprite": "bounty_hunter", "hp": 52, "atk": 9, "def": 5, "spd": 6, "crit": 0.1, "row": "front", "tags": ["hunter", "boss", "leader"], "abilities": ["strike", "throw_net", "call_hounds"], "carries_gold": 50}
 }

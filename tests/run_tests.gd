@@ -6,6 +6,7 @@ const Unit = preload("res://core/unit.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const Campaign = preload("res://core/campaign.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 ## The four heroes the older campaign tests were written for (a story campaign starts smaller).
 const BAND4 := ["robin", "little_john", "will", "tuck"]
@@ -54,9 +55,21 @@ func autoplay(b, max_turns := 400) -> void:
 		turns += 1
 
 
+## Travels like the map screen does: if bounty hunters jump the band on the way, fight them and walk on.
+func go(c, to: String) -> void:
+	for _i in 10:
+		c.travel(to)
+		if not c.ambush.is_empty():
+			var run = c.start_ambush()
+			autoplay_mission(run)
+			c.finish_mission(run)
+		if c.location == to or c.free_heroes().is_empty():
+			return
+
+
 func test_screens_load() -> void:
 	# Screens aren't run headlessly, so at least make sure each one parses.
-	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd"]:
+	for path in ["res://scenes/menu/main_menu.gd", "res://scenes/map/map_view.gd", "res://scenes/mission/mission_view.gd", "res://scenes/battle/battle_view.gd", "res://scenes/minigame/minigame_view.gd"]:
 		check(load(path) != null, "%s loads" % path)
 
 
@@ -189,11 +202,18 @@ func autoplay_mission(run, use_scouts := false) -> void:
 		if step["type"] == "trap_choice":
 			step = run.decide_trap(true)
 		if step["type"] == "choice":
-			step = run.choose(1)
+			# The second option where the band can afford it, else the first it can.
+			var picks: Array = [1, 0] + range(2, step["options"].size())
+			step = run.choose(picks.filter(func(i): return i < step["options"].size() and run.can_choose(i))[0])
 		if step["type"] == "battle":
 			var b = run.make_battle(step["enemies"])
 			autoplay(b)
 			run.battle_finished(b)
+		if step["type"] == "archery":
+			var round = run.make_archery()
+			while not round.done():
+				round.tap(0.4 * round.shots.size())
+			run.archery_finished(round)
 		run.advance()
 
 
@@ -376,6 +396,166 @@ func test_villains_plot_and_set_bait() -> void:
 	check(c.missions.values().all(func(m): return m.get("expires", 0) >= c.day or m.has("rescue_heroes") or m["type"] == "story"), "old jobs expire")
 
 
+func test_archery_rules() -> void:
+	const Archery = preload("res://core/archery.gd")
+	check(Archery.score_at(Vector2.ZERO) == 10 and Archery.score_at(Vector2(0.55, 0)) == 5 and Archery.score_at(Vector2(0, 1.2)) == 0, "rings score 10 in the gold down to 0 off the target")
+	var a = Archery.new(5, 3, 0.7, "The champion")
+	var b = Archery.new(5, 3, 0.7, "The champion")
+	for i in 3:
+		check(a.wind == b.wind and a.aim_at(0.8) == b.aim_at(0.8), "the same seed sways and blows the same way")
+		check(a.aim_at(0.3).y == 0.0, "the first tap fixes the sight left and right")
+		check(a.tap(0.3) == -1 and b.tap(0.3) == -1, "the first tap doesn't loose the arrow")
+		var x: float = a.locked_x
+		var expect: int = Archery.score_at(Vector2(x + a.wind * Archery.WIND_PUSH, a.aim_at(1.1).y))
+		check(a.tap(1.1) == expect and b.tap(1.1) == expect, "the second tap looses it, and the wind carries it sideways")
+	check(a.done() and a.total() == b.total() and a.rival_total() == b.rival_total(), "a round is three arrows each and replays exactly")
+	check(a.won() == (a.total() >= a.rival_total()), "the higher score wins, ties to Robin")
+	var weak := 0
+	var strong := 0
+	for s in 200:
+		weak += Archery.new(s, 3, 0.3, "x").rival_total()
+		strong += Archery.new(s, 3, 0.9, "x").rival_total()
+	check(strong > weak, "a skilled rival outshoots a poor one (%d vs %d)" % [strong, weak])
+	# Good timing hits the gold: fix the sight just into the wind, then loose it as it crosses the middle.
+	for s in 20:
+		var c = Archery.new(s, 1)
+		var best_x := 0.0
+		var best := 99.0
+		for k in int(c.WINDOW * 100):
+			var off := absf(c.landing(k * 0.01).x)
+			if off < best:
+				best = off
+				best_x = k * 0.01
+		c.tap(best_x)
+		var best_y := 0.0
+		best = 99.0
+		for k in int(c.WINDOW * 100):
+			if absf(c.aim_at(k * 0.01).y) < best:
+				best = absf(c.aim_at(k * 0.01).y)
+				best_y = k * 0.01
+		check(c.tap(best_y) >= 9, "well-timed taps hit the gold (seed %d)" % s)
+	# Waiting does not help: a late tap lands where the sight was when the window closed.
+	var slow = Archery.new(3, 1)
+	var quick = Archery.new(3, 1)
+	slow.tap(30.0)
+	quick.tap(Archery.WINDOW)
+	check(slow.tap(30.0) == quick.tap(Archery.WINDOW), "a late arrow is loosed when time runs out")
+	var m1 = preload("res://core/timing.gd").new(4, 1)
+	var m2 = preload("res://core/timing.gd").new(4, 1)
+	check(m1.tap(30.0) == m2.tap(preload("res://core/timing.gd").WINDOW), "a late blow lands when time runs out")
+
+
+func test_timing_meter() -> void:
+	const Timing = preload("res://core/timing.gd")
+	check(Timing.quality_at(0.5) == 1.0 and Timing.quality_at(0.1) == 0.0 and Timing.quality_at(0.7) > 0.4, "a tap is judged by how near the middle it lands")
+	var m = Timing.new(3, 3, 1.6)
+	var n = Timing.new(3, 3, 1.6)
+	for t in [0.2, 0.5, 0.9]:
+		check(m.tap(t) == n.tap(t), "the same seed and timing judge the same")
+	check(m.done() and m.qualities.size() == 3, "a flourish is three taps")
+
+
+func test_minigames_reward_good_play() -> void:
+	var dealt := {}
+	for q in [0.0, 0.5, 1.0]:
+		var b = db.make_battle(["robin"], "forest_patrol", 41)
+		var hits := []
+		b.damaged.connect(func(u, amount, crit): hits.append([amount, crit]))
+		var robin = b.next_turn()
+		while robin != null and robin.id != "robin":
+			b.run_ai_turn()
+			robin = b.next_turn()
+		robin.ap = 2
+		var target = b.legal_targets(robin, "split_arrow")[0]
+		target.hp = 999
+		hits.clear()
+		b.perform(robin, "split_arrow", target, [q])
+		dealt[q] = hits[0]
+	check(dealt[0.0][0] < dealt[0.5][0] and dealt[0.5][0] < dealt[1.0][0], "a better aimed shot hits harder (%s)" % [dealt])
+	check(dealt[1.0][1] and not dealt[0.5][1], "a perfect shot is a sure critical, a middling one isn't")
+	# Will's flourish judges each of its three cuts on its own.
+	var b2 = db.make_battle(["will"], "forest_patrol", 41)
+	var cuts := []
+	b2.damaged.connect(func(u, amount, crit): cuts.append(crit))
+	var will = b2.next_turn()
+	while will != null and will.id != "will":
+		b2.run_ai_turn()
+		will = b2.next_turn()
+	will.ap = 2
+	var foe = b2.legal_targets(will, "flourish")[0]
+	foe.hp = 999
+	cuts.clear()
+	b2.perform(will, "flourish", foe, [1.0, 0.2, 1.0])
+	check(cuts == [true, false, true], "each flourish cut is judged on its own tap (%s)" % [cuts])
+	for id in ["split_arrow", "pinning_shot", "staff_sweep", "flourish"]:
+		check(db.abilities[id].get("minigame", "") in ["aim", "swing", "rhythm"], "%s has a mini-game" % id)
+	check(not db.abilities["bow_shot"].has("minigame"), "a plain bow shot just shoots")
+
+
+func test_contests_appear_and_pay_out() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	var seen := 0
+	for _d in 60:
+		c.rest()
+		var held: Array = c.missions.values().filter(func(m): return m["type"] == "contest")
+		check(held.size() <= 1, "never more than one contest at a time")
+		seen += held.size()
+	check(seen > 0, "contests turn up now and then")
+	var gen = MissionGen.new(db)
+	for won in [true, false]:
+		c.missions.clear()
+		c.location = "nottingham"
+		c.missions["nottingham"] = gen.contest("market_arrow", "Nottingham", 12)
+		c.missions["nottingham"]["expires"] = c.day + 3
+		var save: Dictionary = JSON.parse_string(JSON.stringify(c.to_dict()))
+		check(Campaign.from_dict(db, save).missions["nottingham"] == c.missions["nottingham"], "a waiting contest saves and loads unchanged")
+		var gold_before: int = c.gold
+		var run = c.start_mission()
+		check(run.arrive()["type"] == "continue", "the band arrives at the contest")
+		run.advance()
+		check(run.arrive()["type"] == "archery", "then Robin shoots")
+		var round = run.make_archery()
+		while not round.done():
+			round.tap(0.0)
+		if won:
+			round.rival_scores = [0, 0, 0]
+		else:
+			round.rival_scores = [10, 10, 10]
+			round.scores = [0, 0, 0]
+		run.archery_finished(round)
+		run.advance()
+		c.finish_mission(run)
+		check(run.result == "success", "a contest is never a failed mission")
+		if won:
+			check(c.gold == gold_before + 60, "winning the Golden Arrow pays its purse (%d)" % (c.gold - gold_before))
+		else:
+			check(c.gold == gold_before, "losing pays nothing")
+
+
+func test_scouting_costs_a_day() -> void:
+	var days := []
+	var food := []
+	for scouted in [false, true]:
+		var c = Campaign.new(db, 8, BAND4)
+		c.missions.clear()
+		c.missions[c.location] = MissionGen.new(db).generate("robbery", 30, 77, "", "")
+		for h in c.free_heroes():
+			h.hp = h.max_hp / 2
+		var hp_before: Array = c.free_heroes().map(func(h): return h.hp)
+		var run = c.start_mission()
+		if scouted:
+			run.scout()
+			run.scout()   # asking twice costs nothing more
+		run.result = "success"
+		c.finish_mission(run)
+		days.append(c.day)
+		food.append(c.supplies)
+		if scouted:
+			check(c.free_heroes().map(func(h): return h.hp) == hp_before, "the scouting day is no rest: nobody heals")
+	check(days[1] == days[0] + 1, "scouting costs the band a day (%s)" % [days])
+	check(food[1] < food[0], "and a day's food (%s)" % [food])
+
+
 func _fake_run(c, result: String, captured_ids: Array):
 	var run = c.start_mission()
 	run.result = result
@@ -394,6 +574,32 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.free_heroes().size() == 2, "only two heroes left to send")
 	c.finish_mission(_fake_run(c, "success", []))
 	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_freeing_a_villager_says_what_it_did() -> void:
+	for seed in range(40, 140):
+		var c = Campaign.new(db, seed, BAND4)
+		var target := ""
+		for id in c.missions:
+			if c.missions[id]["type"] == "rescue" and not c.missions[id].has("rescue_heroes"):
+				target = id
+		if target == "":
+			continue
+		go(c, target)
+		var run = c.start_mission()
+		if run == null or c.location != target:
+			continue
+		var region: String = c.node(target)["region"]
+		var before: int = c.control[region]
+		autoplay_mission(run, true)
+		if run.result != "success":
+			continue
+		var line: String = run.mission_log.filter(func(l): return l.begins_with("The villager is home safe")).front()
+		c.finish_mission(run)
+		check(line.contains("+%d reputation" % run.reputation), "the rescue text names the reputation gained")
+		check(line.contains("from %d%% to %d%%" % [before, c.control[region]]), "and how far the Sheriff's grip loosened")
+		return
+	check(false, "found a villager rescue to win")
 
 
 func test_prisoners_moved_to_dungeon_after_deadline() -> void:
@@ -438,15 +644,15 @@ func test_long_campaign_with_autoplay_stays_sane() -> void:
 			c.rest()
 			continue
 		var targets: Array = c.missions.keys()
-		c.travel(targets[0])
+		go(c, targets[0])
 		var run = c.start_mission()
 		if run == null:
-			c.travel("camp")
+			go(c, "camp")
 			continue
 		autoplay_mission(run, true)
 		c.finish_mission(run)
 		played += 1
-		c.travel("camp")
+		go(c, "camp")
 		while c.supply_days() < 8 and c.buy_supplies():
 			pass
 		c.rest()
@@ -689,7 +895,7 @@ func test_bridge_duel_is_staffs_only() -> void:
 
 
 func test_story_data_is_valid() -> void:
-	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape"]
+	var kinds := ["approach", "combat", "choice", "duel", "hazard", "objective", "escape", "archery"]
 	for h in db.stories["start_band"]:
 		check(db.heroes.has(h), "start band hero %s exists" % h)
 	for id in db.stories["stories"]:
@@ -772,7 +978,7 @@ func band_for_story(id: String) -> Array:
 	var deepest := -1
 	for h in need:
 		deepest = maxi(deepest, order.find(h))
-	return order.slice(0, maxi(2, deepest + 1))
+	return order.slice(0, maxi(1, deepest + 1))
 
 
 ## Each tale should be winnable most of the time by the band you'd have when it first appears.
@@ -801,6 +1007,7 @@ func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
 	var c = Campaign.new(db, 40)
 	check(c.band == db.stories["start_band"], "a new campaign starts with only the start band")
 	check(c.missions.get("sherwood_edge", {}).get("story", "") == "little_john_bridge", "Little John's bridge is waiting on day one")
+	check(c.missions.get("locksley", {}).get("story", "") == "will_meets_robin", "so is the stranger in scarlet, and Will isn't in the band yet")
 	check(not c.missions.values().any(func(m): return m.get("story", "") == "tuck_ford"), "Tuck's story waits until John has joined")
 	c.travel("sherwood_edge")
 	var run = c.start_mission()
@@ -837,6 +1044,8 @@ func test_campaign_starts_small_and_john_joins_on_the_bridge() -> void:
 func test_every_legend_can_be_played_through() -> void:
 	var c = Campaign.new(db, 41)
 	c.reputation = 60
+	c.infamy = 60
+	c.gold = 500
 	var guard := 0
 	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
@@ -847,7 +1056,7 @@ func test_every_legend_can_be_played_through() -> void:
 		if at == "":
 			c.rest()
 			continue
-		c.travel(at)
+		go(c, at)
 		for h in c.heroes.values():
 			h.hp = h.max_hp
 		var run = c.start_mission()
@@ -855,7 +1064,7 @@ func test_every_legend_can_be_played_through() -> void:
 		c.finish_mission(run)
 		c.captured.clear()
 		c._remove_rescues()
-		c.travel("camp")
+		go(c, "camp")
 	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
 	for h in Campaign.FULL_BAND:
 		check(c.band.has(h), "%s has joined by the end of the legends" % h)
@@ -884,17 +1093,17 @@ func test_story_campaign_with_autoplay() -> void:
 				continue
 			var targets: Array = c.missions.keys()
 			targets.sort_custom(func(a, b): return c.missions[a]["type"] == "story" and c.missions[b]["type"] != "story")
-			c.travel(targets[0])
+			go(c, targets[0])
 			var run = c.start_mission()
 			if run == null:
-				c.travel("camp")
+				go(c, "camp")
 				continue
 			autoplay_mission(run, true)
 			if c.band.size() <= 2 and run.mission["type"] != "story":
 				early_jobs += 1
 				early_ok += 1 if run.result == "success" else 0
 			c.finish_mission(run)
-			c.travel("camp")
+			go(c, "camp")
 			while c.supply_days() < 8 and c.buy_supplies():
 				pass
 			c.rest()
@@ -902,3 +1111,454 @@ func test_story_campaign_with_autoplay() -> void:
 		print("story campaign %d: day %d, band %s, legends %s, gold %d, rep %d" % [s, c.day, c.band, c.stories_done, c.gold, c.reputation])
 	print("ordinary jobs tried with only Robin and Will: %d/%d succeeded" % [early_ok, early_jobs])
 	check(finished >= 6 * 3, "most legends get played within 30 trips (%d of %d)" % [finished, 6 * db.stories["stories"].size()])
+
+
+# --- The Sheriff hits back -----------------------------------------------------
+
+func test_wanted_posters_go_up_with_infamy() -> void:
+	var c = Campaign.new(db, 60, BAND4)
+	check(c.wanted_level() == 0 and c.bounty() == 0, "nobody is wanted at first")
+	c.infamy = 30
+	c._update_wanted()
+	check(c.wanted_level() == 1 and c.poster_news == 1, "infamy 30 puts up the first posters")
+	check(c.news.back().contains("Wanted posters"), "the news says so")
+	c.infamy = 80
+	c._update_wanted()
+	check(c.wanted_level() == 3 and c.bounty() > 100, "infamy 80 is the biggest bounty (%d)" % c.bounty())
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.posted_wanted == 3 and copy.poster_news == 3, "posters survive a save")
+	c.poster_news = 0
+	c.infamy = 76
+	c.rest()
+	check(c.infamy == 74 and c.wanted_level() == 2, "lying low at camp cools the band's infamy (%d)" % c.infamy)
+	check(c.posted_wanted == 2 and c.poster_news == 0, "the posters fade without a new one being shown")
+
+
+func test_robberies_raise_the_bounty() -> void:
+	var c = Campaign.new(db, 61, BAND4)
+	var run = MissionRun.new(db, MissionGen.new(db).generate("robbery", 10, 5, "great_north_road"), c.party())
+	run.mission["bait"] = {}
+	run.result = "success"
+	run.loot_taken = true
+	c.infamy = 22
+	c.location = "great_north_road"
+	c.finish_mission(run)
+	check(c.wanted_level() == 1 and c.poster_news == 1, "the robbery that tips infamy past 25 puts up posters")
+
+
+func test_bounty_hunters_ambush_on_the_road() -> void:
+	var ambushes := 0
+	var fights := 0
+	for s in 40:
+		var c = Campaign.new(db, 300 + s, BAND4)
+		c.infamy = 80
+		c.posted_wanted = 3
+		var visited: Array = c.travel("nottingham")
+		if c.ambush.is_empty():
+			check(c.location == "nottingham", "without an ambush the band arrives")
+			continue
+		ambushes += 1
+		check(c.location == visited.back() and c.location != "camp", "an ambush stops the band on the road")
+		var job_before = c.missions.get(c.location, {}).duplicate(true)
+		var run = c.start_ambush()
+		check(run.mission["type"] == "ambush" and run.mission["nodes"][0]["enemies"].has("bounty_hunter"), "bounty hunters are waiting")
+		var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+		check(not copy.ambush.is_empty(), "a waiting ambush survives a save")
+		autoplay_mission(run)
+		c.finish_mission(run)
+		fights += 1 if run.result == "success" else 0
+		check(c.ambush.is_empty(), "the ambush is over once fought")
+		check(JSON.stringify(c.missions.get(c.location, {})) == JSON.stringify(job_before) or run.result != "success", "the job at that place is still there")
+	check(ambushes >= 10, "a wanted band is often waylaid on a long walk (%d of 40)" % ambushes)
+	check(fights >= ambushes / 2, "the full band usually sees the hunters off (%d of %d)" % [fights, ambushes])
+	var calm = Campaign.new(db, 300, BAND4)
+	calm.travel("nottingham")
+	check(calm.ambush.is_empty(), "nobody hunts a band that isn't wanted")
+
+
+func test_running_from_hunters_is_getting_away() -> void:
+	var c = Campaign.new(db, 70, BAND4)
+	c.infamy = 60
+	c.posted_wanted = c.wanted_level()
+	c.location = "great_north_road"
+	c.ambush = MissionGen.new(db).ambush(["bounty_hunter"], "the road", "great_north_road", 100, 3)
+	var run = c.start_ambush()
+	var step: Dictionary = run.arrive()
+	var b = run.make_battle(step["enemies"])
+	b.result = "retreated"
+	run.battle_finished(b)
+	run.advance()
+	check(run.result == "success", "slipping away from bounty hunters still counts")
+	c.finish_mission(run)
+	check(c.news.any(func(n): return n.contains("slip")), "the news says the band gave them the slip")
+
+
+func test_sheriff_story_builds_to_the_castle() -> void:
+	var c = Campaign.new(db, 80, Campaign.FULL_BAND)
+	c.reputation = 40
+	c.missions.clear()
+	c._post_stories()
+	check(not c.missions.has("edwinstowe") or c.missions["edwinstowe"].get("story", "") != "wanted_posters", "no posters story before the band is wanted")
+	c.infamy = 30
+	c.missions.clear()
+	c._post_stories()
+	check(c.missions.get("edwinstowe", {}).get("story", "") == "wanted_posters", "the posters story comes once the band is wanted")
+	check(not c.story_ready("hunters_hunted") and not c.story_ready("storm_castle"), "the rest of the story waits its turn")
+	c.stories_done.append("wanted_posters")
+	check(not c.story_ready("hunters_hunted"), "Black Hob comes after the band only at a higher bounty")
+	c.infamy = 45
+	check(c.story_ready("hunters_hunted"), "then Black Hob's camp appears")
+	c.stories_done.append_array(["hunters_hunted", "silver_arrow"])
+	check(c.story_ready("storm_castle"), "with Hob's secret and the silver arrow, the castle can be stormed")
+	# An ordinary tale never pushes out the Sheriff's story, but the story does take a tale's place.
+	c.missions.clear()
+	c.missions["nottingham"] = MissionGen.new(db).story("butcher", 10, 1)
+	c.missions["nottingham"]["expires"] = 0
+	c._post_stories()
+	check(c.missions["nottingham"]["story"] == "storm_castle", "the finale takes the place of a waiting tale")
+
+
+func test_storming_the_castle_frees_sherwood() -> void:
+	var wins := 0
+	for s in 8:
+		var c = Campaign.new(db, 90 + s, Campaign.FULL_BAND)
+		c.infamy = 80
+		c.posted_wanted = 3
+		# A hired man is in the dungeon; the whole named band storms the castle.
+		c.reputation = 20
+		c.gold = 100
+		c.hire_merry_man()
+		c.captured["merry_man_1"] = {"node": "nottingham", "since": c.day}
+		c.missions.clear()
+		c.missions["nottingham"] = MissionGen.new(db).story("storm_castle", 60, 7 + s)
+		c.missions["nottingham"]["expires"] = 0
+		c.location = "nottingham"
+		check(not c.finale_won(), "the Sheriff still holds the castle")
+		var run = c.start_mission()
+		check(run.mission["location"] == "castle_courtyard", "the finale is fought in the castle courtyard")
+		autoplay_mission(run)
+		c.finish_mission(run)
+		if run.result != "success":
+			continue
+		wins += 1
+		check(c.finale_won(), "the Sheriff is driven out")
+		check(c.infamy == 0 and c.wanted_level() == 0, "the posters come down for good")
+		check(c.control.values().all(func(v): return v <= 40), "the Sheriff's grip is broken everywhere (%s)" % [c.control])
+		check(c.captured.is_empty(), "every cell is opened")
+	check(wins >= 4, "the whole band usually wins the finale (%d of 8)" % wins)
+
+
+func test_every_enemy_has_a_sprite_and_hunters_net() -> void:
+	check(db.enemies["bounty_hunter"]["abilities"].has("throw_net"), "bounty hunters carry nets")
+	check(ResourceLoader.exists("res://assets/sprites/bounty_hunter.png"), "bounty hunters have a picture")
+	check(ResourceLoader.exists("res://assets/backdrops/castle_courtyard.png"), "the castle courtyard is painted")
+
+
+# --- Disguises -------------------------------------------------------------------
+
+func test_disguises_offer_one_of_each_fate() -> void:
+	for s in 30:
+		var m: Dictionary = MissionGen.new(db).generate(["robbery", "rescue"][s % 2], 30, s, "great_north_road")
+		var run = MissionRun.new(db, m, [db.make_hero("robin"), db.make_hero("little_john")])
+		check(run.can_disguise(), "a %s can be done in disguise" % m["type"])
+		var opts: Array = run.disguise_options()
+		check(opts.size() == 3, "three disguises are offered")
+		var fates: Array = opts.map(func(o): return o["fate"])
+		fates.sort()
+		check(fates == ["blown", "slip", "surprise"], "one works, one half-works, one fails (%s)" % [fates])
+		check(opts.map(func(o): return o["id"]).all(func(id): return db.disguises.has(id)), "they are real disguises")
+		var again = MissionRun.new(db, MissionGen.new(db).generate(m["type"], 30, s, "great_north_road"), [])
+		check(JSON.stringify(again.disguise_options()) == JSON.stringify(opts), "the same job always offers the same disguises")
+	for id in db.disguises:
+		for k in ["name", "legend", "wear", "slip", "surprise", "blown"]:
+			check(db.disguises[id].has(k), "disguise %s says %s" % [id, k])
+		check(db.stories["stories"].has(db.disguises[id]["legend"]), "disguise %s comes from a real legend" % id)
+	var story = MissionRun.new(db, MissionGen.new(db).story("wanted_posters", 10, 1), [])
+	check(not story.can_disguise(), "legends are played as told, without disguises")
+
+
+func _run_with_fate(fate: String, type := "rescue"):
+	for s in 50:
+		var run = MissionRun.new(db, MissionGen.new(db).generate(type, 30, s, "great_north_road"), BAND4.map(func(h): return db.make_hero(h)))
+		var opts: Array = run.disguise_options()
+		for i in 3:
+			if opts[i]["fate"] == fate:
+				run.wear_disguise(i)
+				return run
+	return null
+
+
+func test_a_good_disguise_slips_past_a_fight() -> void:
+	var run = _run_with_fate("slip")
+	var fights_before: int = run.mission["nodes"].filter(func(n): return not n.get("enemies", []).is_empty() and not n.has("slipped")).size()
+	var battles := 0
+	var guard := 0
+	while not run.is_over() and guard < 20:
+		guard += 1
+		var step: Dictionary = run.arrive()
+		if step["type"] == "battle":
+			battles += 1
+			var b = run.make_battle(step["enemies"])
+			autoplay(b)
+			run.battle_finished(b)
+		run.advance()
+	check(run.mission_log.any(func(l): return l.contains(db.disguises[run.disguise]["slip"].left(20))), "the log tells how the band slipped past")
+	check(battles <= fights_before, "one fight fewer than without the disguise (%d of %d)" % [battles, fights_before])
+	check(run.result == "success" and run.prisoner_freed, "and the prisoner is still freed")
+
+
+func test_a_half_good_disguise_strikes_first() -> void:
+	var run = _run_with_fate("surprise")
+	check(run.surprise, "the band will strike first")
+	var step: Dictionary = run.arrive()
+	while step["type"] != "battle":
+		run.advance()
+		step = run.arrive()
+	var b = run.make_battle(step["enemies"])
+	check(b.units.filter(func(u): return u.side == "enemies").all(func(u): return u.has_status("stunned")), "every foe starts the fight stunned")
+	check(not run.surprise, "only the first fight is a surprise")
+
+
+func test_a_bad_disguise_brings_an_attack_at_once() -> void:
+	var run = _run_with_fate("blown", "robbery")
+	var first: Dictionary = run.current_node()
+	check(first["kind"] == "combat" and not first["enemies"].is_empty(), "the band is attacked straight away")
+	check(run.arrive()["type"] == "battle", "the fight starts before the approach")
+	check(run.mission_log.any(func(l): return l == db.disguises[run.disguise]["blown"].format({"place": run.mission["location_name"]})), "the log tells how the disguise was seen through")
+
+
+## On a phone one tap sends a touch and a click. It must fix the aim, not also loose the arrow.
+func test_one_tap_on_a_phone_counts_once() -> void:
+	var game = MinigameView.new()
+	game.start_contest(preload("res://core/archery.gd").new(3, 3, 0.5, "Rival"), "Robin", "robin", "Test")
+	root.add_child(game)
+	game.t = 0.5
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+	click.button_index = MOUSE_BUTTON_LEFT
+	game._gui_input(touch)
+	game._gui_input(click)
+	check(game.round.locked_x != null and game.round.shots.is_empty(), "a tap fixes the aim without shooting")
+	game._gui_input(click)
+	check(game.round.shots.is_empty(), "a second tap straight after is ignored")
+	game.t = 0.5
+	game._gui_input(click)
+	check(game.round.shots.size() == 1, "the next real tap looses the arrow")
+	game.free()
+
+
+func test_disguises_are_learned_from_the_legends() -> void:
+	var c = Campaign.new(db, 75, BAND4)
+	check(c.known_disguises().is_empty(), "a new band knows no disguises")
+	c.missions.clear()
+	c.missions["great_north_road"] = MissionGen.new(db).generate("robbery", 20, 9, "great_north_road")
+	c.location = "great_north_road"
+	var run = c.start_mission()
+	check(not run.can_disguise(), "no disguises until three are learned")
+	for tale in ["potter", "beggar"]:
+		c.stories_done.append(tale)
+	check(c.known_disguises() == ["potter", "beggar"], "playing the Potter and the Beggar teaches those two disguises")
+	check(not c.start_mission().can_disguise(), "two are not enough to choose from")
+	# Finishing a third legend's mission teaches its disguise and says so.
+	c.missions["sherwood_edge"] = MissionGen.new(db).story("butcher", 10, 2)
+	c.missions["sherwood_edge"]["expires"] = 0
+	c.location = "sherwood_edge"
+	var tale_run = c.start_mission()
+	tale_run.result = "success"
+	c.finish_mission(tale_run)
+	check(c.known_disguises().has("butcher"), "the Butcher teaches the butcher's disguise")
+	check(c.news.any(func(n): return n.contains("Butcher")), "the news says a disguise was learned")
+	c.location = "great_north_road"
+	run = c.start_mission()
+	check(run.can_disguise(), "with three learned, the band can go in disguise")
+	var offered: Array = run.disguise_options().map(func(o): return o["id"])
+	offered.sort()
+	check(offered == ["beggar", "butcher", "potter"], "only learned disguises are offered (%s)" % [offered])
+
+
+## A simulated archer who reads the wind from the screen's arrows and taps with a timing error.
+func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
+	var r = preload("res://core/archery.gd").new(seed_value, 3, skill, "Rival")
+	var hand := RandomNumberGenerator.new()
+	hand.seed = seed_value * 7 + 1
+	var rate: float = r.SWING_RATE * r.speed
+	while not r.done():
+		# The screen shows up to three wind arrows; the archer aims into the wind by that much.
+		var shown: float = ceil(absf(r.wind) * 3) / 3.0 * signf(r.wind) if absf(r.wind) >= 0.05 else 0.0
+		var guess: float = shown - 0.17 * signf(shown)
+		for target in [-guess * r.WIND_PUSH, 0.0]:
+			# The sight passes the target twice a swing; take the first pass, as a player would.
+			var a: float = asin(clampf(target / r.SWAY, -1, 1))
+			var t: float = minf(fposmod(a - r._phase, TAU), fposmod(PI - a - r._phase, TAU)) / rate
+			r.tap(maxf(0.0, t + hand.randfn(0.0, tap_error)))
+	return r.won()
+
+
+func test_contests_are_winnable() -> void:
+	for row in [[0.45, 0.06, 0.85], [0.6, 0.06, 0.75], [0.8, 0.06, 0.55], [0.85, 0.06, 0.5], [0.45, 0.09, 0.7], [0.8, 0.09, 0.3]]:
+		var wins := 0
+		for s in 400:
+			wins += 1 if _sim_round(row[0], 5000 + s, row[1]) else 0
+		print("contest vs skill %.2f, taps within %dms: won %d/400" % [row[0], row[1] * 1000, wins])
+		check(wins >= int(400 * row[2]), "an archer tapping within %dms beats a skill %.2f rival often (%d/400)" % [row[1] * 1000, row[0], wins])
+	var sharp := 0
+	for s in 400:
+		sharp += 1 if _sim_round(0.85, 9000 + s, 0.0) else 0
+	check(sharp >= 360, "perfect timing nearly always wins, even the hardest match (%d/400)" % sharp)
+
+
+func test_sneaking_past_is_a_gamble() -> void:
+	var tried := 0
+	var slipped := 0
+	var bigger_fights := 0
+	for s in 2000:
+		var m: Dictionary = MissionGen.new(db).generate("robbery", 40, s, "great_north_road")
+		for i in m["nodes"].size():
+			if m["nodes"][i]["kind"] != "choice":
+				continue
+			var run = MissionRun.new(db, m, BAND4.map(func(h): return db.make_hero(h)))
+			run.node_index = i
+			run.arrive()
+			var step: Dictionary = run.choose(0)
+			tried += 1
+			if step["type"] == "continue":
+				slipped += 1
+			elif step["enemies"].size() > m["nodes"][i]["options"][1]["enemies"].size():
+				bigger_fights += 1
+	var rate := float(slipped) / tried
+	check(rate > 0.35 and rate < 0.65, "sneaking past works about half the time for the band (%d/%d)" % [slipped, tried])
+	check(bigger_fights == tried - slipped, "getting caught brings the guards and one more (%d of %d)" % [bigger_fights, tried - slipped])
+	var m2: Dictionary = MissionGen.new(db).generate("robbery", 0, 1, "great_north_road")
+	var pair = MissionRun.new(db, m2, [db.make_hero("robin"), db.make_hero("will")])
+	var crowd = MissionRun.new(db, m2, BAND4.map(func(h): return db.make_hero(h)) + [db.make_hero("alan")])
+	check(pair.sneak_chance() > crowd.sneak_chance(), "two can sneak more quietly than five")
+	m2["threat"] = 90
+	check(pair.sneak_chance() < 0.75, "alert guards are harder to sneak past")
+
+
+func test_lending_to_the_knight_costs_gold_and_is_repaid() -> void:
+	var c = Campaign.new(db, 77, BAND4)
+	c.missions.clear()
+	c.missions["great_north_road"] = MissionGen.new(db).story("poor_knight", 10, 3)
+	c.missions["great_north_road"]["expires"] = 0
+	c.location = "great_north_road"
+	c.gold = 50
+	var run = c.start_mission()
+	run.arrive()
+	run.advance()
+	check(run.arrive()["type"] == "choice", "Sir Richard asks for help")
+	check(not run.can_choose(0) and not run.can_choose(1) and run.can_choose(2), "with 50 gold the band can only wish him luck")
+	check(run.choose(0)["type"] == "choice", "trying to lend money the band hasn't got does nothing")
+	c.gold = 100
+	run = c.start_mission()
+	run.arrive()
+	run.advance()
+	run.arrive()
+	run.choose(0)
+	check(run.spent == 60, "lending costs 60 gold")
+	run.result = "failed"
+	c.finish_mission(run)
+	check(c.gold == 40 and c.flags.has("knight_loan"), "the gold is gone even if the spies win, and the loan is remembered")
+	c.missions["great_north_road"] = MissionGen.new(db).story("poor_knight", 10, 3)
+	c.missions["great_north_road"]["expires"] = 0
+	run = c.start_mission()
+	run.arrive()
+	run.advance()
+	run.arrive()
+	check(run.can_choose(0), "trying the tale again doesn't charge the loan twice")
+	# Wishing him luck ends the knight's story.
+	var mean = Campaign.new(db, 78, BAND4)
+	mean.stories_done.append("poor_knight")
+	mean.reputation = 30
+	check(not mean.story_ready("knight_pays_abbot"), "no loan, no visit to the Abbot")
+	mean.flags.append("knight_loan")
+	check(mean.story_ready("knight_pays_abbot"), "with the loan made, Sir Richard's story goes on")
+	var knight_returns: Dictionary = db.stories["stories"]["knight_returns"]
+	check(int(knight_returns["rewards"]["gold"]) > 80, "Sir Richard pays back more than the band lent (%d)" % int(knight_returns["rewards"]["gold"]))
+	var old: Dictionary = JSON.parse_string(JSON.stringify(mean.to_dict()))
+	old.erase("flags")
+	check(Campaign.from_dict(db, old).flags.has("knight_loan"), "older saves that played the tale keep the knight's story going")
+
+
+# --- Gisborne's raid ---------------------------------------------------------------
+
+func test_guy_raids_when_his_plot_is_full() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	c.plots["guy"] = 99
+	c.rest()
+	check(not c.ambush.is_empty() and c.ambush.get("raid", "") == "guy", "at 100 Sir Guy rides out to raid the band")
+	check(c.ambush["nodes"][0]["enemies"].has("guy"), "and he comes himself")
+	check(c.plots["guy"] < 20, "his plot starts again")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.ambush.get("raid", "") == "guy", "a waiting raid survives a save")
+	# On the road it stops the band where it catches them.
+	var t = Campaign.new(db, 4, BAND4)
+	t.plots["guy"] = 99
+	var visited: Array = t.travel("nottingham")
+	check(visited.size() == 1 and not t.ambush.is_empty(), "the raid catches the band on the road")
+
+
+func test_guy_raid_is_hard_and_takes_one_hero() -> void:
+	var wins := 0
+	var one_taken := 0
+	var losses := 0
+	for s in 40:
+		var c = Campaign.new(db, 600 + s, BAND4)
+		c.hunted_hero = "tuck"
+		c.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 900 + s)
+		c.ambush["hunted"] = "tuck"
+		c.location = "great_north_road"
+		var rep_before: int = c.reputation
+		var run = c.start_ambush()
+		autoplay_mission(run)
+		c.finish_mission(run)
+		if run.result == "success":
+			wins += 1
+			check(c.reputation >= rep_before + MissionRun.RAID_GLORY, "beating Guy wins glory")
+			check(c.captured.is_empty(), "and nobody is taken")
+		else:
+			losses += 1
+			one_taken += 1 if c.captured.keys() == ["tuck"] else 0
+			check(c.captured.get("tuck", {}).get("node", "") == "nottingham", "Guy takes his prisoner to Nottingham")
+			check(c.missions.get("nottingham", {}).get("rescue_heroes", []) == ["tuck"], "a rescue is posted there")
+			check(c.free_heroes().size() == 3 and c.free_heroes().all(func(h): return h.hp >= 1), "the rest of the band gets away")
+	print("Guy's raid against four heroes: won %d/40" % wins)
+	check(wins <= 20, "Guy's raid is a very hard fight (%d/40 won)" % wins)
+	check(wins >= 2, "but it can be won (%d/40)" % wins)
+	check(one_taken == losses, "losing always costs exactly the hero Guy is hunting (%d/%d)" % [one_taken, losses])
+	# Running away counts as losing.
+	var c2 = Campaign.new(db, 7, BAND4)
+	c2.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 1)
+	c2.location = "great_north_road"
+	var run2 = c2.start_ambush()
+	var step: Dictionary = run2.arrive()
+	var b = run2.make_battle(step["enemies"])
+	b.result = "retreated"
+	run2.battle_finished(b)
+	check(run2.result == "failed" and run2.captured.size() == 1, "running from Guy still costs one hero")
+
+
+func test_guy_may_raid_before_his_plot_is_full() -> void:
+	var c = Campaign.new(db, 3, BAND4)
+	c.plots["guy"] = 40
+	check(c.raid_chance() == 0.0, "no raid while his plot is under half")
+	c.plots["guy"] = 70
+	var mid: float = c.raid_chance()
+	c.plots["guy"] = 95
+	var late: float = c.raid_chance()
+	check(mid > 0.0 and late > mid * 3, "the chance grows quickly near the top (%.2f then %.2f)" % [mid, late])
+	c.plots["guy"] = 100
+	check(c.raid_chance() == 1.0, "at 100 he always comes")
+	var early := 0
+	for s in 200:
+		var r = Campaign.new(db, 1000 + s, BAND4)
+		r.plots["guy"] = 50
+		for _d in 15:
+			var before: int = r.plots["guy"]
+			r.rest()
+			if not r.ambush.is_empty():
+				early += 1 if before + 5 < 100 else 0
+				break
+	check(early > 40 and early < 190, "Guy often strikes before the meter fills, but not always (%d/200)" % early)

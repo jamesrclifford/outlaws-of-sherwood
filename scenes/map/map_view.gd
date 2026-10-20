@@ -16,6 +16,8 @@ const STEP_SECONDS := 0.35
 const ICON_LIFT := 12
 const TOKEN_OFFSET := Vector2(12, -44)
 const INK := Color("3a2a1a")
+## Map labels for jobs whose type name alone doesn't say what they are.
+const TAGS := {"rescue": "FREE VILLAGERS"}
 
 var db
 var campaign
@@ -42,7 +44,7 @@ func _ready() -> void:
 		db = GameData.new()
 		campaign = Campaign.new(db, int(Time.get_ticks_usec()))
 	_build_layout()
-	_select(campaign.location)
+	_after_day()
 
 
 func _build_layout() -> void:
@@ -143,9 +145,9 @@ func _place_token(id: String) -> void:
 
 func _refresh() -> void:
 	var c = campaign
-	# The traps fill up as the villains plot; at 100% one of them baits a job.
-	status_label.text = "Day %d   Gold %d   Rep %d\nSupplies %d (%d days)  Infamy %d\nTraps: Sheriff %d%%   Guy %d%%%s" % [
-		c.day, c.gold, c.reputation, c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
+	# The villains' plots fill up each day: at 100% the Sheriff baits a job; Guy may raid from 50%.
+	status_label.text = "Day %d  Gold %d  Rep %d%s\nSupplies %d (%d days)  Infamy %d\nSheriff's trap %d%%  Guy's raid %d%%%s" % [
+		c.day, c.gold, c.reputation, ("  Bounty %d" % c.bounty()) if c.wanted_level() > 0 else "", c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
 		("\nGuy is hunting %s" % c.hero_name(c.hunted_hero)) if c.hunted_hero != "" else ""]
 	for id in c.map["nodes"]:
 		var b: Button = map_layer.get_node(id)
@@ -157,7 +159,7 @@ func _refresh() -> void:
 			elif m["type"] == "story":
 				tag = "\n[LEGEND]"
 			else:
-				tag = "\n[%s]" % m["type"].to_upper()
+				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 
@@ -178,7 +180,10 @@ func _select(id: String) -> void:
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
-		if m["type"] == "story":
+		if m["type"] == "contest":
+			var prize: Dictionary = m["nodes"][1]["prize"]
+			lines.append("Archery contest: %s. Purse %d gold, until day %d." % [m["name"], prize["gold"], m["expires"]])
+		elif m["type"] == "story":
 			var joins: String = " %s may join the band." % db.heroes[m["recruit"]]["name"] if m["recruit"] != "" else ""
 			lines.append("Legend: %s.%s" % [m["name"], joins])
 		else:
@@ -192,7 +197,7 @@ func _select(id: String) -> void:
 	var days: int = c.route(id).size()
 	if id == c.location:
 		if c.missions.has(id):
-			opts.append(["Start the job", _start_job])
+			opts.append(["Enter contest" if c.missions[id]["type"] == "contest" else "Start the job", _start_job])
 		if c.can_pay_informant():
 			opts.append(["Informant (%dg)" % c.informant_cost(), _act.bind(c.pay_informant)])
 		if not c.prisoners_here().is_empty():
@@ -232,34 +237,135 @@ func _set_buttons(options: Array) -> void:
 
 func _travel(to: String) -> void:
 	busy = true
-	var path: Array = campaign.route(to)
+	# The walk is decided first: bounty hunters may stop the band partway.
+	var path: Array = campaign.travel(to)
 	for step in path:
 		var tween := create_tween()
 		tween.tween_property(band_token, "position", _node_pos(step) + TOKEN_OFFSET, STEP_SECONDS)
 		await tween.finished
-	campaign.travel(to)
 	busy = false
 	_after_day()
 
 
+## After anything that passes time: save, then show what the Sheriff did (a new poster, an ambush).
 func _after_day() -> void:
 	campaign.save()
 	_select(campaign.location)
+	if campaign.poster_news > 0:
+		_show_poster()
+	elif not campaign.ambush.is_empty():
+		_play(campaign.start_ambush())
 
 
 func _start_job() -> void:
-	var run = campaign.start_mission()
+	_play(campaign.start_mission())
+
+
+func _play(run) -> void:
 	if run == null:
 		return
+	var was_won: bool = campaign.finale_won()
 	var view := MissionView.new()
 	view.play(db, run)
 	view.done.connect(func(r):
 		campaign.finish_mission(r)
-		campaign.save()
 		view.queue_free()
 		_place_token(campaign.location)
-		_select(campaign.location))
+		if campaign.finale_won() and not was_won:
+			campaign.save()
+			_select(campaign.location)
+			_show_finale()
+		else:
+			_after_day())
 	add_child(view)
+
+
+## A wanted poster, nailed up over the map when the bounty rises.
+func _show_poster() -> void:
+	var c = campaign
+	c.poster_news = 0
+	c.save()
+	var lines := ["for robbing the Sheriff's wagons", "and making him look foolish.", "",
+		"REWARD", "%d GOLD" % c.bounty(), "", "Bounty hunters are on the roads."]
+	_notice("WANTED", "ROBIN HOOD", lines, "robin", "Let them try!")
+
+
+## The end of the Sheriff's story. The campaign carries on afterwards.
+func _show_finale() -> void:
+	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt, and the people", "of the shire are free.", "",
+		"Your legend will be sung", "for a hundred years.", "", "(The greenwood still needs you.)"]
+	_notice("VICTORY", "SHERWOOD IS FREE", lines, "robin", "Play on")
+
+
+## A parchment notice over the map with a picture, closed with one button.
+func _notice(heading: String, subheading: String, lines: Array, sprite_id: String, close_text: String) -> void:
+	busy = true
+	var h := Style.screen_height(self)
+	var layer := Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(layer)
+	var shade := ColorRect.new()
+	shade.color = Color(0.05, 0.03, 0.02, 0.75)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(shade)
+	var top: float = maxf(16, (h - 560) / 2)
+	var edge := ColorRect.new()
+	edge.color = Color("6a4a2c")
+	edge.position = Vector2(26, top)
+	edge.size = Vector2(308, 560)
+	layer.add_child(edge)
+	var paper := ColorRect.new()
+	paper.color = Color("e8d8a8")
+	paper.position = Vector2(30, top + 4)
+	paper.size = Vector2(300, 552)
+	layer.add_child(paper)
+	var y := top + 14
+	for row in [[heading, 32, Color("8a1f1f")], [subheading, 16, INK]]:
+		var l := Label.new()
+		l.text = row[0]
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.add_theme_font_size_override("font_size", row[1])
+		l.add_theme_color_override("font_color", row[2])
+		l.add_theme_constant_override("shadow_offset_x", 0)
+		l.add_theme_constant_override("shadow_offset_y", 0)
+		l.position = Vector2(30, y)
+		l.size = Vector2(300, row[1] + 4)
+		layer.add_child(l)
+		y += row[1] + 10
+	var face := TextureRect.new()
+	face.texture = BattleView.sprite_by_id(sprite_id)
+	face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	face.stretch_mode = TextureRect.STRETCH_SCALE
+	face.position = Vector2(116, y)
+	face.size = Vector2(128, 128)
+	layer.add_child(face)
+	var frame := ReferenceRect.new()
+	frame.border_color = INK
+	frame.border_width = 2
+	frame.editor_only = false
+	frame.position = Vector2(108, y - 6)
+	frame.size = Vector2(144, 140)
+	layer.add_child(frame)
+	y += 144
+	var body := Label.new()
+	body.text = "\n".join(lines)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.add_theme_color_override("font_color", INK)
+	body.add_theme_constant_override("shadow_offset_x", 0)
+	body.add_theme_constant_override("shadow_offset_y", 0)
+	body.position = Vector2(34, y)
+	body.size = Vector2(292, Style.lines(lines.size()))
+	layer.add_child(body)
+	var close := Button.new()
+	close.text = close_text
+	close.position = Vector2(80, top + 500)
+	close.size = Vector2(200, 40)
+	close.pressed.connect(func():
+		layer.queue_free()
+		busy = false
+		_after_day())
+	layer.add_child(close)
 
 
 ## Runs a spending action; on failure (usually too little gold) says so.

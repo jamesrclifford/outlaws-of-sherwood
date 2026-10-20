@@ -11,6 +11,7 @@ const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
+const RESCUE_GRIP := 5           # how much a freed prisoner (or any other honest job) loosens the Sheriff's grip
 const HEAL_AT_CAMP := 1.0          # fraction of max HP restored per day resting at camp
 const HEAL_ON_ROAD := 0.15
 const PARTY_SIZE := 5
@@ -38,6 +39,10 @@ var news: Array = []               # what happened, newest last
 var merry_men := {}                # hired hero id -> name
 var equipment := {}                # hero id -> {slot: item id}
 var stories_done: Array = []       # story ids finished
+var posted_wanted := 0             # the wanted level on the posters the Sheriff has put up
+var poster_news := 0               # a new poster for the screen to show (its level), 0 when none
+var ambush := {}                   # bounty hunters waiting on the road, until the fight is played
+var flags: Array = []              # story choices that later stories depend on (Sir Richard's loan)
 var econ: Dictionary
 
 
@@ -116,62 +121,150 @@ func hero_name(id: String) -> String:
 
 # --- Actions -----------------------------------------------------------------
 
-## Moves the band one day at a time along the route. Returns the nodes visited.
+## Moves the band one day at a time along the route. Returns the nodes visited, which stop short
+## if bounty hunters waylay the band (see ambush).
 func travel(to: String) -> Array:
 	var path := route(to)
+	var visited := []
 	for step in path:
 		location = step
+		visited.append(step)
 		_end_day(false)
-	return path
+		if not ambush.is_empty() or _maybe_ambush():
+			break
+	return visited
 
 
-## Spend a day at camp: heal everyone fully.
+## Spend a day at camp: heal everyone fully. Lying low lets the band's infamy cool off a little.
 func rest() -> void:
 	if location == "camp":
+		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]))
+		_update_wanted()
 		_end_day(true)
+
+
+# --- Wanted ------------------------------------------------------------------
+
+## How hard the Sheriff is hunting the band: 0 (not yet) to 3, set by infamy.
+func wanted_level() -> int:
+	var level := 0
+	for at in econ["wanted"]["infamy"]:
+		if infamy >= int(at):
+			level += 1
+	return level
+
+
+## The reward on the posters, in gold.
+func bounty() -> int:
+	return int(econ["wanted"]["bounty"][wanted_level()])
+
+
+## Puts up new posters when infamy crosses a threshold; old ones fade when the band lies low.
+func _update_wanted() -> void:
+	var level := wanted_level()
+	if level > posted_wanted:
+		posted_wanted = level
+		poster_news = level
+		_news("Wanted posters go up across the shire: %d gold for Robin Hood! Bounty hunters are on the roads." % bounty())
+	elif level < posted_wanted:
+		posted_wanted = level
+		_news("With the band lying low, the wanted posters fade. The bounty is now %d gold." % bounty())
+
+
+## On the road (never at camp), bounty hunters may jump the band. The fight waits in ambush.
+func _maybe_ambush() -> bool:
+	var level := wanted_level()
+	if level == 0 or location == "camp" or not ambush.is_empty() or free_heroes().is_empty():
+		return false
+	if rng.randf() >= float(econ["wanted"]["ambush_chance_per_level"]) * level:
+		return false
+	var n: Dictionary = node(location)
+	var backdrop: String = n.get("location", "sherwood_edge")
+	ambush = MissionGen.new(db).ambush(econ["wanted"]["hunters"][level], n["name"], backdrop, bounty(), rng.randi())
+	_news("Bounty hunters waylay the band near %s!" % n["name"])
+	return true
+
+
+## The bounty hunters' fight, ready to play. Finish it with finish_mission like any job.
+func start_ambush():
+	if ambush.is_empty():
+		return null
+	return MissionRun.new(db, ambush, party())
 
 
 ## Builds the mission waiting at the band's current location, ready to play.
 func start_mission():
 	if not missions.has(location) or free_heroes().is_empty():
 		return null
-	return MissionRun.new(db, missions[location], party())
+	var run = MissionRun.new(db, missions[location], party())
+	run.known_disguises = known_disguises()
+	run.purse = gold
+	run.flags = flags.duplicate()
+	var region: String = node(location)["region"]
+	run.grip = {"region": map["regions"][region]["name"], "control": int(control[region]), "drop": RESCUE_GRIP}
+	return run
+
+
+## Disguises the band has learned by playing their legends (the potter, the beggar...).
+func known_disguises() -> Array:
+	return db.disguises.keys().filter(func(id): return stories_done.has(db.disguises[id]["legend"]))
 
 
 ## Applies a finished mission's results to the campaign.
 func finish_mission(run) -> void:
 	var m: Dictionary = run.mission
 	var region: String = node(location)["region"]
-	missions.erase(location)
+	if m["type"] == "ambush":
+		ambush = {}
+	else:
+		missions.erase(location)
+	# Gold handed over in a story choice is gone whatever happens next, and remembered.
+	gold = maxi(0, gold - run.spent)
+	for f in run.flags:
+		if not flags.has(f):
+			flags.append(f)
 	match run.result:
 		"success":
 			gold += run.gold
 			reputation += run.reputation
 			if m["type"] == "story":
 				stories_done.append(m["story"])
+				for id in db.disguises:
+					if db.disguises[id]["legend"] == m["story"]:
+						_news("New disguise learned from the legend: %s." % db.disguises[id]["name"])
 				_news("%s: the band's legend grows." % m["name"])
 				if run.recruited != "":
 					_join(run.recruited)
 					_news("%s joins the band!" % hero_name(run.recruited))
+				_story_effects(db.stories["stories"][m["story"]].get("effects", {}))
 			for h in m.get("rescue_heroes", []):
 				captured.erase(h)
 				_news("%s is free and back with the band!" % hero_name(h))
 			if m["type"] == "robbery" and not run.is_bait():
 				infamy = mini(100, infamy + 6)
 				control[region] = maxi(0, control[region] - 8)
+			elif m["type"] == "ambush":
+				if m.has("raid"):
+					_news("Sir Guy's raid is beaten off! The whole shire is talking about it.")
+				else:
+					_news("The bounty hunters limp home with sore heads." if run.gold > 0 else "The band gives the bounty hunters the slip.")
+			elif m["type"] == "contest":
+				_news("%s: the band comes home with %d gold." % [m["name"], run.gold] if run.gold > 0 else "%s: Robin shot well, but the purse went to another." % m["name"])
 			elif run.is_bait():
 				infamy = mini(100, infamy + 3)
 				plots[m["bait"]["by"]] = maxi(0, plots[m["bait"]["by"]] - 30)
 				_news("The band escaped %s's trap." % db.baits[m["bait"]["by"]]["name"])
 			else:
-				control[region] = maxi(0, control[region] - 5)
+				control[region] = maxi(0, control[region] - RESCUE_GRIP)
 		"failed":
 			control[region] = mini(100, control[region] + 5)
 			reputation = maxi(0, reputation - 2)
+	_update_wanted()
+	var held_at: String = m.get("prison", location)
 	for h in run.captured:
-		captured[h] = {"node": location, "since": day}
-		_news("%s was captured at %s." % [hero_name(h), node(location)["name"]])
-		_post_rescue(h, location)
+		captured[h] = {"node": held_at, "since": day}
+		_news("%s was captured and is held at %s." % [hero_name(h), node(held_at)["name"]])
+		_post_rescue(h, held_at)
 	if free_heroes().is_empty():
 		_news("The whole band is captured! Friends in Sherwood break them out by night.")
 		for h in captured.keys():
@@ -180,6 +273,35 @@ func finish_mission(run) -> void:
 		location = "camp"
 		gold = gold / 2
 	_post_stories()
+	if run.scouted:
+		# Scouting cost a day: food eaten, villains plotting, other jobs moving on, and no time to rest.
+		_news("Scouting the job cost the band a day.")
+		_end_day(false, false)
+
+
+## What a big story changes on the map. The finale sets infamy back to nothing, breaks the Sheriff's
+## grip everywhere and opens every cell.
+func _story_effects(effects: Dictionary) -> void:
+	if effects.has("infamy"):
+		infamy = int(effects["infamy"])
+	for r in control:
+		control[r] = clampi(control[r] + int(effects.get("control", 0)), 0, 100)
+	if effects.get("free_captured", false):
+		for h in captured.keys():
+			captured.erase(h)
+			_news("%s is free and back with the band!" % hero_name(h))
+		_remove_rescues()
+	if not effects.is_empty():
+		plots = {"sheriff": 0, "guy": 0}
+		hunted_hero = ""
+
+
+## True once the Sheriff has been driven out of Nottingham Castle.
+func finale_won() -> bool:
+	for id in stories_done:
+		if db.stories["stories"][id].get("finale", false):
+			return true
+	return false
 
 
 # --- Spending gold -----------------------------------------------------------
@@ -334,7 +456,7 @@ func bribe_jailer() -> bool:
 
 # --- The day passes: villains act -------------------------------------------
 
-func _end_day(resting: bool) -> void:
+func _end_day(resting: bool, heal := true) -> void:
 	day += 1
 	var band := free_heroes()
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
@@ -344,9 +466,9 @@ func _end_day(resting: bool) -> void:
 		_news("The band has run out of food and arrows. Everyone grows weak.")
 	for h in band:
 		h.statuses.clear()
-		if fed:
+		if fed and heal:
 			h.heal(int(ceil(h.max_hp * (HEAL_AT_CAMP if resting else HEAL_ON_ROAD))))
-		else:
+		elif not fed:
 			h.hp = maxi(1, h.hp - int(ceil(h.max_hp * float(econ["supplies"]["hunger_damage"]))))
 	for id in missions.keys():
 		if not missions[id].has("rescue_heroes") and missions[id]["type"] != "story" and missions[id]["expires"] < day:
@@ -357,6 +479,7 @@ func _end_day(resting: bool) -> void:
 	_post_stories()
 	if rng.randf() < 0.6 or missions.size() < 2:
 		_spawn_mission()
+	_maybe_post_contest()
 
 
 func _sheriff_acts() -> void:
@@ -372,15 +495,30 @@ func _sheriff_acts() -> void:
 		_spawn_mission("robbery", "sheriff")
 
 
+## The chance each day that Sir Guy raids before his plot is full: nothing below raid_from, then
+## rising faster and faster toward 100, when he always comes.
+func raid_chance() -> float:
+	var g: Dictionary = db.baits["guy"]
+	var from := float(g["raid_from"])
+	if plots["guy"] >= 100:
+		return 1.0
+	var t := clampf((plots["guy"] - from) / (100.0 - from), 0.0, 1.0)
+	return t * t * float(g["raid_chance_near_full"])
+
+
 func _guy_acts() -> void:
 	plots["guy"] = mini(100, plots["guy"] + 5 + infamy / 8)
-	if plots["guy"] >= 100:
+	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
 		if not targets.is_empty():
 			hunted_hero = targets[rng.randi_range(0, targets.size() - 1)].id
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
-		_spawn_mission("robbery", "guy")
+		if ambush.is_empty() and not free_heroes().is_empty():
+			var n: Dictionary = node(location)
+			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi())
+			ambush["hunted"] = hunted_hero
+			_news("Sir Guy of Gisborne rides out to raid the band!")
 
 
 ## Prisoners left too long are taken to Nottingham's dungeon, which is much harder to break into.
@@ -422,31 +560,57 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 		return
 
 
+## Now and then a village or town holds an archery contest, never more than one at a time.
+func _maybe_post_contest() -> void:
+	if missions.values().any(func(m): return m["type"] == "contest"):
+		return
+	if rng.randf() >= float(db.contests["chance"]):
+		return
+	var places: Array = map["nodes"].keys().filter(func(n): return not missions.has(n) and node(n).has("location"))
+	var options := []
+	for n in places:
+		for id in db.contests["contests"]:
+			if db.contests["contests"][id]["places"].has(node(n)["kind"]):
+				options.append([n, id])
+	if options.is_empty():
+		return
+	var pick: Array = options[rng.randi_range(0, options.size() - 1)]
+	var m: Dictionary = MissionGen.new(db).contest(pick[1], node(pick[0])["name"], rng.randi())
+	m["expires"] = day + int(db.contests["lifetime"])
+	missions[pick[0]] = m
+	_news("Archers wanted! %s at %s." % [m["name"], node(pick[0])["name"]])
+
+
 ## Puts each story whose requirements are met on the map at its place, taking over any ordinary
 ## job there (but never a rescue). Story jobs never expire; one that fails comes back the next day.
 ## A story where someone joins the band may also bump a waiting tale; tales are capped at MAX_TALES.
 func _post_stories() -> void:
 	var gen = MissionGen.new(db)
-	var tales := missions.values().filter(func(m): return m["type"] == "story" and m["recruit"] == "").size()
+	var tales := missions.values().filter(func(m): return _is_tale(m)).size()
 	for id in db.stories["stories"]:
 		var st: Dictionary = db.stories["stories"][id]
-		var is_tale: bool = st["recruit"] == ""
+		var is_tale: bool = st["recruit"] == "" and not st.get("arc", false)
 		var held: Dictionary = missions.get(st["node"], {})
 		if stories_done.has(id) or held.has("rescue_heroes") or not story_ready(id):
 			continue
 		if is_tale and not held.is_empty():
 			continue        # tales wait for a free spot; they never push out a job you may be heading to
-		if held.get("type", "") == "story" and held["recruit"] != "":
+		if held.get("type", "") == "story" and not _is_tale(held):
 			continue
 		if is_tale and tales >= MAX_TALES:
 			continue
 		if held.get("type", "") == "story":
-			tales -= 1      # an origin story bumps the tale back into the queue
+			tales -= 1      # an origin or Sheriff story bumps the tale back into the queue
 		tales += 1 if is_tale else 0
 		var at: String = st["node"]
 		missions[at] = gen.story(id, threat(at), rng.randi())
 		missions[at]["expires"] = 0
 		_news("A tale is told of %s. (%s)" % [st["name"], node(at)["name"]])
+
+
+## A tale from the legends: a story that recruits nobody and isn't part of the Sheriff's arc.
+static func _is_tale(m: Dictionary) -> bool:
+	return m["type"] == "story" and m["recruit"] == "" and not m.get("arc", false)
 
 
 func story_ready(id: String) -> bool:
@@ -460,7 +624,10 @@ func story_ready(id: String) -> bool:
 	for s in req.get("stories", []):
 		if not stories_done.has(s):
 			return false
-	return reputation >= int(req.get("reputation", 0))
+	for f in req.get("flags", []):
+		if not flags.has(f):
+			return false
+	return reputation >= int(req.get("reputation", 0)) and infamy >= int(req.get("infamy", 0))
 
 
 ## Posts (or extends) a rescue job where a hero is held. One job frees everyone held there.
@@ -494,7 +661,8 @@ func to_dict() -> Dictionary:
 		"control": control, "plots": plots, "hunted_hero": hunted_hero, "hero_hp": hp, "captured": captured,
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
-		"band": band, "stories_done": stories_done}
+		"band": band, "stories_done": stories_done, "posted_wanted": posted_wanted, "poster_news": poster_news,
+		"ambush": ambush, "flags": flags}
 
 
 static func from_dict(game_data, data: Dictionary):
@@ -505,6 +673,13 @@ static func from_dict(game_data, data: Dictionary):
 	c.gold = int(data["gold"])
 	c.reputation = int(data["reputation"])
 	c.infamy = int(data["infamy"])
+	c.posted_wanted = int(data.get("posted_wanted", c.wanted_level()))
+	c.poster_news = int(data.get("poster_news", 0))
+	c.ambush = data.get("ambush", {})
+	# Saves from before the loan cost anything: the band lent the money back then.
+	c.flags = data.get("flags", ["knight_loan"] if c.stories_done.has("poor_knight") else [])
+	if not c.ambush.is_empty():
+		_fix_ints(c.ambush)
 	c.location = data["location"]
 	c.hunted_hero = data["hunted_hero"]
 	for r in data["control"]:
@@ -539,10 +714,7 @@ static func _fix_ints(m: Dictionary) -> void:
 	for k in m["rewards"]:
 		m["rewards"][k] = int(m["rewards"][k])
 	for n in m["nodes"]:
-		for opt in n.get("options", []):
-			for k in ["gold", "reputation"]:
-				if opt.has(k):
-					opt[k] = int(opt[k])
+		MissionGen.fix_node_ints(n)
 
 
 const SAVE_PATH := "user://campaign.json"

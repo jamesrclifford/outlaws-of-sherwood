@@ -2,12 +2,15 @@
 ## xvfb-run godot --path . --rendering-driver opengl3 -s tests/screenshots.gd -- out_dir
 extends SceneTree
 
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
+const Archery = preload("res://core/archery.gd")
 const MapView = preload("res://scenes/map/map_view.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const GameData = preload("res://core/game_data.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
+const Campaign = preload("res://core/campaign.gd")
 
 
 func _snap(dir: String, tag: String) -> void:
@@ -40,6 +43,10 @@ func _init() -> void:
 	mission.threat = 40
 	root.add_child(mission)
 	await _snap(dir, "mission")
+	mission.buttons.get_child(1).pressed.emit()   # Go in disguise
+	await _snap(dir, "disguise_pick")
+	mission.buttons.get_child(0).pressed.emit()
+	await _snap(dir, "disguise_worn")
 	await _clear()
 
 	var db = GameData.new()
@@ -89,4 +96,83 @@ func _init() -> void:
 	var hero = battle.battle.current()
 	battle._on_ability_pressed(battle.db.heroes[hero.id]["abilities"][2] if battle.db.heroes.has(hero.id) else "strike")
 	await _snap(dir, "battle_hint")
+	battle._on_ability_pressed(battle.battle.usable_abilities(hero).filter(func(a): return battle.db.abilities[a]["target"] == "enemy")[0])
+	await _snap(dir, "battle_aim")
+	battle.selected_ability = ""
+	# Tuck in the back row has five abilities: three rows, clear of the commands.
+	for i in 3000:
+		if not battle.animating and battle.battle.current() != null and battle.battle.current().id == "tuck" and battle.actions_box.get_child_count() > 0:
+			break
+		if not battle.animating and battle.battle.current() != null and battle.battle.current().side == "heroes":
+			battle._end_hero_turn()
+		await process_frame
+	await _snap(dir, "battle_tuck")
+	await _clear()
+
+	# Skill games: a contest after one arrow, an arrow move in battle, and Little John's sweep.
+	var contest := MinigameView.new()
+	contest.start_contest(Archery.new(4, 3, 0.7, "The Sheriff's archer"), "Robin", "robin", "The Sheriff's archer shoots against you")
+	root.add_child(contest)
+	await process_frame
+	contest.t = 0.35
+	contest.tap()
+	contest.t = 0.6
+	contest.tap()
+	contest._paused = 0.0
+	contest._flash = ""
+	contest.t = 0.2
+	contest.tap()
+	contest.t = 0.3
+	await _snap(dir, "contest")
+	await _clear()
+	var shot_db = GameData.new()
+	for kind in ["aim", "swing", "rhythm"]:
+		var move: String = {"aim": "split_arrow", "swing": "staff_sweep", "rhythm": "flourish"}[kind]
+		var who: String = {"aim": "robin", "swing": "little_john", "rhythm": "will"}[kind]
+		var game := MinigameView.new()
+		game.start_move(7, kind, shot_db.abilities[move], who.capitalize(), who)
+		root.add_child(game)
+		await process_frame
+		game.t = 0.4
+		if kind == "rhythm":
+			game.tap()
+			game._paused = 0.0
+			game._flash = ""
+		await _snap(dir, "move_" + kind)
+		await _clear()
+
+	# The Sheriff hits back: a wanted poster, a bounty hunters' ambush, the castle and the victory.
+	var cdb = GameData.new()
+	var camp = Campaign.new(cdb, 12, Campaign.FULL_BAND)
+	camp.infamy = 55
+	camp._update_wanted()
+	var wanted_map := MapView.new()
+	wanted_map.start(cdb, camp)
+	root.add_child(wanted_map)
+	await _snap(dir, "wanted_poster")
+	wanted_map.get_child(wanted_map.get_child_count() - 1).queue_free()
+	wanted_map.busy = false
+	camp.location = "great_north_road"
+	camp.ambush = MissionGen.new(cdb).ambush(cdb.economy["wanted"]["hunters"][2], "Great North Road", "great_north_road", camp.bounty(), 5)
+	wanted_map._select("great_north_road")
+	await _snap(dir, "wanted_map")
+	wanted_map._play(camp.start_ambush())
+	await _snap(dir, "ambush")
+	await _clear()
+	var finale_run = MissionRun.new(cdb, MissionGen.new(cdb).story("storm_castle", 60, 3), camp.party())
+	finale_run.node_index = 4
+	var castle := BattleView.new()
+	castle.run_battle(cdb, finale_run.make_battle(finale_run.current_node()["enemies"]), finale_run.current_node()["text"], "castle_courtyard")
+	root.add_child(castle)
+	for i in 10:
+		await process_frame
+	await _snap(dir, "castle")
+	await _clear()
+	var won_map := MapView.new()
+	won_map.start(cdb, camp)
+	root.add_child(won_map)
+	await process_frame
+	won_map._show_finale()
+	await _snap(dir, "finale")
+	await _clear()
 	quit()

@@ -2,11 +2,11 @@
   "strike":        {"name": "Strike",          "ap": 1, "target": "enemy",       "range": "melee", "power": 1.0, "desc": "A blow at a foe in reach."},
   "bow_shot":      {"fx": "arrow", "name": "Bow Shot",        "ap": 1, "target": "enemy",       "range": "any",   "power": 0.8, "desc": "An arrow at any foe, even from the back row."},
   "defend":        {"name": "Defend",          "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}], "desc": "Brace: take less harm until your next turn."},
-  "split_arrow":   {"fx": "arrow", "name": "Split the Arrow", "ap": 2, "target": "enemy",       "range": "any",   "power": 1.7, "bonus_crit": 0.35, "desc": "A mighty shot at any foe, often a critical hit."},
-  "pinning_shot":  {"fx": "arrow", "name": "Pinning Shot",    "ap": 1, "target": "enemy",       "range": "any",   "power": 0.6, "effects": [{"status": "pinned", "turns": 2}], "desc": "A light shot that pins a foe: slower, can't swap rows."},
+  "split_arrow":   {"fx": "arrow", "name": "Split the Arrow", "ap": 2, "target": "enemy",       "range": "any",   "power": 1.7, "bonus_crit": 0.35, "minigame": "aim", "desc": "A mighty aimed shot at any foe. Hit the gold for a critical."},
+  "pinning_shot":  {"fx": "arrow", "name": "Pinning Shot",    "ap": 1, "target": "enemy",       "range": "any",   "power": 0.6, "effects": [{"status": "pinned", "turns": 2}], "minigame": "aim", "desc": "A light shot that pins a foe: slower, can't swap rows."},
   "bridge_hold":   {"name": "Bridge Hold",     "ap": 2, "target": "self",        "effects": [{"status": "taunt", "turns": 2}, {"status": "defending", "turns": 1}], "desc": "Foes must attack John for 2 turns, and he braces."},
-  "staff_sweep":   {"name": "Staff Sweep",     "ap": 2, "target": "all_enemies", "range": "melee", "power": 1.0, "effects": [{"status": "stunned", "turns": 1, "chance": 0.35}], "desc": "Hits every foe in reach and may knock them down."},
-  "flourish":      {"name": "Flourish",        "ap": 2, "target": "enemy",       "range": "melee", "power": 0.55, "hits": 3, "bonus_vs_tag": {"knight": 1.5}, "desc": "Three quick cuts at one foe. Extra hard on knights."},
+  "staff_sweep":   {"name": "Staff Sweep",     "ap": 2, "target": "all_enemies", "range": "melee", "power": 1.0, "effects": [{"status": "stunned", "turns": 1, "chance": 0.35}], "minigame": "swing", "desc": "Hits every foe in reach and may knock them down."},
+  "flourish":      {"name": "Flourish",        "ap": 2, "target": "enemy",       "range": "melee", "power": 0.55, "hits": 3, "bonus_vs_tag": {"knight": 1.5}, "minigame": "rhythm", "desc": "Three quick cuts at one foe. Extra hard on knights."},
   "blessing":      {"name": "Blessing",        "ap": 2, "target": "ally",        "heal": 1.2, "desc": "Heals one friend a lot."},
   "tavern_brawl":  {"name": "Tavern Brawl",    "ap": 2, "target": "enemy",       "range": "melee", "power": 0.7, "effects": [{"status": "stunned", "turns": 1, "chance": 0.6}], "desc": "A punch at a foe in reach. Often stuns for a turn."},
   "rally":         {"name": "Rally",           "ap": 2, "target": "all_allies",  "effects": [{"status": "inspired", "turns": 2}], "desc": "The whole band hits harder for 2 turns."},
@@ -17,6 +17,7 @@
   "throw_net":     {"fx": "net", "name": "Throw Net",       "ap": 2, "target": "enemy",       "range": "any",   "power": 0.2, "effects": [{"status": "netted", "turns": 2}], "desc": "Nets a foe so they lose turns until cut free."},
   "gisborne_duel": {"name": "Gisborne's Blade", "ap": 2, "target": "enemy",      "range": "melee", "power": 1.5, "bonus_crit": 0.2, "desc": "A fierce sword blow, often a critical hit."},
   "call_guards":   {"name": "Call the Guards", "ap": 2, "target": "self",        "summon": "man_at_arms", "desc": "Calls a man-at-arms to help."},
+  "call_hounds":   {"name": "Whistle for Hounds", "ap": 2, "target": "self",     "summon": "hound", "desc": "Whistles up a hunting hound."},
   "rousing_ballad": {"name": "Rousing Ballad", "ap": 2, "target": "all_allies",  "heal": 0.8, "effects": [{"status": "inspired", "turns": 2}], "desc": "Heals the whole band and they hit harder for 2 turns."},
   "lullaby":       {"name": "Lullaby",         "ap": 1, "target": "enemy",       "range": "any",   "power": 0.3, "fx": "note", "effects": [{"status": "stunned", "turns": 1, "chance": 0.75}], "desc": "A soft song at any foe. Usually puts them to sleep."}
 }

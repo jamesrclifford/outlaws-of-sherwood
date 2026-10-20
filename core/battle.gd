@@ -146,7 +146,10 @@ func _has_front(side: String) -> bool:
 # --- Actions -----------------------------------------------------------------
 
 ## Performs an ability. Returns true if it was legal and happened.
-func perform(u, ability_id: String, target) -> bool:
+## skill holds how well the player did at an ability's mini-game ("minigame" in data/abilities.json),
+## one value from 0 to 1 per hit (the last one repeats). Empty means no mini-game was played (the
+## computer's turns, tests), and the ability hits as usual.
+func perform(u, ability_id: String, target, skill: Array = []) -> bool:
 	if is_over() or u != current() or not u.available_abilities().has(ability_id):
 		return false
 	var ab: Dictionary = abilities[ability_id]
@@ -162,12 +165,15 @@ func perform(u, ability_id: String, target) -> bool:
 		targets = active(u.side)
 
 	_emit("%s uses %s." % [u.name, ab["name"]])
+	if not skill.is_empty():
+		var best: float = skill.max()
+		_emit("A perfect %s!" % ("shot" if ab.get("minigame", "") == "aim" else "blow") if best >= 0.9 else ("A good one!" if best >= 0.6 else "Not the best..."))
 	acted.emit(u, ability_id, targets)
 	for t in targets:
 		if ab.has("power"):
-			for _i in int(ab.get("hits", 1)):
+			for i in int(ab.get("hits", 1)):
 				if t.is_active():
-					_deal_damage(u, t, ab)
+					_deal_damage(u, t, ab, float(skill[mini(i, skill.size() - 1)]) if not skill.is_empty() else -1.0)
 		if ab.has("heal"):
 			var amount_healed: int = t.heal(int(round(u.atk * float(ab["heal"]))))
 			_emit("%s recovers %d HP." % [t.name, amount_healed])
@@ -183,14 +189,18 @@ func perform(u, ability_id: String, target) -> bool:
 	return true
 
 
-func _deal_damage(attacker, target, ab: Dictionary) -> void:
+## skill: how well this hit's mini-game went (0-1), or -1 when none was played.
+func _deal_damage(attacker, target, ab: Dictionary, skill := -1.0) -> void:
 	var dmg: float = attacker.atk * float(ab["power"])
+	if skill >= 0:
+		# A poor hit glances off at 0.7x, a perfect one lands at 1.4x, and 0.9 or better is a sure critical.
+		dmg *= 0.7 + skill * 0.7
 	for tag in ab.get("bonus_vs_tag", {}):
 		if target.tags.has(tag):
 			dmg *= float(ab["bonus_vs_tag"][tag])
 	if attacker.has_status("inspired"):
 		dmg *= 1.25
-	var is_crit: bool = rng.randf() < attacker.crit + float(ab.get("bonus_crit", 0.0))
+	var is_crit: bool = skill >= 0.9 if skill >= 0 else rng.randf() < attacker.crit + float(ab.get("bonus_crit", 0.0))
 	if is_crit:
 		dmg *= 1.5
 	dmg -= target.def * 0.5

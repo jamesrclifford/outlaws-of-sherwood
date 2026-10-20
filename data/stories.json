@@ -1,6 +1,28 @@
 {
-  "start_band": ["robin", "will"],
+  "start_band": ["robin"],
   "stories": {
+    "will_meets_robin": {
+      "name": "The Stranger in Scarlet",
+      "node": "locksley",
+      "backdrop": "sherwood_edge",
+      "place": "A glade near Locksley",
+      "requires": {},
+      "recruit": "will",
+      "rewards": {"gold": 0, "reputation": 3},
+      "intro": "Folk near Locksley speak of a young dandy in fine scarlet who strolls the glades as if he owned them. Robin goes to see for himself.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin, newly outlawed, sees a young man in fine scarlet strolling through the glade, sniffing a rose."},
+        {"kind": "choice", "text": "'Stand!' says Robin. The stranger yawns. 'Must I?'",
+          "options": [
+            {"label": "Ask for a toll", "result": "next", "log": "'A toll? From me?' The stranger draws his sword with a flourish."},
+            {"label": "Challenge him to a bout", "result": "next", "log": "'A bout? Delightful.' The stranger draws his sword with a flourish."}
+          ]},
+        {"kind": "duel", "text": "Bow against blade in the glade!", "party": ["robin"], "enemies": ["rival_will"], "friendly": true,
+          "win": "Robin trips the stranger into a gorse bush. 'Ow! All right, all right!'",
+          "lose": "The stranger flicks Robin's hood over his eyes. 'Shall we call it a draw?'"},
+        {"kind": "objective", "text": "'Will Gamwell is my name, Robin. I'm your own cousin, come to find you. May I join your band?' Ever after, the outlaws call him Will Scarlet.", "recruit": true}
+      ]
+    },
     "little_john_bridge": {
       "name": "The Stranger on the Bridge",
       "node": "sherwood_edge",
@@ -77,13 +99,83 @@
       "intro": "The Sheriff announces an archery contest. The prize is an arrow of pure silver. Everyone knows it's a trap to catch Robin, and Robin goes anyway.",
       "nodes": [
         {"kind": "approach", "text": "Robin pulls a patched brown hood low and joins the crowd of archers. The rest of the band hides among the townsfolk."},
-        {"kind": "choice", "text": "The target is set at a hundred paces. The Sheriff's own champion shoots first: a fine shot, right in the middle.",
-          "options": [
-            {"label": "Split his arrow", "result": "next", "log": "Robin's arrow splits the champion's arrow clean in two! The crowd roars."},
-            {"label": "Shoot through the ring of the prize", "result": "next", "log": "Robin's arrow flies through the silver arrow's own ring and pins it to the target. The crowd goes wild."}
-          ]},
+        {"kind": "archery", "text": "The target is set at a hundred paces. The Sheriff's own champion steps up to shoot against the hooded stranger.",
+          "rival": "The Sheriff's champion", "skill": 0.8, "arrows": 3,
+          "win": "Robin's last arrow splits the champion's arrow clean in two! The crowd roars.",
+          "lose": "The champion wins by a hair, but the crowd roars for the hooded stranger, and the Sheriff looks hard at him."},
         {"kind": "combat", "text": "The Sheriff hands over the silver arrow, peers under the hood, and shouts: 'It's him! Seize Robin Hood!'", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "crossbowman", "knight"]},
         {"kind": "combat", "text": "Over the town wall and away! Riders give chase.", "enemies": ["knight", "man_at_arms"], "is_escape": true}
+      ]
+    },
+    "wanted_posters": {
+      "name": "Wanted: Robin Hood",
+      "node": "edwinstowe",
+      "backdrop": "locksley",
+      "place": "The square at Edwinstowe",
+      "arc": true,
+      "requires": {"band": ["will"], "infamy": 25},
+      "recruit": "",
+      "rewards": {"gold": 30, "reputation": 5},
+      "intro": "The Sheriff hits back. Wanted posters are going up in every village, and the villagers are made to pay a 'bounty tax' to fund the reward.",
+      "nodes": [
+        {"kind": "approach", "text": "Posters are nailed to every tree in Edwinstowe: WANTED, ROBIN HOOD. The picture looks more like a turnip in a hat."},
+        {"kind": "choice", "text": "The Sheriff's crier reads the poster aloud while soldiers go door to door for the bounty tax.",
+          "options": [
+            {"label": "Tear the posters down", "result": "next", "log": "Robin rips down the nearest poster. 'That's not even my good side!'"},
+            {"label": "Improve the picture", "result": "next", "reputation": 2, "log": "Will draws a much handsomer Robin on every poster, and gives the Sheriff's face a pig's snout. The villagers howl with laughter."}
+          ]},
+        {"kind": "combat", "text": "The crier squeals for the guards! The tax men clutch their money bags.", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "tax_collector"]},
+        {"kind": "objective", "text": "The band hands the bounty tax back to the villagers. An old woman tucks a poster into Robin's quiver. 'For luck, lad. They'll send hunters after you next.'"}
+      ]
+    },
+    "hunters_hunted": {
+      "name": "The Hunters Hunted",
+      "node": "hanged_mans_crossing",
+      "backdrop": "hanged_mans_crossing",
+      "place": "Black Hob's camp at the crossing",
+      "arc": true,
+      "requires": {"stories": ["wanted_posters"], "band": ["little_john", "tuck"], "infamy": 40},
+      "recruit": "",
+      "rewards": {"gold": 60, "reputation": 6},
+      "intro": "Black Hob, captain of the bounty hunters, has camped at the crossroads with his hounds. He boasts he'll have Robin Hood in a sack by Sunday.",
+      "nodes": [
+        {"kind": "approach", "text": "The band creeps through the gorse toward the smoke of Hob's campfire."},
+        {"kind": "choice", "text": "Hob's men are dicing by the fire. A hound lifts its nose and sniffs the wind.",
+          "options": [
+            {"label": "Creep up quietly", "result": "sneak"},
+            {"label": "Walk in bold as brass", "result": "fight", "log": "'Looking for me?' says Robin, strolling into the firelight.", "enemies": ["bounty_hunter", "bounty_hunter", "hound"]}
+          ]},
+        {"kind": "objective", "text": "Black Hob leaps up with a net in each hand. 'Two hundred gold, and it's mine!'", "enemies": ["black_hob", "bounty_hunter", "hound"]},
+        {"kind": "objective", "text": "Tied up in his own net, Hob grumbles out a secret: an old sally port under the castle's west wall, where the moat runs dry. 'The Sheriff never paid me anyway.'"}
+      ]
+    },
+    "storm_castle": {
+      "name": "Storming Nottingham Castle",
+      "node": "nottingham",
+      "backdrop": "castle_courtyard",
+      "place": "Nottingham Castle",
+      "arc": true,
+      "finale": true,
+      "requires": {"stories": ["hunters_hunted", "silver_arrow"], "band": ["little_john", "tuck", "will"], "reputation": 30},
+      "recruit": "",
+      "rewards": {"gold": 200, "reputation": 20},
+      "effects": {"infamy": 0, "control": -40, "free_captured": true},
+      "intro": "The Sheriff has filled his dungeon with villagers who could not pay the bounty tax. Thanks to Black Hob's secret, the band knows a way in. Tonight they storm Nottingham Castle!",
+      "nodes": [
+        {"kind": "approach", "text": "At dusk the band wades the dry moat and squeezes through the old sally port under the west wall."},
+        {"kind": "choice", "text": "A narrow stair, and two sleepy guards at the top.",
+          "options": [
+            {"label": "Tuck brings them cider", "result": "next", "log": "Friar Tuck offers the guards a flask of his best cider. Soon they are snoring like pigs."},
+            {"label": "Rush them", "result": "fight", "enemies": ["man_at_arms", "man_at_arms"]}
+          ]},
+        {"kind": "combat", "text": "Into the courtyard! Torches flare and the alarm bell clangs.", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "crossbowman", "knight"]},
+        {"kind": "choice", "text": "The dungeon door, and beyond it the Sheriff's treasury. There's only time for one before the garrison comes.",
+          "options": [
+            {"label": "Free the prisoners", "result": "next", "reputation": 10, "log": "Little John bends the dungeon bars apart. Out pour farmers, millers and widows, cheering the band."},
+            {"label": "Open the treasury", "result": "next", "gold": 150, "log": "Will picks the lock. Chests of tax money! On the way past, Little John tosses the jailer's keys through the dungeon bars."}
+          ]},
+        {"kind": "objective", "text": "On the battlements stand the Sheriff and Sir Guy. 'Seize them! Seize them all!'", "enemies": ["sheriff", "guy", "knight", "man_at_arms", "crossbowman"]},
+        {"kind": "objective", "text": "Sir Guy topples off the battlements into a hay cart, and the Sheriff flees out of the back gate in his nightshirt. The people of Nottingham pour into the streets, cheering. Sherwood is free!"}
       ]
     }
   }

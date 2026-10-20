@@ -7,10 +7,12 @@ signal finished(battle)
 
 const GameData = preload("res://core/game_data.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const COLUMN_X := {"heroes": {"back": 8, "front": 92}, "enemies": {"front": 188, "back": 272}}
 const DEFAULT_BACKDROP := "sherwood_edge"
+const ROW_H := 38            # height of an ability or command button
 const SHADOW := preload("res://assets/ui/shadow.png")
 const RING_TURN := preload("res://assets/ui/ring_turn.png")
 const RING_TARGET := preload("res://assets/ui/ring_target.png")
@@ -45,6 +47,7 @@ var actions_box: GridContainer
 var commands_box: HBoxContainer
 ## What a tap on a unit last asked about, shown in the hint line until the next action.
 var _inspected = null
+var _aimed = null              # the highlighted target a second tap on the ability hits
 
 
 func _ready() -> void:
@@ -245,6 +248,7 @@ func _refresh() -> void:
 	var targets: Array = []
 	if cur != null and selected_ability != "":
 		targets = battle.legal_targets(cur, selected_ability)
+	var aim = _aim()
 	for u in unit_buttons:
 		var b: Button = unit_buttons[u]
 		# One capital per status (S for stunned...); tapping the unit spells them out.
@@ -259,7 +263,7 @@ func _refresh() -> void:
 		bar.size.x = 68 * frac
 		bar.color = Color("6ac04a") if frac > 0.5 else (Color("e0b040") if frac > 0.25 else Color("d04a3a"))
 		var ring: TextureRect = b.get_node("Ring")
-		ring.texture = RING_TURN if u == cur else (RING_TARGET if targets.has(u) else SHADOW)
+		ring.texture = RING_TURN if u == cur else (RING_TARGET if u == aim else SHADOW)
 		b.modulate = Color(1, 1, 1, 0.4) if not u.is_active() else Color.WHITE
 		var art: TextureRect = b.get_node("Art")
 		art.modulate = Color("b8e8ff") if targets.has(u) and u != cur else Color.WHITE
@@ -268,9 +272,9 @@ func _refresh() -> void:
 	if cur != null and cur.side == "heroes" and not battle.is_over():
 		turn = "%s: %d AP   %s" % [cur.short_name(), cur.ap, turn]
 	Style.fit_text(timeline_label, "%s\nNext: %s" % [turn, " > ".join(names)])
+	_refresh_actions()    # first: the number of ability rows sets how tall the log can be
 	_refresh_log()
 	_refresh_hint()
-	_refresh_actions()
 
 
 func _refresh_log() -> void:
@@ -281,6 +285,7 @@ func _refresh_log() -> void:
 func _refresh_actions() -> void:
 	for c in actions_box.get_children() + commands_box.get_children():
 		c.queue_free()
+	_fit_action_rows(0)
 	if battle.is_over() and _external:
 		_add_button(commands_box, "Continue", func(): finished.emit(battle))
 		return
@@ -300,6 +305,7 @@ func _refresh_actions() -> void:
 		btn.disabled = not battle.usable_abilities(cur).has(a)
 		if a == selected_ability:
 			btn.modulate = Color("9fe0ff")
+	_fit_action_rows(cur.available_abilities().size())
 	_add_button(commands_box, "End turn", _end_hero_turn)
 	_add_button(commands_box, "Swap row", func():
 		battle.swap_row(cur)
@@ -309,13 +315,32 @@ func _refresh_actions() -> void:
 		_after_hero_action())
 
 
+## Two rows of abilities fit by default; a hero with more (Tuck in the back row has five) pushes the
+## rows, the hint and the bottom of the log upward instead of spilling onto the commands.
+func _fit_action_rows(count: int) -> void:
+	var h := Style.screen_height(self)
+	var rows := maxi(2, ceili(count / 2.0))
+	var height := rows * ROW_H + (rows - 1) * 4
+	actions_box.position.y = h - 48 - height
+	actions_box.size.y = height
+	hint_label.position.y = actions_box.position.y - 40
+	# Style.fit_text keeps the box it first saw; give it the new one (_refresh_log refills the text).
+	var box := maxf(Style.lines(1), hint_label.position.y - 4 - log_label.position.y)
+	log_label.text = ""
+	log_label.set_meta("box_height", box)
+	log_label.size.y = box
+
+
 ## The line above the abilities explains the chosen ability, or the unit last tapped.
 func _refresh_hint() -> void:
 	var cur = battle.current()
 	var text := ""
 	if selected_ability != "" and cur != null:
 		var ab: Dictionary = db.abilities[selected_ability]
-		var how := "Tap it again to use it." if _acts_at_once(selected_ability) else "Tap a glowing target."
+		var how := "Tap it again to use it."
+		if not _acts_at_once(selected_ability):
+			var aim = _aim()
+			how = "Tap again to hit the ringed %s." % aim.short_name() if aim != null else "Nobody is in reach."
 		text = "%s %s" % [ab.get("desc", ab["name"]), how]
 	elif _inspected != null:
 		var u = _inspected
@@ -326,6 +351,23 @@ func _refresh_hint() -> void:
 	Style.fit_text(hint_label, text)
 
 
+## Who a second tap on the chosen ability hits: the enemy last tapped or hit if it is still in reach,
+## otherwise the first one that is (or, for help, the friend worst hurt).
+func _aim():
+	var cur = battle.current()
+	if cur == null or selected_ability == "" or _acts_at_once(selected_ability):
+		return null
+	var targets: Array = battle.legal_targets(cur, selected_ability)
+	if targets.has(_aimed):
+		return _aimed
+	if targets.is_empty():
+		return null
+	if targets[0].side == cur.side:
+		# Healing and help go to whoever is worst hurt.
+		targets.sort_custom(func(a, b): return float(a.hp) / a.max_hp < float(b.hp) / b.max_hp)
+	return targets[0]
+
+
 ## Abilities on yourself or the whole band need no target, so a second tap uses them.
 func _acts_at_once(ability_id: String) -> bool:
 	return db.abilities[ability_id]["target"] in ["self", "all_allies"]
@@ -334,7 +376,7 @@ func _acts_at_once(ability_id: String) -> bool:
 func _add_button(box: Container, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 38)
+	b.custom_minimum_size = Vector2(0, ROW_H)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.pressed.connect(cb)
 	box.add_child(b)
@@ -346,11 +388,16 @@ func _on_ability_pressed(ability_id: String) -> void:
 		return
 	var cur = battle.current()
 	_inspected = null
-	if ability_id == selected_ability and _acts_at_once(ability_id):
-		battle.perform(cur, ability_id, cur)
-		_after_hero_action()
-		return
-	# The first tap explains; a second tap on a targeted ability puts it away again.
+	if ability_id == selected_ability:
+		if _acts_at_once(ability_id):
+			battle.perform(cur, ability_id, cur)
+			_after_hero_action()
+			return
+		var aim = _aim()
+		if aim != null:
+			_use_on(cur, aim)
+			return
+	# The first tap explains and highlights a target; a second tap uses it on that target.
 	selected_ability = "" if ability_id == selected_ability else ability_id
 	_refresh()
 
@@ -361,16 +408,42 @@ func _on_unit_pressed(u) -> void:
 		return
 	if selected_ability == "" and u.has_status("netted") and u.side == "heroes" and u != cur:
 		battle.free_ally(cur, u)
+		_inspected = null
+		_after_hero_action()
 	elif selected_ability != "" and battle.legal_targets(cur, selected_ability).has(u):
-		battle.perform(cur, selected_ability, u)
+		_use_on(cur, u)
 	else:
-		# Not a target: say who this is and what is wrong with them.
+		# Not a target: say who this is and what is wrong with them, and aim at them if they are a foe.
 		_inspected = u
+		if u.side != cur.side:
+			_aimed = u
 		selected_ability = ""
 		_refresh()
-		return
+
+
+func _use_on(cur, u) -> void:
+	_aimed = u
 	_inspected = null
+	if db.abilities[selected_ability].has("minigame"):
+		_play_minigame(cur, selected_ability, u)
+		return
+	battle.perform(cur, selected_ability, u)
 	_after_hero_action()
+
+
+## Arrow moves are aimed, Little John's sweep and Will's flourish are timed: how well the player
+## does sets how hard the move lands.
+func _play_minigame(cur, ability_id: String, target) -> void:
+	animating = true
+	var game := MinigameView.new()
+	game.start_move(battle.rng.randi(), db.abilities[ability_id]["minigame"], db.abilities[ability_id], cur.short_name(), cur.sprite)
+	game.finished.connect(func(r):
+		game.queue_free()
+		animating = false
+		_inspected = null
+		battle.perform(cur, ability_id, target, MinigameView.skill_of(r))
+		_after_hero_action())
+	add_child(game)
 
 
 func _after_hero_action() -> void:

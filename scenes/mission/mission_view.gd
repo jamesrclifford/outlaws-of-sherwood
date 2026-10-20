@@ -10,6 +10,7 @@ const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
 const TRAP_MARK := preload("res://assets/ui/trap_mark.png")
@@ -218,7 +219,19 @@ func _show_briefing() -> void:
 		_refresh()
 		_set_buttons([["Set out", _set_out]])
 		return
-	run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [run.mission["type"].capitalize(), run.mission["location_name"], run.mission["rewards"]["gold"]])
+	if run.mission["type"] == "ambush":
+		run.mission_log.append(run.mission["intro"])
+		_refresh()
+		_set_buttons([["Fight!", _set_out]])
+		return
+	var m: Dictionary = run.mission
+	if m.has("rescue_heroes"):
+		var names: Array = m["rescue_heroes"].map(func(h): return db.heroes[h]["name"] if db.heroes.has(h) else "a Merry Man")
+		run.mission_log.append("Briefing: %s held at %s. Break them out!" % [" and ".join(names), m["location_name"]])
+	elif m["type"] == "rescue":
+		run.mission_log.append("Briefing: the Sheriff has locked up a villager at %s. Free them! Reward: %d gold and %d reputation." % [m["location_name"], m["rewards"]["gold"], m["rewards"]["reputation"]])
+	else:
+		run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [m["type"].capitalize(), m["location_name"], m["rewards"]["gold"]])
 	if run.is_bait() and run.mission["bait"]["revealed"]:
 		run.mission_log.append("You already know this job is %s's trap." % db.baits[run.mission["bait"]["by"]]["name"])
 		_refresh()
@@ -226,15 +239,34 @@ func _show_briefing() -> void:
 			["Call it off", func():
 				run.call_off()
 				_finish()],
-			["Send scouts ahead", _scout],
+			["Send scouts ahead (1 day)", _scout],
 			["Go anyway", _set_out],
 		])
 		return
 	_refresh()
-	_set_buttons([
-		["Send scouts ahead", _scout],
-		["Set out now", _set_out],
-	])
+	var opts := [["Send scouts ahead (1 day)", _scout]]
+	if run.can_disguise():
+		opts.append(["Go in disguise", _pick_disguise])
+	elif run.mission["type"] in ["robbery", "rescue"]:
+		var learned: Array = run.known().map(func(id): return db.disguises[id]["name"].to_lower())
+		run.mission_log.append("Disguises are learned from the legends. Known: %s (three are needed)." % (", ".join(learned) if not learned.is_empty() else "none yet"))
+		_refresh()
+	opts.append(["Set out now", _set_out])
+	_set_buttons(opts)
+
+
+## Three disguises from the legends; only trying one shows how it goes.
+func _pick_disguise() -> void:
+	run.mission_log.append("Which disguise will the band wear?")
+	_refresh()
+	var opts := []
+	var options: Array = run.disguise_options()
+	for i in options.size():
+		opts.append([db.disguises[options[i]["id"]]["name"], func():
+			run.wear_disguise(i)
+			_refresh()
+			_set_buttons([["Onward", _set_out]])])
+	_set_buttons(opts)
 
 
 func _scout() -> void:
@@ -276,6 +308,8 @@ func _handle(step: Dictionary) -> void:
 			_set_buttons(opts)
 		"battle":
 			_fight(step["enemies"])
+		"archery":
+			_shoot()
 		"continue":
 			_set_buttons([["Onward", _next]])
 
@@ -294,6 +328,20 @@ func _fight(enemy_ids: Array) -> void:
 			_refresh()
 			_set_buttons([["Onward", _next]]))
 	add_child(view)
+
+
+## An archery round against the node's rival, on its own screen.
+func _shoot() -> void:
+	var r = run.make_archery()
+	var who = run.archer()
+	var game := MinigameView.new()
+	game.start_contest(r, who.short_name() if who else "Robin", who.sprite if who else "robin", run.current_node().get("rival", "The champion") + " shoots against you")
+	game.finished.connect(func(done_round):
+		game.queue_free()
+		run.archery_finished(done_round)
+		_refresh()
+		_set_buttons([["Onward", _next]]))
+	add_child(game)
 
 
 func _next() -> void:

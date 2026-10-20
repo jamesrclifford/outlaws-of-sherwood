@@ -9,5 +9,17 @@
   "merry_men": {
     "price": 50, "min_reputation": 10, "max": 4,
     "names": ["Gilbert Whitehand", "Wat the Tinker", "Midge", "Bartholomew", "Old Reynold", "Simon of the Lea", "Hob o' the Hill", "Ralph Longshanks"]
+  },
+  "wanted": {
+    "infamy": [25, 50, 75],
+    "bounty": [0, 50, 100, 200],
+    "ambush_chance_per_level": 0.08,
+    "lie_low": 2,
+    "hunters": [
+      [],
+      ["bounty_hunter", "hound"],
+      ["bounty_hunter", "bounty_hunter", "hound"],
+      ["bounty_hunter", "bounty_hunter", "crossbowman", "hound", "hound"]
+    ]
   }
 }
