@@ -221,7 +221,7 @@ func ambush(hunters: Array, place_name: String, backdrop: String, bounty: int, s
 ## JSON numbers load as floats; keep a node's counts as ints so a saved mission reloads identically.
 static func fix_node_ints(n: Dictionary) -> void:
 	for opt in n.get("options", []):
-		for k in ["gold", "reputation"]:
+		for k in ["gold", "reputation", "pay"]:
 			if opt.has(k):
 				opt[k] = int(opt[k])
 	if n.has("arrows"):

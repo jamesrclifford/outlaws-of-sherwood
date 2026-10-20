@@ -41,6 +41,7 @@ var stories_done: Array = []       # story ids finished
 var posted_wanted := 0             # the wanted level on the posters the Sheriff has put up
 var poster_news := 0               # a new poster for the screen to show (its level), 0 when none
 var ambush := {}                   # bounty hunters waiting on the road, until the fight is played
+var flags: Array = []              # story choices that later stories depend on (Sir Richard's loan)
 var econ: Dictionary
 
 
@@ -196,6 +197,8 @@ func start_mission():
 		return null
 	var run = MissionRun.new(db, missions[location], party())
 	run.known_disguises = known_disguises()
+	run.purse = gold
+	run.flags = flags.duplicate()
 	return run
 
 
@@ -212,6 +215,11 @@ func finish_mission(run) -> void:
 		ambush = {}
 	else:
 		missions.erase(location)
+	# Gold handed over in a story choice is gone whatever happens next, and remembered.
+	gold = maxi(0, gold - run.spent)
+	for f in run.flags:
+		if not flags.has(f):
+			flags.append(f)
 	match run.result:
 		"success":
 			gold += run.gold
@@ -594,6 +602,9 @@ func story_ready(id: String) -> bool:
 	for s in req.get("stories", []):
 		if not stories_done.has(s):
 			return false
+	for f in req.get("flags", []):
+		if not flags.has(f):
+			return false
 	return reputation >= int(req.get("reputation", 0)) and infamy >= int(req.get("infamy", 0))
 
 
@@ -629,7 +640,7 @@ func to_dict() -> Dictionary:
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
 		"band": band, "stories_done": stories_done, "posted_wanted": posted_wanted, "poster_news": poster_news,
-		"ambush": ambush}
+		"ambush": ambush, "flags": flags}
 
 
 static func from_dict(game_data, data: Dictionary):
@@ -643,6 +654,8 @@ static func from_dict(game_data, data: Dictionary):
 	c.posted_wanted = int(data.get("posted_wanted", c.wanted_level()))
 	c.poster_news = int(data.get("poster_news", 0))
 	c.ambush = data.get("ambush", {})
+	# Saves from before the loan cost anything: the band lent the money back then.
+	c.flags = data.get("flags", ["knight_loan"] if c.stories_done.has("poor_knight") else [])
 	if not c.ambush.is_empty():
 		_fix_ints(c.ambush)
 	c.location = data["location"]

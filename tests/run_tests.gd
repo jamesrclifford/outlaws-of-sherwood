@@ -202,7 +202,9 @@ func autoplay_mission(run, use_scouts := false) -> void:
 		if step["type"] == "trap_choice":
 			step = run.decide_trap(true)
 		if step["type"] == "choice":
-			step = run.choose(1)
+			# The second option where the band can afford it, else the first it can.
+			var picks: Array = [1, 0] + range(2, step["options"].size())
+			step = run.choose(picks.filter(func(i): return i < step["options"].size() and run.can_choose(i))[0])
 		if step["type"] == "battle":
 			var b = run.make_battle(step["enemies"])
 			autoplay(b)
@@ -1007,6 +1009,7 @@ func test_every_legend_can_be_played_through() -> void:
 	var c = Campaign.new(db, 41)
 	c.reputation = 60
 	c.infamy = 60
+	c.gold = 500
 	var guard := 0
 	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
@@ -1395,3 +1398,47 @@ func test_sneaking_past_is_a_gamble() -> void:
 	check(pair.sneak_chance() > crowd.sneak_chance(), "two can sneak more quietly than five")
 	m2["threat"] = 90
 	check(pair.sneak_chance() < 0.75, "alert guards are harder to sneak past")
+
+
+func test_lending_to_the_knight_costs_gold_and_is_repaid() -> void:
+	var c = Campaign.new(db, 77, BAND4)
+	c.missions.clear()
+	c.missions["great_north_road"] = MissionGen.new(db).story("poor_knight", 10, 3)
+	c.missions["great_north_road"]["expires"] = 0
+	c.location = "great_north_road"
+	c.gold = 50
+	var run = c.start_mission()
+	run.arrive()
+	run.advance()
+	check(run.arrive()["type"] == "choice", "Sir Richard asks for help")
+	check(not run.can_choose(0) and not run.can_choose(1) and run.can_choose(2), "with 50 gold the band can only wish him luck")
+	check(run.choose(0)["type"] == "choice", "trying to lend money the band hasn't got does nothing")
+	c.gold = 100
+	run = c.start_mission()
+	run.arrive()
+	run.advance()
+	run.arrive()
+	run.choose(0)
+	check(run.spent == 60, "lending costs 60 gold")
+	run.result = "failed"
+	c.finish_mission(run)
+	check(c.gold == 40 and c.flags.has("knight_loan"), "the gold is gone even if the spies win, and the loan is remembered")
+	c.missions["great_north_road"] = MissionGen.new(db).story("poor_knight", 10, 3)
+	c.missions["great_north_road"]["expires"] = 0
+	run = c.start_mission()
+	run.arrive()
+	run.advance()
+	run.arrive()
+	check(run.can_choose(0), "trying the tale again doesn't charge the loan twice")
+	# Wishing him luck ends the knight's story.
+	var mean = Campaign.new(db, 78, BAND4)
+	mean.stories_done.append("poor_knight")
+	mean.reputation = 30
+	check(not mean.story_ready("knight_pays_abbot"), "no loan, no visit to the Abbot")
+	mean.flags.append("knight_loan")
+	check(mean.story_ready("knight_pays_abbot"), "with the loan made, Sir Richard's story goes on")
+	var knight_returns: Dictionary = db.stories["stories"]["knight_returns"]
+	check(int(knight_returns["rewards"]["gold"]) > 80, "Sir Richard pays back more than the band lent (%d)" % int(knight_returns["rewards"]["gold"]))
+	var old: Dictionary = JSON.parse_string(JSON.stringify(mean.to_dict()))
+	old.erase("flags")
+	check(Campaign.from_dict(db, old).flags.has("knight_loan"), "older saves that played the tale keep the knight's story going")

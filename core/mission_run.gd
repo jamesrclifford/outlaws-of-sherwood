@@ -28,6 +28,9 @@ var _duel_loadouts := {}      # hero id -> [abilities, row, sprite] kept while a
 var disguise := ""            # the disguise the band wore, if any
 var surprise := false         # the next battle opens with the enemy caught flat-footed
 var known_disguises = null    # disguise ids the band has learned from the legends; null means all
+var purse := -1               # the band's gold at home, for choices that cost some; -1 means no limit
+var spent := 0                # gold paid out of the band's purse by choices (kept even if the job fails)
+var flags: Array = []         # story flags set by choices (Sir Richard's loan), kept by the campaign
 
 
 func _init(game_data, mission_data: Dictionary, hero_units: Array) -> void:
@@ -166,8 +169,24 @@ func decide_trap(avoid: bool) -> Dictionary:
 	return arrive()
 
 
+## Whether the band can afford an option (some story choices are paid from the band's purse).
+func can_choose(option_index: int) -> bool:
+	return _cost(current_node()["options"][option_index]) == 0 or purse < 0 or purse - spent >= _cost(current_node()["options"][option_index])
+
+
+## What an option costs: nothing if its flag is already set (the loan was made on an earlier try).
+func _cost(opt: Dictionary) -> int:
+	return 0 if flags.has(opt.get("flag", "")) else int(opt.get("pay", 0))
+
+
 func choose(option_index: int) -> Dictionary:
 	var opt: Dictionary = current_node()["options"][option_index]
+	if not can_choose(option_index):
+		_log("The band hasn't got %d gold to spare." % int(opt["pay"]))
+		return {"type": "choice", "options": current_node()["options"]}
+	spent += _cost(opt)
+	if opt.has("flag") and not flags.has(opt["flag"]):
+		flags.append(opt["flag"])
 	if opt.has("log"):
 		_log(opt["log"])
 	gold += int(opt.get("gold", 0))
