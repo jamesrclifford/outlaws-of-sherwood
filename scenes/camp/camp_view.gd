@@ -103,11 +103,16 @@ func _draw_scene() -> void:
 	for ch in scene_layer.get_children():
 		ch.queue_free()
 	var c = campaign
+	var count := {}
 	for id in c.upgrades:
 		var u: Dictionary = db.camp["upgrades"][id]
 		var tex: Texture2D = load("res://assets/camp/%s.png" % id)
-		var y: float = scene_h - 6 - tex.get_size().y * 2 if u.get("ground", false) else u["y"]
-		_sprite(tex, Vector2(u["x"], y), tex.get_size() * 2)
+		var nth: int = count.get(id, 0)
+		count[id] = nth + 1
+		var pos := Vector2(u["x"], scene_h - 6 - tex.get_size().y * 2 if u.get("ground", false) else u["y"])
+		if nth > 0:
+			pos = Vector2(u["more"][nth - 1][0], u["more"][nth - 1][1])
+		_sprite(tex, pos, tex.get_size() * 2)
 	var folk: Array = c.free_heroes().map(func(h): return BattleView.sprite_for(h))
 	if c.marian_home():
 		folk.insert(1, BattleView.sprite_by_id("marian"))
@@ -212,7 +217,7 @@ func _show_build(picked: String) -> void:
 				_show_camp("You can't afford that right now."), c.can_build(picked)],
 			["Back", _show_build.bind("")]])
 		return
-	var left: Array = ups.keys().filter(func(id): return not c.upgrades.has(id))
+	var left: Array = ups.keys().filter(func(id): return c.built(id) < int(ups[id].get("max", 1)))
 	Style.fit_text(text_label, "Gold %d. What shall the band build?" % c.gold if not left.is_empty() else "The camp has everything it could want!")
 	var opts := []
 	for id in left:

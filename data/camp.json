@@ -1,5 +1,5 @@
 {
-  "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button), shown in the camp scene at x,y (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
+  "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button; max: how many may be built, default 1, with \"more\" giving where the extra ones stand), shown in the camp scene at x,y (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
   "visitor_chance": 0.3,
   "visitor_days": 3,
   "upgrades": {
@@ -7,7 +7,7 @@
     "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "x": 4, "y": 84, "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
     "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
     "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
-    "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "x": 236, "y": 72, "text": "A long hall of woven branches and turf. Two more Merry Men can join the band.", "merry_men_max": 2},
+    "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "x": 236, "y": 72, "more": [[150, 116], [258, 112]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
     "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
   },
   "evenings": {

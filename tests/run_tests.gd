@@ -1865,6 +1865,8 @@ func test_camp_upgrades_cost_gold_and_last() -> void:
 	check(copy.upgrades.has("butts") and copy.heroes["robin"].atk == atk + 1, "upgrades are saved")
 	c.build("hall")
 	check(c.men_max() == int(db.economy["merry_men"]["max"]) + 2, "the great hall has room for more men")
+	check(c.build("hall") and c.build("hall") and not c.build("hall"), "up to three halls")
+	check(c.men_max() == int(db.economy["merry_men"]["max"]) + 6, "each with room for two more")
 	c.build("larder")
 	c.location = "camp"
 	c.supplies = 50

@@ -168,7 +168,12 @@ func upgrade_sum(key: String) -> float:
 
 
 func can_build(id: String) -> bool:
-	return location == "camp" and not upgrades.has(id) and gold >= int(db.camp["upgrades"][id]["cost"])
+	return location == "camp" and built(id) < int(db.camp["upgrades"][id].get("max", 1)) and gold >= int(db.camp["upgrades"][id]["cost"])
+
+
+## How many of an upgrade the band has built (the Great Hall can be built more than once).
+func built(id: String) -> int:
+	return upgrades.count(id)
 
 
 func build(id: String) -> bool:
