@@ -2,8 +2,8 @@
   "_doc": "Maid Marian turns up on ordinary jobs once she has met the band (the marian_page legend), except while she is locked in the tower. chance: how often a new robbery or rescue has her; help_chance: how often she makes it easier (help_chance_wed after the wedding). After the wedding she lives at Major Oak Camp: visits use text_home, and \"home\" says what she does for the band when it rests there.",
   "home": {"rest_guy_plot": 8, "text": "Marian keeps watch over the camp while the band rests. Sir Guy's scouts slink away, and his raid is set back."},
   "chance": 0.3,
-  "help_chance": 0.6,
-  "help_chance_wed": 0.8,
+  "help_chance": 0.2,
+  "help_chance_wed": 0.3,
   "visits": {
     "warning": {"kind": "help", "text_home": "Marian has been out in the forest at dawn, reading tracks. She knows exactly where the Sheriff's men have laid their traps.", "text": "Maid Marian slips out of the castle with a warning: she knows exactly where the Sheriff's traps are laid.", "reveal_traps": true},
     "distraction": {"kind": "help", "text_home": "Marian rides ahead dressed as a lost lady and asks a guard the way to Nottingham... a very long way round. One less guard to fight!", "text": "Maid Marian drops her glove in front of a guard and asks him to fetch it... all the way back to the castle. One less guard to fight!", "remove_enemy": 1},
