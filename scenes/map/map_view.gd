@@ -293,6 +293,10 @@ func _next_tip() -> void:
 		due.append("villains")
 	if not c.captured.is_empty():
 		due.append("captured")
+	if c.wanted_level() >= 1:
+		due.append("wanted")
+	if c.ransom_open():
+		due.append("ransom")
 	for id in due:
 		var card = TipCard.show_once(self, id)
 		if card:

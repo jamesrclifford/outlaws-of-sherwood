@@ -801,7 +801,7 @@ func test_tips_show_once_and_can_be_switched_off() -> void:
 	check(Tips.new(path).take("aim").is_empty(), "no more tips means none")
 	t.reset()
 	check(not Tips.new(path).take("battle").is_empty(), "and replaying the tips starts again")
-	for id in ["map", "legends", "villains", "mission", "battle", "aim", "swing", "rhythm", "captured"]:
+	for id in ["map", "legends", "villains", "mission", "battle", "aim", "swing", "rhythm", "captured", "camp", "teams", "wanted", "ransom"]:
 		check(t.tips.has(id), "there is a tip for %s" % id)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
