@@ -1,0 +1,84 @@
+{
+  "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button; max: how many may be built, default 1, with \"more\" giving where the extra ones stand), shown in the camp scene at x,y (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
+  "visitor_chance": 0.3,
+  "visitor_days": 3,
+  "upgrades": {
+    "lookout": {"name": "Lookout in the Oak", "short": "Lookout", "cost": 60, "x": 160, "y": 40, "text": "A platform high in the Major Oak. Sir Guy's raid plot grows more slowly.", "guy_per_day": -2},
+    "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "x": 4, "y": 84, "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
+    "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
+    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "x": 292, "y": 176, "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
+    "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
+    "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "x": 236, "y": 72, "more": [[150, 116], [258, 112]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
+    "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
+  },
+  "evenings": {
+    "alan_song": {"needs": ["alan"], "text": "Alan-a-Dale tunes his harp and sings a new ballad: 'A Gest of Robyn Hode'. Charcoal burners hiding in the trees creep closer to listen, and carry the song home to their villages.", "effects": {"reputation": 1}},
+    "tuck_stew": {"needs": ["tuck"], "text": "Friar Tuck stirs a great pot of stew with a ladle the size of an oar. 'Loaves and fishes,' he says, and somehow it stretches to tomorrow too.", "effects": {"supplies": 3}},
+    "john_staff": {"needs": ["little_john"], "text": "Little John stands on a log over the brook and challenges anyone to knock him off with a quarterstaff.",
+      "options": [
+        {"label": "Robin tries his luck", "log": "SPLASH! Robin climbs out of the brook dripping and laughing. 'Just like the day we met!'"},
+        {"label": "Bet 5 gold on John", "cost": 5, "log": "Nobody gets John off that log. The band pays up, grumbling, and Robin collects.", "effects": {"gold": 10}}
+      ]},
+    "will_brag": {"needs": ["will"], "text": "Will Scarlet brags that he could cut the Sheriff's purse from his belt in the middle of Nottingham market.",
+      "options": [
+        {"label": "Bet him 10 gold he can't", "cost": 10, "log": "Two days later a purse lands in Robin's lap. It has the Sheriff's crest on it. Will grins. 'Pay up!'", "effects": {"gold": 30, "infamy": 3}},
+        {"label": "Tell him to be careful", "log": "Will grumbles, but sharpens his swords instead of his tongue."}
+      ]},
+    "kings_deer": {"needs": ["robin"], "text": "A fat stag of the King's own herd wanders right into camp. Hunting the King's deer is the very crime that made Robin an outlaw.",
+      "options": [
+        {"label": "Venison for supper!", "log": "The whole camp feasts. The foresters will find the bones, though.", "effects": {"supplies": 6, "infamy": 2}},
+        {"label": "Let it go", "log": "The stag bounds away. 'Another day, my friend.'"}
+      ]},
+    "garland": {"needs": ["robin", "will"], "upgrade": "butts", "text": "Shooting at the garland on the archery butts: anyone whose arrow misses the rose garland gets a buffet from Robin. Robin misses his own last shot, and takes his buffet like a good sport.", "effects": {"reputation": 1}},
+    "guest_dinner": {"needs": ["robin"], "text": "Robin will not sit down to supper without a guest. Little John comes back with the Abbot of St Mary's, who is very fat and very cross.",
+      "options": [
+        {"label": "Feast, then he pays", "log": "The Abbot eats three helpings, then the band counts out his saddlebags. 'Such a fine supper deserves a fine price!'", "effects": {"gold": 25, "infamy": 3}},
+        {"label": "Feast, and he goes free", "log": "The Abbot rides home full and baffled. He tells everyone the outlaws were the best hosts he ever had.", "effects": {"reputation": 2}}
+      ]},
+    "marian_home": {"flags": ["marian_wed"], "text": "Marian teaches the band how to bow like courtiers, so their disguises will fool the Sheriff. Little John bows so low he falls over.", "effects": {"infamy": -3}},
+    "marian_arrow": {"marian": true, "text": "An arrow thuds into the Major Oak with a note tied to it, in Marian's hand: the Sheriff's men are setting traps on the roads, and here is where.", "effects": {"reveal": true}},
+    "missing_friend": {"captured": true, "text": "The camp is quiet tonight. There is an empty place by the fire. The band draws maps in the dirt and plans the rescue.", "effects": {"reveal": true}},
+    "guy_scout": {"guy_plot": 40, "text": "The watchmen catch one of Sir Guy's scouts creeping round the camp.",
+      "options": [
+        {"label": "Send him home backwards", "log": "He rides back to Gisborne sitting backwards on a donkey, with a sign: 'Guy's best scout.' Guy is furious, and his plans are a mess.", "effects": {"plots": {"guy": -15}, "infamy": 2}},
+        {"label": "Feed him and let him go", "log": "The scout eats his first good meal in weeks. Next morning he 'forgets' half of what he saw.", "effects": {"plots": {"guy": -8}, "supplies": -2}}
+      ]},
+    "merry_drill": {"merry_men": 1, "text": "The new Merry Men practise with bow and staff until dark. They are getting rather good.", "effects": {"reputation": 1}},
+    "rain": {"text": "Rain drums on the leaves all night. Everyone huddles under the oak, and some of the bread goes soggy.", "effects": {"supplies": -2}},
+    "stars": {"text": "A clear night. The band lies in the bracken looking at the stars, and Robin tells of the day he first came to Sherwood. Nobody stirs from camp, and the Sheriff's men lose the trail.", "effects": {"infamy": -1}},
+    "hall_feast": {"upgrade": "hall", "text": "The Great Hall is full: Merry Men, villagers, a juggler and two very confused sheep. People talk about the feast for miles around.", "effects": {"reputation": 2, "supplies": -3}}
+  },
+  "visitors": {
+    "pedlar": {"name": "A pedlar", "sprite": "tradesman", "text": "A pedlar with a pack full of ribbons and pins sets it down by the fire. 'I've a map, too. Where the Sheriff's traps are laid. For a price.'",
+      "options": [
+        {"label": "Buy the map (15g)", "cost": 15, "log": "The map is filthy, but it is right.", "effects": {"reveal": true}},
+        {"label": "Buy supplies (10g)", "cost": 10, "log": "He sells the band salt pork and arrowheads, cheaper than the market.", "effects": {"supplies": 10}},
+        {"label": "Send him on", "log": "The pedlar shrugs and wanders on toward Edwinstowe."}
+      ]},
+    "widow": {"name": "A widow", "sprite": "beggar", "text": "An old widow has walked all day to find the camp. 'The Sheriff's men took my sons for shooting a rabbit. Please, good Robin.'",
+      "options": [
+        {"label": "We'll bring them home", "log": "The band swears to free her sons. Word goes out to find where they are held.", "effects": {"spawn": "rescue"}},
+        {"label": "Give her 20 gold", "cost": 20, "log": "With the gold she can pay the fine herself. She blesses the band all the way home.", "effects": {"reputation": 3}}
+      ]},
+    "abbot": {"name": "A fat abbot", "sprite": "monk", "text": "An abbot has lost his way in the forest and stumbles into camp. His mule's saddlebags clink as he walks.",
+      "options": [
+        {"label": "Invite him to supper", "log": "Robin's custom: the guest pays for the feast. The abbot's saddlebags are much lighter on the way home.", "effects": {"gold": 30, "infamy": 3}},
+        {"label": "Show him the road", "log": "Little John walks him to the road. The abbot is so relieved he gives the poor box a coin.", "effects": {"reputation": 1}}
+      ]},
+    "forester": {"name": "A forester", "sprite": "forester", "text": "One of the King's foresters walks in with his hands up. 'I'm tired of chasing honest men for the Sheriff. Will you have me?'",
+      "options": [
+        {"label": "Welcome to the band", "log": "He swaps his Lincoln green for... Lincoln green. Nobody can tell the difference.", "effects": {"merry_man": true}},
+        {"label": "Ask what he knows", "log": "He tells you every trick the Sheriff's men have planned.", "effects": {"reveal": true, "plots": {"sheriff": -10}}}
+      ]},
+    "carter": {"name": "A carter", "sprite": "tradesman", "text": "A carter with an empty cart stops by. 'The Sheriff's tax wagon went by me this morning, loaded heavy as a mountain. Thought you'd like to know.'",
+      "options": [
+        {"label": "After that wagon!", "log": "The band marks the wagon's road on the map.", "effects": {"spawn": "robbery"}},
+        {"label": "Give him a meal", "log": "He eats well and promises to keep his eyes open.", "effects": {"supplies": -1, "reputation": 1}}
+      ]},
+    "runaway": {"name": "A runaway", "sprite": "beggar", "text": "A runaway serf hides in the bracken near camp. His lord's men are hunting him with dogs.",
+      "options": [
+        {"label": "Hide him in Sherwood", "log": "He lives free in the greenwood now. Every village hears that Sherwood shelters the weak.", "effects": {"reputation": 3, "infamy": 2, "control": -2}},
+        {"label": "Give him bread for the road", "log": "He hurries north with a full belly and a blessing.", "effects": {"supplies": -1, "reputation": 1}}
+      ]}
+  }
+}

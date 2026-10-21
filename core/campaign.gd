@@ -45,6 +45,11 @@ var posted_wanted := 0             # the wanted level on the posters the Sheriff
 var poster_news := 0               # a new poster for the screen to show (its level), 0 when none
 var ambush := {}                   # bounty hunters waiting on the road, until the fight is played
 var flags: Array = []              # story choices that later stories depend on (Sir Richard's loan)
+var upgrades: Array = []           # camp improvements built (data/camp.json)
+var visitor := ""                  # someone waiting at camp to speak with the band
+var visitor_until := 0             # the last day they will wait
+var evening := ""                  # tonight's campfire evening, told when the band rests
+var evening_open := false          # tonight's evening still waits for the band's choice
 var econ: Dictionary
 
 
@@ -139,14 +144,155 @@ func travel(to: String) -> Array:
 
 ## Spend a day at camp: heal everyone fully. Lying low lets the band's infamy cool off a little,
 ## and once Marian lives there she keeps watch, setting Sir Guy's raid plot back.
+## Each night brings a campfire evening (see evening); one with options waits for choose_evening.
 func rest() -> void:
 	if location == "camp":
-		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]))
+		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]) * (1 + int(upgrade_sum("lie_low"))))
+		supplies += int(upgrade_sum("rest_supplies"))
+		_tell_evening()
 		if marian_home():
 			plots["guy"] = maxi(0, plots["guy"] - int(db.marian["home"]["rest_guy_plot"]))
 			_news(db.marian["home"]["text"])
 		_update_wanted()
 		_end_day(true)
+
+
+# --- Major Oak Camp ------------------------------------------------------------
+
+## The total of one effect over every upgrade built (0 when none gives it).
+func upgrade_sum(key: String) -> float:
+	var total := 0.0
+	for id in upgrades:
+		total += float(db.camp["upgrades"][id].get(key, 0))
+	return total
+
+
+func can_build(id: String) -> bool:
+	return location == "camp" and built(id) < int(db.camp["upgrades"][id].get("max", 1)) and gold >= int(db.camp["upgrades"][id]["cost"])
+
+
+## How many of an upgrade the band has built (the Great Hall can be built more than once).
+func built(id: String) -> int:
+	return upgrades.count(id)
+
+
+func build(id: String) -> bool:
+	if not can_build(id) or not _spend(int(db.camp["upgrades"][id]["cost"])):
+		return false
+	upgrades.append(id)
+	for h in heroes:
+		_apply_gear(h)
+	_news("The band builds %s at Major Oak Camp." % db.camp["upgrades"][id]["name"])
+	return true
+
+
+## Whether an evening or visitor can be told here: who it needs must be free in camp, and so on.
+func _camp_ready(e: Dictionary) -> bool:
+	var here: Array = free_heroes().map(func(h): return h.id)
+	if not e.get("needs", []).all(func(h): return here.has(h)):
+		return false
+	if not e.get("flags", []).all(func(f): return flags.has(f)):
+		return false
+	if e.has("upgrade") and not upgrades.has(e["upgrade"]):
+		return false
+	if e.get("captured", false) and captured.is_empty():
+		return false
+	if e.get("marian", false) and (not marian_free() or marian_home()):
+		return false
+	return merry_men.size() >= int(e.get("merry_men", 0)) and plots["guy"] >= int(e.get("guy_plot", 0))
+
+
+## Picks tonight's campfire evening, never the same as last night's. One without options happens at once.
+func _tell_evening() -> void:
+	var all: Dictionary = db.camp["evenings"]
+	var ready: Array = all.keys().filter(func(id): return id != evening and _camp_ready(all[id]))
+	if ready.is_empty():
+		evening = ""
+		evening_open = false
+		return
+	evening = ready[rng.randi_range(0, ready.size() - 1)]
+	evening_open = all[evening].has("options")
+	if not evening_open:
+		_camp_effects(all[evening].get("effects", {}))
+
+
+## Whether the band can take this option (it may cost gold).
+func can_take(option: Dictionary) -> bool:
+	return gold >= int(option.get("cost", 0))
+
+
+## The band's choice for tonight's evening. Returns what happened, or "" if it can't be taken.
+func choose_evening(i: int) -> String:
+	if not evening_open:
+		return ""
+	var opt: Dictionary = db.camp["evenings"][evening]["options"][i]
+	if not _take(opt):
+		return ""
+	evening_open = false
+	return opt["log"]
+
+
+## Now and then someone finds the way to camp, and waits a few days to be heard.
+func _visitor_comes() -> void:
+	if visitor != "" and day > visitor_until:
+		visitor = ""
+	if visitor != "" or rng.randf() >= float(db.camp["visitor_chance"]):
+		return
+	var all: Dictionary = db.camp["visitors"]
+	var ready: Array = all.keys().filter(func(id): return _camp_ready(all[id]))
+	if ready.is_empty():
+		return
+	visitor = ready[rng.randi_range(0, ready.size() - 1)]
+	visitor_until = day + int(db.camp["visitor_days"])
+	_news("%s has come to Major Oak Camp, asking for Robin Hood." % all[visitor]["name"])
+
+
+## Answer the visitor waiting at camp. Returns what happened, or "" if the band can't do that.
+func answer_visitor(i: int) -> String:
+	if visitor == "" or location != "camp":
+		return ""
+	var opt: Dictionary = db.camp["visitors"][visitor]["options"][i]
+	if not _take(opt):
+		return ""
+	visitor = ""
+	return opt["log"]
+
+
+func _take(opt: Dictionary) -> bool:
+	var cost := int(opt.get("cost", 0))
+	if cost > 0 and not _spend(cost):
+		return false
+	_camp_effects(opt.get("effects", {}))
+	return true
+
+
+func _camp_effects(e: Dictionary) -> void:
+	gold += int(e.get("gold", 0))
+	supplies = maxi(0, supplies + int(e.get("supplies", 0)))
+	reputation += int(e.get("reputation", 0))
+	infamy = maxi(0, infamy + int(e.get("infamy", 0)))
+	for p in e.get("plots", {}):
+		plots[p] = clampi(plots[p] + int(e["plots"][p]), 0, 100)
+	if e.has("control"):
+		control["sherwood"] = clampi(control["sherwood"] + int(e["control"]), 0, 100)
+	if e.get("reveal", false):
+		for m in missions.values():
+			for n in m["nodes"]:
+				if n.has("trap"):
+					n["trap"]["revealed"] = true
+			if not m.get("bait", {}).is_empty():
+				m["bait"]["revealed"] = true
+	if e.has("spawn"):
+		_spawn_mission(e["spawn"])
+	if e.get("merry_man", false):
+		# With no room in camp he goes home a friend, and tells everyone.
+		var names: Array = econ["merry_men"]["names"].filter(func(n): return not merry_men.values().has(n))
+		if merry_men.size() < men_max() and not names.is_empty():
+			_add_merry_man()
+		else:
+			reputation += 2
+	if e.has("infamy"):
+		_update_wanted()
 
 
 # --- Wanted ------------------------------------------------------------------
@@ -411,6 +557,7 @@ func _apply_gear(hero_id: String) -> void:
 		for k in bonus:
 			stats[k] += float(bonus[k])
 	var damage: int = u.max_hp - u.hp
+	stats["atk"] += upgrade_sum("atk")
 	u.max_hp = int(stats["hp"])
 	u.hp = maxi(1, u.max_hp - damage)
 	u.atk = int(stats["atk"])
@@ -421,12 +568,22 @@ func _apply_gear(hero_id: String) -> void:
 
 func can_hire() -> bool:
 	var mm: Dictionary = econ["merry_men"]
-	return location == "camp" and reputation >= int(mm["min_reputation"]) and merry_men.size() < int(mm["max"])
+	return location == "camp" and reputation >= int(mm["min_reputation"]) and merry_men.size() < men_max()
+
+
+## How many Merry Men the camp has room for.
+func men_max() -> int:
+	return int(econ["merry_men"]["max"]) + int(upgrade_sum("merry_men_max"))
 
 
 func hire_merry_man() -> bool:
 	if not can_hire() or not _spend(int(econ["merry_men"]["price"])):
 		return false
+	_add_merry_man()
+	return true
+
+
+func _add_merry_man() -> void:
 	var names: Array = econ["merry_men"]["names"].filter(func(n): return not merry_men.values().has(n))
 	var id := "merry_man_%d" % (merry_men.size() + 1)
 	while heroes.has(id):
@@ -434,7 +591,6 @@ func hire_merry_man() -> bool:
 	merry_men[id] = names[rng.randi_range(0, names.size() - 1)]
 	heroes[id] = _make_merry_man(id)
 	_news("%s joins the band." % merry_men[id])
-	return true
 
 
 func _make_merry_man(id: String):
@@ -494,6 +650,7 @@ func bribe_jailer() -> bool:
 func _end_day(resting: bool, heal := true) -> void:
 	day += 1
 	var band := free_heroes()
+	supplies += int(upgrade_sum("daily_supplies"))
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
 	var fed := supplies >= needed
 	supplies = maxi(0, supplies - needed)
@@ -502,7 +659,7 @@ func _end_day(resting: bool, heal := true) -> void:
 	for h in band:
 		h.statuses.clear()
 		if fed and heal:
-			h.heal(int(ceil(h.max_hp * (HEAL_AT_CAMP if resting else HEAL_ON_ROAD))))
+			h.heal(int(ceil(h.max_hp * (HEAL_AT_CAMP if resting else HEAL_ON_ROAD + upgrade_sum("road_heal")))))
 		elif not fed:
 			h.hp = maxi(1, h.hp - int(ceil(h.max_hp * float(econ["supplies"]["hunger_damage"]))))
 	for id in missions.keys():
@@ -515,6 +672,7 @@ func _end_day(resting: bool, heal := true) -> void:
 	if rng.randf() < 0.6 or missions.size() < 2:
 		_spawn_mission()
 	_maybe_post_contest()
+	_visitor_comes()
 
 
 func _sheriff_acts() -> void:
@@ -542,7 +700,7 @@ func raid_chance() -> float:
 
 
 func _guy_acts() -> void:
-	plots["guy"] = mini(100, plots["guy"] + 5 + infamy / 8)
+	plots["guy"] = mini(100, plots["guy"] + maxi(0, 5 + infamy / 8 + int(upgrade_sum("guy_per_day"))))
 	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
@@ -705,7 +863,7 @@ func to_dict() -> Dictionary:
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
 		"band": band, "stories_done": stories_done, "story_retry": story_retry, "posted_wanted": posted_wanted, "poster_news": poster_news,
-		"ambush": ambush, "flags": flags}
+		"ambush": ambush, "flags": flags, "upgrades": upgrades, "visitor": visitor, "visitor_until": visitor_until, "evening": evening}
 
 
 static func from_dict(game_data, data: Dictionary):
@@ -721,6 +879,10 @@ static func from_dict(game_data, data: Dictionary):
 	c.posted_wanted = int(data.get("posted_wanted", c.wanted_level()))
 	c.poster_news = int(data.get("poster_news", 0))
 	c.ambush = data.get("ambush", {})
+	c.upgrades = data.get("upgrades", [])
+	c.visitor = data.get("visitor", "")
+	c.visitor_until = int(data.get("visitor_until", 0))
+	c.evening = data.get("evening", "")
 	# Saves from before the loan cost anything: the band lent the money back then.
 	c.flags = data.get("flags", ["knight_loan"] if c.stories_done.has("poor_knight") else [])
 	if not c.ambush.is_empty():

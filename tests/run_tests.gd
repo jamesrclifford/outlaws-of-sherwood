@@ -1282,6 +1282,8 @@ func test_every_legend_can_be_played_through() -> void:
 		c.reputation = maxi(c.reputation, 60)    # Gisborne's raids, lost by the plain autoplayer, cost reputation
 		c.captured.clear()                       # and leave heroes in the dungeon, blocking the castle
 		c._remove_rescues()
+		if c.stories_done.has("poor_knight") and not c.flags.has("knight_loan"):
+			c.flags.append("knight_loan")        # the autoplayer may turn the knight away, closing his tales
 		var at := ""
 		for n in c.missions:
 			if c.missions[n]["type"] == "story":
@@ -1365,7 +1367,9 @@ func test_wanted_posters_go_up_with_infamy() -> void:
 	c.poster_news = 0
 	c.infamy = 76
 	c.rest()
-	check(c.infamy == 74 and c.wanted_level() == 2, "lying low at camp cools the band's infamy (%d)" % c.infamy)
+	# Tonight's campfire evening may nudge infamy too.
+	var evening_infamy: int = 0 if c.evening_open or c.evening == "" else int(db.camp["evenings"][c.evening].get("effects", {}).get("infamy", 0))
+	check(c.infamy == 74 + evening_infamy and c.wanted_level() == 2, "lying low at camp cools the band's infamy (%d)" % c.infamy)
 	check(c.posted_wanted == 2 and c.poster_news == 0, "the posters fade without a new one being shown")
 
 
@@ -1847,3 +1851,104 @@ func _tale_odds(id: String, tough_scale: float) -> int:
 func _tale_odds_print() -> void:   # rename to test_ to print legend odds while balancing
 	for id in db.stories["stories"]:
 		print("%-22s rep %2d band %d: plain %2d/12  tough %2d/12" % [id, int(db.stories["stories"][id]["requires"].get("reputation", 0)), band_for_story(id).size(), _tale_odds(id, 0.0), _tale_odds(id, 1.0)])
+
+
+func test_camp_upgrades_cost_gold_and_last() -> void:
+	var db = GameData.new()
+	var c = Campaign.new(db, 3, Campaign.FULL_BAND)
+	c.gold = 1000
+	var atk: int = c.heroes["robin"].atk
+	check(c.build("butts") and c.heroes["robin"].atk == atk + 1, "archery butts sharpen every hero")
+	check(c.gold == 1000 - int(db.camp["upgrades"]["butts"]["cost"]), "building costs its price")
+	check(not c.build("butts"), "each upgrade is built once")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.upgrades.has("butts") and copy.heroes["robin"].atk == atk + 1, "upgrades are saved")
+	c.build("hall")
+	check(c.men_max() == int(db.economy["merry_men"]["max"]) + 2, "the great hall has room for more men")
+	check(c.build("hall") and c.build("hall") and not c.build("hall"), "up to three halls")
+	check(c.men_max() == int(db.economy["merry_men"]["max"]) + 6, "each with room for two more")
+	c.build("larder")
+	c.location = "camp"
+	c.supplies = 50
+	var band: int = c.free_heroes().size()
+	c.evening = "rain"   # any evening but the one below
+	c.rest()
+	check(c.supplies >= 50 + 3 - band - 3, "the larder fills up while the band rests")
+	c.build("hunting")
+	var stock: int = c.supplies
+	c._end_day(false)
+	check(c.supplies == stock + 2 - c.free_heroes().size(), "the hunting camp brings in supplies every day")
+	c.location = "nottingham"
+	check(not c.can_build("lookout"), "only at camp")
+	for id in db.camp["upgrades"]:
+		var u: Dictionary = db.camp["upgrades"][id]
+		check(u.has("name") and u.has("cost") and u.has("text") and ResourceLoader.exists("res://assets/camp/%s.png" % id), "%s has its art" % id)
+
+
+func test_campfire_evenings() -> void:
+	var db = GameData.new()
+	var seen := {}
+	for seed in 60:
+		var c = Campaign.new(db, seed, Campaign.FULL_BAND)
+		c.gold = 100
+		c.location = "camp"
+		var last: String = c.evening
+		c.rest()
+		check(c.evening != "" and c.evening != last, "every rest brings a new evening")
+		seen[c.evening] = true
+		var e: Dictionary = db.camp["evenings"][c.evening]
+		check(c.evening_open == e.has("options"), "evenings with choices wait for one")
+		if c.evening_open:
+			check(c.choose_evening(0) != "" and not c.evening_open, "choosing tells what happened")
+			check(c.choose_evening(0) == "", "only once")
+		check(not e.has("upgrade") and not e.get("captured", false), "evenings needing something only come when it is there")
+	check(seen.size() >= 8, "many different evenings (%d)" % seen.size())
+	for id in db.camp["evenings"]:
+		var e: Dictionary = db.camp["evenings"][id]
+		for o in e.get("options", []):
+			check(o.has("label") and o.has("log"), "%s options are complete" % id)
+	var c = Campaign.new(db, 1, Campaign.FULL_BAND)
+	c.gold = 0
+	c.evening = "will_brag"
+	c.evening_open = true
+	check(c.choose_evening(0) == "" and c.evening_open, "a bet needs gold")
+	check(c.choose_evening(1) != "", "but the band can always say no")
+
+
+func test_camp_visitors() -> void:
+	var db = GameData.new()
+	var c = Campaign.new(db, 7, Campaign.FULL_BAND)
+	var came := 0
+	for i in 60:
+		c._visitor_comes()
+		if c.visitor != "":
+			came += 1
+			check(c.visitor_until > c.day, "a visitor waits a while")
+			c.visitor = ""
+	check(came > 5 and came < 40, "visitors come now and then (%d of 60)" % came)
+	c.visitor = "forester"
+	c.visitor_until = c.day + 3
+	c.location = "great_north_road"
+	check(c.answer_visitor(0) == "", "only heard at camp")
+	c.location = "camp"
+	var men: int = c.merry_men.size()
+	check(c.answer_visitor(0) != "" and c.merry_men.size() == men + 1 and c.visitor == "", "the forester joins the band")
+	c.visitor = "pedlar"
+	c.gold = 0
+	check(c.answer_visitor(0) == "", "the map costs gold")
+	c.gold = 20
+	var m: Dictionary = MissionGen.new(db).generate("robbery", 40, 9, "great_north_road")
+	MissionGen.new(db).make_bait(m, "sheriff", "")
+	c.missions["great_north_road"] = m
+	check(c.answer_visitor(0) != "" and m["bait"]["revealed"], "and shows where the traps are")
+	c.visitor = "carter"
+	var jobs: int = c.missions.size()
+	c.answer_visitor(0)
+	check(c.missions.size() == jobs + 1, "the carter's tip becomes a job")
+	c.visitor = "widow"
+	c.visitor_until = c.day
+	c.day += 1
+	c._visitor_comes()
+	check(c.visitor != "widow", "visitors don't wait forever")
+	for id in db.camp["visitors"]:
+		check(ResourceLoader.exists("res://assets/sprites/%s.png" % db.camp["visitors"][id]["sprite"]), "%s has a sprite" % id)
