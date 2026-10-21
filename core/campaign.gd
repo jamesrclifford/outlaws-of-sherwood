@@ -48,6 +48,7 @@ var ambush := {}                   # bounty hunters waiting on the road, until t
 var flags: Array = []              # story choices that later stories depend on (Sir Richard's loan)
 var upgrades: Array = []           # camp improvements built (data/camp.json)
 var boons: Array = []              # lasting gifts from friends made in the legends (camp.json boons)
+var ransom := 0                    # gold in King Richard's ransom chest (camp.json ransom)
 var visitor := ""                  # someone waiting at camp to speak with the band
 var visitor_until := 0             # the last day they will wait
 var evening := ""                  # tonight's campfire evening, told when the band rests
@@ -308,6 +309,45 @@ func build(id: String) -> bool:
 		_apply_gear(h)
 	_news("The band builds %s at Major Oak Camp." % db.camp["upgrades"][id]["name"])
 	return true
+
+
+# --- King Richard's ransom ----------------------------------------------------
+
+## The chest appears once the band has lived enough legends to hear the news.
+func ransom_open() -> bool:
+	return stories_done.size() >= int(db.camp["ransom"]["legends"]) or castle_taken()
+
+
+## How many of the ransom's stages the chest has reached.
+func ransom_stage() -> int:
+	return db.camp["ransom"]["stages"].filter(func(s): return ransom >= int(s["at"])).size()
+
+
+func ransom_full() -> bool:
+	return ransom_stage() >= db.camp["ransom"]["stages"].size()
+
+
+## The most the band can put in now: its gold, and no more than the chest still needs.
+func ransom_room() -> int:
+	var stages: Array = db.camp["ransom"]["stages"]
+	return maxi(0, mini(gold, int(stages[-1]["at"]) - ransom))
+
+
+## Puts gold in the chest at camp. Returns the stages it reached, whose letters the camp reads out.
+func give_ransom(amount: int) -> Array:
+	amount = mini(amount, ransom_room())
+	if location != "camp" or not ransom_open() or amount <= 0 or not _spend(amount):
+		return []
+	var before: int = ransom_stage()
+	ransom += amount
+	var reached: Array = db.camp["ransom"]["stages"].slice(before, ransom_stage())
+	for st in reached:
+		reputation += int(st.get("reputation", 0))
+		_story_effects(st)
+		_news("%s: %s" % [st["name"], st["text"]])
+	if not reached.is_empty():
+		_update_wanted()
+	return reached
 
 
 ## Whether an evening or visitor can be told here: who it needs must be free in camp, and so on.
@@ -632,11 +672,16 @@ func legends() -> Array:
 
 
 ## True once the Sheriff has been driven out of Nottingham Castle.
-func finale_won() -> bool:
+func castle_taken() -> bool:
 	for id in stories_done:
 		if db.stories["stories"][id].get("finale", false):
 			return true
 	return false
+
+
+## The end of the tale: the Sheriff driven out of the castle and King Richard home, in either order.
+func finale_won() -> bool:
+	return castle_taken() and flags.has("richard_home")
 
 
 # --- Spending gold -----------------------------------------------------------
@@ -816,6 +861,9 @@ func bribe_jailer() -> bool:
 
 func _end_day(resting: bool, heal := true) -> void:
 	day += 1
+	if ransom_open() and not flags.has("ransom_news"):
+		flags.append("ransom_news")
+		_news(db.camp["ransom"]["opens"])
 	var band := free_heroes()
 	supplies += int(upgrade_sum("daily_supplies"))
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
@@ -1038,7 +1086,7 @@ func to_dict() -> Dictionary:
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
 		"band": band, "stories_done": stories_done, "story_retry": story_retry, "posted_wanted": posted_wanted, "poster_news": poster_news,
-		"ambush": ambush, "flags": flags, "teams": teams, "upgrades": upgrades, "boons": boons, "visitor": visitor, "visitor_until": visitor_until, "evening": evening}
+		"ambush": ambush, "flags": flags, "teams": teams, "upgrades": upgrades, "boons": boons, "ransom": ransom, "visitor": visitor, "visitor_until": visitor_until, "evening": evening}
 
 
 static func from_dict(game_data, data: Dictionary):
@@ -1056,6 +1104,7 @@ static func from_dict(game_data, data: Dictionary):
 	c.ambush = data.get("ambush", {})
 	c.upgrades = data.get("upgrades", [])
 	c.boons = data.get("boons", [])
+	c.ransom = int(data.get("ransom", 0))
 	c.teams = data.get("teams", [])
 	for t in c.teams:
 		t["back"] = int(t["back"])

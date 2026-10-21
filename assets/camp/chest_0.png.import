@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://sbmgpm2w2tqp"
-path="res://.godot/imported/lanterns.png-54cb9b8e72a82aff44c62b07ab21febb.ctex"
+uid="uid://dykcghgrnv2at"
+path="res://.godot/imported/chest_0.png-883b93ddb6719baefef4a3fc75cc15e4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/camp/lanterns.png"
-dest_files=["res://.godot/imported/lanterns.png-54cb9b8e72a82aff44c62b07ab21febb.ctex"]
+source_file="res://assets/camp/chest_0.png"
+dest_files=["res://.godot/imported/chest_0.png-883b93ddb6719baefef4a3fc75cc15e4.ctex"]
 
 [params]
 

@@ -1,20 +1,21 @@
 {
-  "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button; max: how many may be built, default 1, with \"more\" giving where the extra ones stand), shown in the camp scene at x,y (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
+  "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button; max: how many may be built, default 1, with \"more\" giving where the extra ones stand), shown in the camp scene with their feet at spot (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
   "visitor_chance": 0.3,
   "visitor_days": 3,
   "growth": {
-    "_doc": "The camp grows on its own as the campaign goes on: the feasting board once the band has board_band members, lanterns after lanterns_legends legends, Robin's banner after banner_legends, and a tent for every tent_per_men Merry Men (at tents, screen pixels).",
-    "board_band": 3, "lanterns_legends": 5, "banner_legends": 15, "banner": [118, 28],
-    "tent_per_men": 2, "tents": [[60, 102], [184, 94], [6, 138], [214, 100], [318, 96]]
+    "_doc": "The camp grows on its own as the campaign goes on: the feasting board once the band has board_band members, lanterns after lanterns_legends legends, Robin's banner after banner_legends, and a tent for every tent_per_men Merry Men. Spots are screen pixels where a thing's feet stand (y 0: the foot of the scene): the fire in the middle, the band around it (folk), the Merry Men in a row behind (men_row: y, from x, to x), the visitor.",
+    "board_band": 3, "lanterns_legends": 5, "banner_legends": 15, "board": [254, 178], "banner": [206, 166],
+    "tent_per_men": 2, "tents": [[24, 200], [336, 202], [300, 140], [62, 140], [342, 278]],
+    "fire": [180, 210], "folk": [[112, 214], [248, 214], [76, 236], [284, 236], [134, 252], [226, 252]], "men_row": [188, 110, 250], "visitor": [326, 0]
   },
   "upgrades": {
-    "lookout": {"name": "Lookout in the Oak", "short": "Lookout", "cost": 60, "x": 160, "y": 40, "text": "A platform high in the Major Oak. Sir Guy's raid plot grows more slowly.", "guy_per_day": -2},
-    "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "x": 4, "y": 84, "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
-    "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
-    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "x": 2, "y": 206, "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
-    "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
-    "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "x": 236, "y": 72, "more": [[150, 116], [258, 112]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
-    "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
+    "lookout": {"name": "Lookout in the Oak", "short": "Lookout", "cost": 60, "spot": [180, 96], "text": "A platform high in the Major Oak. Sir Guy's raid plot grows more slowly.", "guy_per_day": -2},
+    "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "spot": [236, 150], "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
+    "butts": {"name": "Archery Butts", "short": "Butts", "cost": 90, "spot": [334, 240], "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
+    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "spot": [28, 236], "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
+    "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "spot": [64, 0], "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
+    "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "spot": [54, 172], "more": [[306, 172], [116, 150]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
+    "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "spot": [180, 0], "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
   },
   "boons": {
     "_doc": "Lasting gifts from friends made in the legends (a tale's effects give \"boon\"). They add to the same effects as upgrades: atk, def, road_heal, lie_low, supply_price (gold off each bundle) and ambush (scales the bounty hunters' ambush chance).",
@@ -94,5 +95,11 @@
         {"label": "Hide him in Sherwood", "log": "He lives free in the greenwood now. Every village hears that Sherwood shelters the weak.", "effects": {"reputation": 3, "infamy": 2, "control": -2}},
         {"label": "Give him bread for the road", "log": "He hurries north with a full belly and a blessing.", "effects": {"supplies": -1, "reputation": 1}}
       ]}
-  }
+  },
+  "ransom": {"_doc": "King Richard's ransom: a chest at camp, opened once the band has lived 'legends' legends. The band puts in any of 'gifts' (gold) while at camp; reaching each stage's 'at' (total gold) reads its letter and applies its effects (story effects: control everywhere, infamy set, flags, free_captured, merry_man, supplies; plus reputation). The last stage brings the King home.", "legends": 10, "gifts": [50, 100, 250], "spot": [262, 0], "opens": "A pilgrim home from the Holy Land brings dreadful news: King Richard has been seized on his way home and is held for ransom in a German castle. Prince John will never pay it. The band sets an old oak chest by the fire. 'Then the greenwood will,' says Robin.", "stages": [
+    {"at": 150, "name": "A Queen's Thanks", "text": "A letter sealed with the royal arms reaches Sherwood. Queen Eleanor herself thanks the outlaws of the greenwood, and the news runs through every village in the shire.", "reputation": 6}, 
+    {"at": 350, "name": "The Barons Take Heart", "text": "Word of the chest spreads. Sir Richard at the Lee adds a sack of his own silver, and barons who feared Prince John begin to stand up to his Sheriff.", "reputation": 4, "control": -8}, 
+    {"at": 550, "name": "Guards for the Chest", "text": "Yeomen walk in from all over England to guard the King's ransom. One of them asks to stay for good.", "reputation": 4, "merry_man": "Gilbert of the White Hand"}, 
+    {"at": 800, "name": "A Ship Is Hired", "text": "A Hull merchant lends his fastest ship to carry the ransom across the sea. The Sheriff's men are too busy chasing rumours of gold to chase the band.", "reputation": 4, "control": -8, "plots": {"sheriff": -20, "guy": -20}}, 
+    {"at": 1000, "name": "The King Comes Home", "text": "The ransom sails, and King Richard is free! He rides into Sherwood in a plain green cloak, sits down at the band's fire and eats their venison. Then he stands and draws his sword. 'Kneel, Robin of Locksley.' Robin and every outlaw of the greenwood are pardoned, and the King names them his own friends.", "reputation": 20, "control": -15, "infamy": 0, "free_captured": true, "flags": ["richard_home"]}]}
 }

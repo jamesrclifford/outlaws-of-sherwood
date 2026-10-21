@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://0nggkfsu7hy5"
-path="res://.godot/imported/clearing.png-772e3fddeb779be4e5f97ef117fe778a.ctex"
+uid="uid://b108bq6lvm630"
+path="res://.godot/imported/chest_3.png-5dc5dd89ae9b8b7357b124c9abee6346.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/camp/clearing.png"
-dest_files=["res://.godot/imported/clearing.png-772e3fddeb779be4e5f97ef117fe778a.ctex"]
+source_file="res://assets/camp/chest_3.png"
+dest_files=["res://.godot/imported/chest_3.png-5dc5dd89ae9b8b7357b124c9abee6346.ctex"]
 
 [params]
 

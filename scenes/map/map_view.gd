@@ -293,6 +293,10 @@ func _next_tip() -> void:
 		due.append("villains")
 	if not c.captured.is_empty():
 		due.append("captured")
+	if c.wanted_level() >= 1:
+		due.append("wanted")
+	if c.ransom_open():
+		due.append("ransom")
 	for id in due:
 		var card = TipCard.show_once(self, id)
 		if card:
@@ -308,6 +312,7 @@ func _play(run) -> void:
 	if run == null:
 		return
 	var was_won: bool = campaign.finale_won()
+	var had_castle: bool = campaign.castle_taken()
 	var view := MissionView.new()
 	view.play(db, run)
 	view.done.connect(func(r):
@@ -318,6 +323,10 @@ func _play(run) -> void:
 			campaign.save()
 			_select(campaign.location)
 			_show_finale()
+		elif campaign.castle_taken() and not had_castle:
+			campaign.save()
+			_select(campaign.location)
+			_show_castle_taken()
 		else:
 			_after_day())
 	add_child(view)
@@ -347,12 +356,16 @@ func _show_team_pick(id: String) -> void:
 
 ## Major Oak Camp's own screen. Resting there ends the day, and the map takes over again.
 func _show_camp() -> void:
+	var was_won: bool = campaign.finale_won()
 	var view := CampView.new()
 	view.start(db, campaign)
 	view.armory = _show_armory
 	view.closed.connect(func(rested: bool):
 		view.queue_free()
-		if rested:
+		if campaign.finale_won() and not was_won:
+			_select(campaign.location)
+			_show_finale()
+		elif rested:
 			_after_day()
 		else:
 			_select(campaign.location))
@@ -370,8 +383,16 @@ func _show_poster() -> void:
 
 
 ## The end of the Sheriff's story. The campaign carries on afterwards.
+## The Sheriff is out of the castle, but the tale ends only when King Richard is home.
+func _show_castle_taken() -> void:
+	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt!", "",
+		"But Prince John still rules", "while King Richard is held", "across the sea.", "",
+		"Fill the ransom chest at camp", "to bring the King home."]
+	_notice("CASTLE WON", "NOTTINGHAM FALLS", lines, "robin", "Onward")
+
+
 func _show_finale() -> void:
-	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt, and the people", "of the shire are free.", "",
+	var lines := ["The Sheriff has fled Nottingham,", "King Richard is home, and", "his friends of the greenwood", "are free men for ever.", "",
 		"Your legend will be sung", "for a hundred years.", "", "(The greenwood still needs you.)"]
 	_notice("VICTORY", "SHERWOOD IS FREE", lines, "robin", "Play on")
 

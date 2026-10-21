@@ -1704,6 +1704,114 @@ def camp_banner():
     return c
 
 
+def camp_chest(stage):
+    """King Richard's ransom chest, lid open, with the gold heaped higher at each stage (5: full, with a crown)."""
+    c = Canvas(24, 22)
+    c.rect(3, 2, 20, 8, "#5a3d24")                 # the open lid behind
+    c.rect(4, 3, 19, 7, "#7a5232")
+    c.rect(3, 5, 20, 5, "#c8a040")
+    c.ellipse(12, 5, 2, 1, "#c0302a")              # the royal seal on the lid
+    heap = [0, 2, 4, 6, 8, 10][stage]
+    for i in range(heap):                          # gold rising out of the chest
+        y = 11 - i // 2
+        half = 8 - i // 2
+        c.rect(12 - half, y, 11 + half, y, "#e8c040" if i % 2 else "#c89a28")
+    for x, y in ((6, 11), (14, 10), (9, 9), (17, 11)) if stage >= 2 else ():
+        c.px(x, y - (stage - 2), "#fff0a0")
+    if stage == 5:
+        c.rect(9, 3, 14, 4, "#e8c040")             # a crown on top of the heap
+        for x in (9, 11, 12, 14):
+            c.px(x, 2, "#e8c040")
+        c.px(11, 3, "#c0302a")
+    c.rect(2, 11, 21, 20, "#7a5232")               # the chest itself
+    c.rect(2, 11, 21, 12, "#9a6a3a")
+    c.rect(2, 15, 21, 15, "#c8a040")
+    c.rect(6, 11, 7, 20, "#c8a040")
+    c.rect(16, 11, 17, 20, "#c8a040")
+    c.rect(11, 14, 12, 16, "#3a2a1a")
+    c.outline("#1e140c")
+    return c
+
+
+CAMP_FIRE = (90, 105)   # where the camp fire burns on the night clearing (screen: twice this)
+
+
+def camp_night():
+    """Major Oak Camp at night, like the title screen: stars, the oak black against the sky, a dark
+    clearing lit by a fire in the middle. The fire, the band and everything built stand on top."""
+    rng = random.Random(41)
+    c = new_backdrop()
+    c.gradient(0, 74, ["#12122c", "#1a1a3a", "#262248", "#342a54", "#46325a"])
+    for _ in range(45):
+        c.px(rng.randint(0, BW), rng.randint(0, 46), rng.choice(["#f4f0d8", "#a8a8c8", "#ffffff"]))
+    for y in range(4, 26):   # crescent moon
+        for x in range(140, 164):
+            if math.hypot(x - 152, y - 14) <= 8 and math.hypot(x - 155, y - 12) > 7:
+                c.px(x, y, "#f4ecc8")
+    for base, height, colour in ((60, 22, "#2a2240"), (72, 18, "#1e1830")):
+        phase = rng.random() * 9
+        for x in range(BW):
+            top = int(base - height * (0.6 + 0.25 * math.sin(x / 6 + phase) + 0.15 * math.sin(x / 2.7 + phase)))
+            for y in range(top, 80):
+                c.px(x, y, colour)
+    oak = "#120e1a"
+    c.rect(80, 14, 100, 78, oak)
+    for x0, y0, x1, y1 in ((84, 30, 40, 4), (96, 28, 140, 2), (88, 18, 90, -4), (82, 40, 22, 30), (98, 38, 160, 30)):
+        c.line(x0, y0, x1, y1, oak, 4)
+    for _ in range(55):
+        c.ellipse(rng.randint(14, 166), rng.randint(-8, 36), rng.randint(8, 18), rng.randint(5, 10), oak)
+    c.line(82, 76, 70, 82, oak, 3)                       # roots
+    c.line(98, 76, 110, 82, oak, 3)
+    c.gradient(76, BH - 1, ["#1c1a26", "#1a1a22", "#17171e", "#141419"])
+    speckle(c, 80, BH - 1, ["#22261e", "#1e2218", "#24202a"], rng, 0.05)
+    c.rect(80, 74, 100, 78, oak)
+    fx, fy = CAMP_FIRE
+    for r, a in ((70, 22), (50, 30), (32, 40), (18, 50)):   # firelight on the clearing
+        c.ellipse(fx, fy + 2, r, r * 0.42, (240, 140, 60, a))
+    return c
+
+
+def camp_lights(c):
+    """Lanterns strung through the oak's boughs, glowing."""
+    for i, x in enumerate(range(26, 158, 12)):
+        y = 30 + int(6 * math.sin((x - 26) / 132 * math.pi))
+        c.px(x, y - 1, "#3a2a1a")
+        c.ellipse(x, y + 1, 2, 2, (248, 200, 90, 70))
+        c.rect(x, y, x + 1, y + 1, "#f8d060" if i % 2 else "#f0b040")
+
+
+def camp_fire(frame):
+    """The camp fire: a ring of stones, crossed logs and flames (two frames to flicker)."""
+    c = Canvas(20, 18)
+    for x, y in ((2, 15), (6, 16), (10, 16), (14, 16), (17, 15), (4, 13), (16, 13)):
+        c.ellipse(x, y, 2, 1, "#5a5660")
+    c.line(3, 15, 16, 11, "#5a3420", 2)
+    c.line(3, 11, 16, 15, "#6a4028", 2)
+    flames = ((10, 9, 5, 7, "#c83a1a"), (10, 10, 4, 5, "#f08a2a"), (10, 11, 2, 3, "#f8d050"), (10, 12, 1, 1, "#fff4c0"))
+    for cx, cy, rx, ry, col in flames:
+        if frame:
+            cx += 1 if col in ("#f08a2a", "#fff4c0") else -1 if col == "#f8d050" else 0
+            cy -= 1
+        c.ellipse(cx, cy, rx, ry, col)
+    c.px(7 + frame * 5, 1 + frame, "#f8d050")              # a spark
+    return c
+
+
+def camp_board():
+    """The feasting board on trestles, laden with loaves, a roast, cheese and tankards."""
+    c = Canvas(38, 14)
+    c.rect(1, 5, 36, 7, "#8a6a40")
+    c.rect(1, 8, 36, 8, "#5a3d24")
+    for tx in (4, 32):
+        c.rect(tx, 9, tx + 1, 13, "#5a3d24")
+    for x, col in ((5, "#c8a060"), (12, "#a8603a"), (19, "#e8e0c8"), (26, "#c8a060"), (32, "#7a3a2a")):
+        c.ellipse(x, 3, 3, 2, col)
+    for x in (9, 23, 30):
+        c.rect(x, 1, x + 1, 4, "#9a9a92")
+    c.outline("#1e140c")
+    return c
+
+
 def camp_overlay(fn):
     """A backdrop-sized layer holding just one part of the camp (the board, the lanterns)."""
     c = Canvas(BW, BH)
@@ -1734,11 +1842,15 @@ def make_all():
     make_icon()
     for name, fn in CAMP.items():
         fn().save("assets", "camp", name + ".png")
-    bd_major_oak(board=False, lanterns=False).save("assets", "camp", "clearing.png")
-    camp_overlay(oak_board).save("assets", "camp", "board.png")
-    camp_overlay(oak_lanterns).save("assets", "camp", "lanterns.png")
     camp_tent().save("assets", "camp", "tent.png")
     camp_banner().save("assets", "camp", "banner.png")
+    for stage in range(6):
+        camp_chest(stage).save("assets", "camp", "chest_%d.png" % stage)
+    camp_night().save("assets", "camp", "night.png")
+    camp_overlay(camp_lights).save("assets", "camp", "lights.png")
+    camp_board().save("assets", "camp", "table.png")
+    for frame in range(2):
+        camp_fire(frame).save("assets", "camp", "fire_%d.png" % frame)
 
 
 if __name__ == "__main__":
