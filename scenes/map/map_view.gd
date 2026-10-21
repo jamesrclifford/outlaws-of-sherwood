@@ -27,6 +27,7 @@ var busy := false
 
 var status_label: Label
 var map_layer: Control
+var marian_token: TextureRect   # Maid Marian at home in camp, after the wedding
 var band_token: TextureRect
 var info_label: Label
 var buttons: GridContainer
@@ -77,6 +78,12 @@ func _build_layout() -> void:
 	add_child(map_layer)
 	for id in campaign.map["nodes"]:
 		_add_node_button(id)
+	marian_token = TextureRect.new()
+	marian_token.texture = BattleView.sprite_by_id("marian")
+	marian_token.size = Vector2(32, 32)
+	marian_token.position = _node_pos("camp") + TOKEN_OFFSET + Vector2(-26, 0)
+	marian_token.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_layer.add_child(marian_token)
 	band_token = TextureRect.new()
 	band_token.texture = preload("res://assets/sprites/robin.png")
 	band_token.size = Vector2(32, 32)
@@ -146,6 +153,7 @@ func _place_token(id: String) -> void:
 
 func _refresh() -> void:
 	var c = campaign
+	marian_token.visible = c.marian_home()
 	# The villains' plots fill up each day: at 100% the Sheriff baits a job; Guy may raid from 50%.
 	status_label.text = "Day %d  Gold %d  Rep %d%s\nSupplies %d (%d days)  Infamy %d\nSheriff's trap %d%%  Guy's raid %d%%%s" % [
 		c.day, c.gold, c.reputation, ("  Bounty %d" % c.bounty()) if c.wanted_level() > 0 else "", c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
@@ -161,6 +169,8 @@ func _refresh() -> void:
 				tag = "\n[LEGEND]"
 			else:
 				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
+			if m.has("marian"):
+				tag += "\n+ Maid Marian"
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 
@@ -175,6 +185,8 @@ func _select(id: String) -> void:
 	# Threat is the Sheriff's grip on the region plus half the band's infamy.
 	var lines := ["%s  Threat %d" % [n["name"], c.threat(id)],
 		"Sheriff's grip on %s: %d%%" % [c.map["regions"][n["region"]]["name"], c.control[n["region"]]]]
+	if id == "camp" and c.marian_home():
+		lines[1] = "Grip %d%%. Maid Marian lives here." % c.control[n["region"]]
 	var heroes_line := []
 	for h in c.free_heroes():
 		heroes_line.append("%s %d/%d" % [h.short_name(), h.hp, h.max_hp])

@@ -68,6 +68,7 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 		"intro": st["intro"],
 		"recruit": st["recruit"],
 		"arc": st.get("arc", false),
+		"guest": st.get("guest", ""),
 		"location": st["backdrop"],
 		"location_name": st["place"],
 		"threat": threat,
@@ -79,7 +80,56 @@ func story(story_id: String, threat: int, seed_value: int) -> Dictionary:
 	}
 
 
-## Turns any generated robbery into bait set by the given villain (used when a villain's plot comes due).
+## Maid Marian's visits of one kind ("help" or "trouble") that would change something on this job.
+static func marian_visits(game_db, m: Dictionary, kind: String) -> Array:
+	var fights: Array = m["nodes"].filter(func(n): return n.has("enemies"))
+	var out: Array = []
+	for id in game_db.marian["visits"]:
+		var v: Dictionary = game_db.marian["visits"][id]
+		if v["kind"] != kind:
+			continue
+		if v.has("remove_enemy") and not fights.any(func(n): return n["enemies"].size() >= 2):
+			continue
+		if v.has("add_enemy") and not fights.any(func(n): return n["enemies"].size() < 6):
+			continue
+		if v.get("reveal_traps", false) and not m["nodes"].any(func(n): return n.has("trap")) and m["bait"].is_empty():
+			continue
+		out.append(id)
+	return out
+
+
+## Maid Marian comes along on this job: she warns of traps, draws a guard away, patches the band up
+## or tips them off to a fatter purse, or else brings trouble on her heels. The briefing says which.
+## Once she lives in Sherwood (home) she comes from the camp rather than the castle.
+func add_marian(m: Dictionary, visit_id: String, home := false) -> void:
+	var v: Dictionary = db.marian["visits"][visit_id]
+	m["guest"] = "marian"
+	m["marian"] = visit_id
+	m["marian_text"] = v["text_home"] if home and v.has("text_home") else v["text"]
+	var fights: Array = m["nodes"].filter(func(n): return n.has("enemies"))
+	if v.has("remove_enemy"):
+		for n in fights:
+			if n["enemies"].size() >= 2:
+				n["enemies"].pop_back()
+				break
+	if v.has("add_enemy"):
+		for n in fights:
+			if n["enemies"].size() < 6:
+				n["enemies"].append(v["add_enemy"])
+				break
+	if v.get("reveal_traps", false):
+		for n in m["nodes"]:
+			if n.has("trap"):
+				n["trap"]["revealed"] = true
+		if not m["bait"].is_empty():
+			m["bait"]["revealed"] = true
+	if v.has("gold"):
+		m["rewards"]["gold"] = int(round(m["rewards"]["gold"] * (1.0 + float(v["gold"]))))
+	if v.has("heal"):
+		m["heal"] = float(v["heal"])
+
+
+## Turns any generated robbery set by the given villain (used when a villain's plot comes due).
 func make_bait(mission: Dictionary, by: String, hunted_hero: String) -> void:
 	for n in mission["nodes"]:
 		n.erase("trap")

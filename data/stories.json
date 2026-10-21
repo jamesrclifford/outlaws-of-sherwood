@@ -1,6 +1,124 @@
 {
   "start_band": ["robin"],
   "stories": {
+    "marian_page": {
+      "name": "Maid Marian in Disguise",
+      "node": "great_north_road",
+      "backdrop": "sherwood_edge",
+      "place": "the greenwood",
+      "arc": true,
+      "requires": {"band": ["will"], "reputation": 6},
+      "recruit": "",
+      "rewards": {"gold": 0, "reputation": 4},
+      "intro": "Long ago, before he was an outlaw, Robin loved Marian, a lady of Locksley. Since he fled to the greenwood she has missed him every day. Now a strange page boy rides into Sherwood with a sword at his side...",
+      "nodes": [
+        {"kind": "approach", "text": "A slim page in a blue cap blocks the forest path and draws a sword. 'Stand aside, outlaw! I seek Robin Hood, and I'll not be stopped by the likes of you.'"},
+        {"kind": "choice", "text": "Robin is in a ragged disguise of his own. The page doesn't know him.",
+          "options": [
+            {"label": "Draw your sword", "result": "next", "log": "'Then come and stop me, little page!' laughs Robin, and their blades ring together."},
+            {"label": "Ask the page's name", "result": "next", "log": "'My name is my own,' says the page, and swings. Robin has to draw or be beaten!"}
+          ]},
+        {"kind": "duel", "text": "Robin and the page fight up and down the path for a whole hour.", "party": ["robin"], "enemies": ["rival_marian"], "friendly": true,
+          "win": "Robin knocks the sword aside. The page cries out, and Robin knows that voice! Off comes the cap, and down tumbles a mane of auburn hair. It is Marian!",
+          "lose": "The page fights so well that Robin begs for mercy. 'Robin? Is that you?' Off comes the cap, and down tumbles a mane of auburn hair. It is Marian!"},
+        {"kind": "objective", "guest": "marian", "text": "That night there is a feast under the Major Oak. Marian will not stay in the forest: 'I can do more for you in the castle, as a lady of the court. I will be your eyes in Nottingham.' From now on, Marian may turn up on the band's jobs."}
+      ]
+    },
+    "marian_word": {
+      "name": "Word from the Castle",
+      "node": "nottingham",
+      "backdrop": "nottingham_market",
+      "place": "Nottingham market",
+      "arc": true,
+      "guest": "marian",
+      "requires": {"stories": ["marian_page"], "band": ["will"], "reputation": 12},
+      "recruit": "",
+      "rewards": {"gold": 30, "reputation": 5},
+      "effects": {"region_control": {"nottingham": -15}, "plots": {"sheriff": -40}},
+      "intro": "A basket of bread arrives at the Major Oak, and inside the biggest loaf is a note from Marian: the Sheriff is writing a new tax on every village in the shire. The tax rolls are kept in the castle.",
+      "nodes": [
+        {"kind": "approach", "text": "Robin and the band slip into Nottingham on market day. Marian waits by the well with an empty water jug."},
+        {"kind": "choice", "text": "'The tax rolls are in the steward's room,' whispers Marian. 'Without them, nobody can say who owes what.'",
+          "options": [
+            {"label": "Marian fetches them", "result": "next", "log": "Marian strolls past the guards as cool as you please and comes back with the rolls under her cloak."},
+            {"label": "Climb in the window", "result": "fight", "enemies": ["man_at_arms", "man_at_arms"], "log": "Will climbs in the steward's window... and finds two guards eating his dinner."}
+          ]},
+        {"kind": "combat", "text": "'Stop! Thieves!' The steward has missed his rolls, and the guards come running across the market.", "enemies": ["man_at_arms", "crossbowman", "man_at_arms"]},
+        {"kind": "objective", "text": "Marian drops the tax rolls into the castle kitchen fire. 'Oh dear,' she tells the steward sweetly. 'I thought they were kindling.' The new tax is forgotten, and the Sheriff's grip on Nottingham slips."}
+      ]
+    },
+    "marian_alms": {
+      "name": "Marian's Harvest Fair",
+      "node": "locksley",
+      "backdrop": "locksley",
+      "place": "Locksley village green",
+      "arc": true,
+      "guest": "marian",
+      "requires": {"stories": ["marian_word"], "band": ["little_john"], "reputation": 15},
+      "recruit": "",
+      "rewards": {"gold": 0, "reputation": 8},
+      "effects": {"control": -10},
+      "intro": "Marian has asked the Sheriff, very politely, to let her hold a harvest fair at Locksley 'for the poor dears.' The Sheriff agreed. He did not know who would be coming.",
+      "nodes": [
+        {"kind": "approach", "text": "Stalls of apples and pies fill the green. Marian, in her finest gown, welcomes the villagers, and a band of strangers in green hoods."},
+        {"kind": "choice", "text": "'The people need seed corn for next year,' says Marian. 'Can the band spare some gold?'",
+          "options": [
+            {"label": "Give 50 gold for seed corn", "result": "next", "pay": 50, "reputation": 4, "log": "Every family goes home with a sack of seed corn. 'Bless Robin Hood, and bless the Lady Marian!'"},
+            {"label": "Robin gives an archery show", "result": "next", "log": "Robin splits a willow wand at a hundred paces. The children cheer, and the fair is the happiest Locksley has seen in years."}
+          ]},
+        {"kind": "combat", "text": "Tax collectors push through the crowd. 'Half of everything here belongs to the Sheriff!'", "enemies": ["tax_collector", "tax_collector", "man_at_arms", "man_at_arms"]},
+        {"kind": "objective", "text": "The tax men run home without a penny. Word spreads through every village: the Lady Marian and Robin Hood stand together. All over the shire, the Sheriff's grip loosens."}
+      ]
+    },
+    "marian_taken": {
+      "name": "Marian in the Tower",
+      "node": "nottingham",
+      "backdrop": "castle_courtyard",
+      "place": "Nottingham Castle",
+      "arc": true,
+      "posted_news": "Sir Guy of Gisborne has found out who has been passing the castle's secrets. Maid Marian is locked in the tower, and Guy says he will marry her!",
+      "requires": {"stories": ["marian_word"], "band": ["little_john", "tuck"], "infamy": 30, "reputation": 18},
+      "toughness": 10,
+      "recruit": "",
+      "rewards": {"gold": 40, "reputation": 10},
+      "effects": {"plots": {"guy": -60}},
+      "intro": "Sir Guy has long wanted to marry Marian, and now he has her locked in the castle's west tower. The wedding is set for tomorrow. Marian has sent no word. She cannot.",
+      "nodes": [
+        {"kind": "approach", "text": "The band reaches the castle walls at midnight. A single candle burns at the top of the west tower."},
+        {"kind": "choice", "text": "How will the band get in?",
+          "options": [
+            {"label": "Dress as wedding monks", "result": "next", "log": "Tuck leads a line of very large 'monks' across the drawbridge, singing very badly. The guards let them in."},
+            {"label": "Climb the ivy", "result": "fight", "enemies": ["crossbowman", "crossbowman"], "log": "Halfway up the ivy, the band is spotted from the walls!"}
+          ]},
+        {"kind": "combat", "text": "Guards on the tower stair!", "enemies": ["man_at_arms", "man_at_arms", "crossbowman", "man_at_arms"]},
+        {"kind": "combat", "text": "At the top of the stair, Sir Guy himself blocks the door, sword drawn. 'She's mine, Hood!'", "enemies": ["guy", "knight", "man_at_arms"]},
+        {"kind": "objective", "guest": "marian", "text": "Marian is free! She grabs the bell rope, rings the castle bell to wake the whole town, and slides down it into the courtyard. 'Took you long enough,' she says, and kisses Robin."},
+        {"kind": "escape", "guest": "marian", "text": "Out through the gate before the garrison is awake!", "is_escape": true}
+      ]
+    },
+    "marian_wedding": {
+      "name": "Robin and Marian Wed",
+      "node": "edwinstowe",
+      "backdrop": "major_oak",
+      "place": "under the Major Oak",
+      "arc": true,
+      "guest": "marian",
+      "requires": {"stories": ["marian_taken", "marian_alms"], "band": ["tuck", "alan"]},
+      "recruit": "",
+      "rewards": {"gold": 50, "reputation": 12},
+      "effects": {"control": -5, "flags": ["marian_wed"]},
+      "intro": "Some say Robin and Marian were married in the little church at Edwinstowe, others under the Major Oak itself. Friar Tuck says it was both, and he should know, because he did it.",
+      "nodes": [
+        {"kind": "approach", "text": "The whole greenwood is hung with ribbons. Friar Tuck has polished his bald head until it shines."},
+        {"kind": "choice", "text": "Who will walk Marian to the oak?",
+          "options": [
+            {"label": "Little John", "result": "next", "log": "Little John walks Marian down the forest aisle, sniffing loudly the whole way."},
+            {"label": "Alan-a-Dale, singing", "result": "next", "reputation": 1, "log": "Alan-a-Dale leads her in with a song so lovely that even the birds stop to listen."}
+          ]},
+        {"kind": "combat", "text": "'I forbid it!' The Bishop of Hereford has come to spoil the wedding, with Sir Guy's men behind him.", "enemies": ["bishop", "knight", "man_at_arms", "man_at_arms"]},
+        {"kind": "objective", "text": "The Bishop runs off without his hat, and Friar Tuck marries Robin Hood and Maid Marian under the Major Oak. Marian leaves the castle for good and makes her home at Major Oak Camp. She still rides out on the band's jobs, and with the forest so close, she is a little more help than before."}
+      ]
+    },
     "will_meets_robin": {
       "name": "The Stranger in Scarlet",
       "node": "locksley",
@@ -160,7 +278,7 @@
       "requires": {"stories": ["hunters_hunted", "silver_arrow"], "band": ["little_john", "tuck", "will"], "reputation": 30},
       "recruit": "",
       "rewards": {"gold": 200, "reputation": 20},
-      "effects": {"infamy": 0, "control": -40, "free_captured": true},
+      "effects": {"infamy": 0, "control": -40, "free_captured": true, "reset_plots": true},
       "intro": "The Sheriff has filled his dungeon with villagers who could not pay the bounty tax. Thanks to Black Hob's secret, the band knows a way in. Tonight they storm Nottingham Castle!",
       "nodes": [
         {"kind": "approach", "text": "At dusk the band wades the dry moat and squeezes through the old sally port under the west wall."},

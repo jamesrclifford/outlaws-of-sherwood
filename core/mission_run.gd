@@ -149,6 +149,9 @@ func arrive() -> Dictionary:
 	var node := current_node()
 	if not _trap_decided:
 		_log(node["text"])
+		if node_index == 0 and mission.has("heal"):
+			for h in active_heroes():
+				h.hp = mini(h.max_hp, h.hp + int(round(h.max_hp * float(mission["heal"]))))
 	if node.has("trap") and not node["trap"].get("done", false):
 		if node["trap"]["revealed"] and not _trap_decided:
 			return {"type": "trap_choice", "trap": db.traps[node["trap"]["id"]]}
@@ -265,6 +268,14 @@ func _disarm_after_duel() -> void:
 			h.sprite = _duel_loadouts[h.id][2]
 			h.fixed_abilities = false
 	_duel_loadouts.clear()
+
+
+## Who stands with the band at this point of the job but doesn't fight (Maid Marian): a node may
+## say so itself (she only appears once freed from the tower), otherwise the whole job does.
+func guest() -> String:
+	if node_index < mission["nodes"].size() and current_node().has("guest"):
+		return current_node()["guest"]
+	return mission.get("guest", "")
 
 
 ## The scenery for where the band is now: a legend's node may move the scene (the Potter's fight
