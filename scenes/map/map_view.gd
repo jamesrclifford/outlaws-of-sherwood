@@ -171,7 +171,9 @@ func _select(id: String) -> void:
 	_refresh()
 	var c = campaign
 	var n: Dictionary = c.node(id)
-	var lines := ["%s  (%s, threat %d)" % [n["name"], c.map["regions"][n["region"]]["name"], c.threat(id)]]
+	# Threat is the Sheriff's grip on the region plus half the band's infamy.
+	var lines := ["%s  Threat %d" % [n["name"], c.threat(id)],
+		"Sheriff's grip on %s: %d%%" % [c.map["regions"][n["region"]]["name"], c.control[n["region"]]]]
 	var heroes_line := []
 	for h in c.free_heroes():
 		heroes_line.append("%s %d/%d" % [h.short_name(), h.hp, h.max_hp])
