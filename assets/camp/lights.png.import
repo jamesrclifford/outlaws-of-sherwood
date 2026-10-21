@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://0nggkfsu7hy5"
-path="res://.godot/imported/clearing.png-772e3fddeb779be4e5f97ef117fe778a.ctex"
+uid="uid://duja5tg5gn2vv"
+path="res://.godot/imported/lights.png-739e67fa64c29eb5c5952b0f407c9cb3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/camp/clearing.png"
-dest_files=["res://.godot/imported/clearing.png-772e3fddeb779be4e5f97ef117fe778a.ctex"]
+source_file="res://assets/camp/lights.png"
+dest_files=["res://.godot/imported/lights.png-739e67fa64c29eb5c5952b0f407c9cb3.ctex"]
 
 [params]
 

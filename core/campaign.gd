@@ -330,7 +330,7 @@ func ransom_full() -> bool:
 ## The most the band can put in now: its gold, and no more than the chest still needs.
 func ransom_room() -> int:
 	var stages: Array = db.camp["ransom"]["stages"]
-	return mini(gold, int(stages[-1]["at"]) - ransom)
+	return maxi(0, mini(gold, int(stages[-1]["at"]) - ransom))
 
 
 ## Puts gold in the chest at camp. Returns the stages it reached, whose letters the camp reads out.

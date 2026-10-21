@@ -249,6 +249,11 @@ func _init() -> void:
 		home.upgrades.append(id)
 	home.visitor = "pedlar"
 	home.visitor_until = home.day + 3
+	home.reputation = 50
+	home.location = "camp"
+	for i in 6:
+		home.hire_merry_man()
+	home.gold = 300
 	home_map._select("camp")
 	home_map._show_camp()
 	await _snap(dir, "camp")
@@ -260,12 +265,12 @@ func _init() -> void:
 	await _snap(dir, "camp_build")
 	# King Richard's ransom: the chest part full, and the King home once it is paid.
 	home.stories_done = cdb.stories["stories"].keys().slice(0, int(cdb.camp["ransom"]["legends"]))
-	home.ransom = 600
+	home.ransom = 400
 	home.gold = 420
 	cv._show_ransom("")
 	await _snap(dir, "ransom")
 	home.gold = 2000
-	home.ransom = 1200
+	home.ransom = 800
 	cv._give_ransom(2000)
 	await _snap(dir, "ransom_king")
 	cv._show_camp()

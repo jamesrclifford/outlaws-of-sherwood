@@ -1,4 +1,4 @@
-## Major Oak Camp: the band gathers under the great tree with whatever they have built around it.
+## Major Oak Camp at nightfall: the band gathers round the fire with whatever they have built around it.
 ## Here they rest (and spend the evening round the fire), build, hire men, buy supplies, visit the
 ## armory and hear out anyone who has come looking for Robin Hood.
 extends Control
@@ -12,6 +12,7 @@ const TipCard = preload("res://scenes/ui/tip_card.gd")
 
 const BUTTON_ROWS := 4
 const NIGHT := Color(0.38, 0.42, 0.72)
+const DUSK := Color(0.6, 0.6, 0.82)
 
 var db
 var campaign
@@ -19,6 +20,8 @@ var campaign
 var armory: Callable
 
 var scene_layer: Control
+var light_layer: Control
+var _frame := 0
 var backdrop: TextureRect
 var title_label: Label
 var text_label: Label
@@ -39,7 +42,7 @@ func _ready() -> void:
 	var h := Style.screen_height(self)
 	scene_h = clampf(h - 6 - BUTTON_ROWS * 40 - Style.lines(5) - 12, 300.0, 400.0)
 	var bg := ColorRect.new()
-	bg.color = Color("1a140e")
+	bg.color = Color("12122c")
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var clip := Control.new()
@@ -47,7 +50,7 @@ func _ready() -> void:
 	clip.size = Vector2(360, scene_h)
 	add_child(clip)
 	backdrop = TextureRect.new()
-	backdrop.texture = load("res://assets/camp/clearing.png")
+	backdrop.texture = load("res://assets/camp/night.png")
 	backdrop.size = Vector2(360, 440)
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
@@ -56,6 +59,15 @@ func _ready() -> void:
 	scene_layer.size = Vector2(360, scene_h)
 	scene_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip.add_child(scene_layer)
+	light_layer = Control.new()
+	light_layer.size = Vector2(360, scene_h)
+	light_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip.add_child(light_layer)
+	var flicker := Timer.new()
+	flicker.wait_time = 0.18
+	flicker.autostart = true
+	flicker.timeout.connect(_flicker)
+	add_child(flicker)
 	var shade := ColorRect.new()
 	shade.color = Color(0.08, 0.06, 0.04, 0.6)
 	shade.size = Vector2(360, 26)
@@ -98,72 +110,94 @@ func _sprite(tex: Texture2D, pos: Vector2, sz: Vector2, flip := false) -> Textur
 	return r
 
 
-## The camp itself: what has been built, the band (and Marian, once she lives here) and any visitor.
+## The camp itself at nightfall, like the title screen: the fire in the middle, the band round it,
+## the Merry Men behind, and everything built (and grown) in a ring at the edge of the firelight.
 func _draw_scene() -> void:
 	for ch in scene_layer.get_children():
 		ch.queue_free()
+	for ch in light_layer.get_children():
+		ch.queue_free()
 	var c = campaign
-	# What the camp has grown into on its own: the board, lanterns, tents for the men, Robin's banner.
 	var grow: Dictionary = db.camp["growth"]
+	# On taller phones the whole clearing sits lower, with more sky above the oak.
+	var oy: float = (scene_h - 300.0) / 2
+	backdrop.position.y = oy
+	var fire := Vector2(grow["fire"][0], grow["fire"][1] + oy)
+	var ground: float = minf(scene_h - 4, fire.y + 96)
+	# Everything stands with its feet at a spot; things further back are drawn first.
+	var items: Array = []
+	var place := func(tex: Texture2D, spot: Array, scale: float, flip: bool):
+		var sz: Vector2 = tex.get_size() * scale
+		var feet: float = ground if int(spot[1]) == 0 else float(spot[1]) + oy
+		items.append([feet, tex, Vector2(spot[0] - sz.x / 2, feet - sz.y), sz, flip])
 	if c.band.size() >= int(grow["board_band"]):
-		_sprite(load("res://assets/camp/board.png"), Vector2.ZERO, Vector2(360, 440))
-	if c.stories_done.size() >= int(grow["lanterns_legends"]):
-		_sprite(load("res://assets/camp/lanterns.png"), Vector2.ZERO, Vector2(360, 440))
+		place.call(load("res://assets/camp/table.png"), grow["board"], 2.0, false)
 	var tents: int = mini(grow["tents"].size(), ceili(c.merry_men.size() / float(grow["tent_per_men"])))
 	for i in tents:
-		_sprite(load("res://assets/camp/tent.png"), Vector2(grow["tents"][i][0], grow["tents"][i][1]), Vector2(44, 32))
+		place.call(load("res://assets/camp/tent.png"), grow["tents"][i], 2.0, false)
 	if c.stories_done.size() >= int(grow["banner_legends"]):
-		_sprite(load("res://assets/camp/banner.png"), Vector2(grow["banner"][0], grow["banner"][1]), Vector2(32, 80))
-	if c.ransom_open():
-		var chest: Texture2D = load("res://assets/camp/chest_%d.png" % c.ransom_stage())
-		_sprite(chest, Vector2(db.camp["ransom"]["x"], scene_h - 6 - chest.get_size().y * 2), chest.get_size() * 2)
+		place.call(load("res://assets/camp/banner.png"), grow["banner"], 2.0, false)
 	var count := {}
 	for id in c.upgrades:
 		var u: Dictionary = db.camp["upgrades"][id]
-		var tex: Texture2D = load("res://assets/camp/%s.png" % id)
 		var nth: int = count.get(id, 0)
 		count[id] = nth + 1
-		var pos := Vector2(u["x"], scene_h - 6 - tex.get_size().y * 2 if u.get("ground", false) else u["y"])
-		if nth > 0:
-			pos = Vector2(u["more"][nth - 1][0], u["more"][nth - 1][1])
-		_sprite(tex, pos, tex.get_size() * 2)
-	# The Merry Men stand in a row behind; the band (and Marian) gather in front, between the fire and the butts.
+		var spot: Array = u["spot"] if nth == 0 else u["more"][nth - 1]
+		place.call(load("res://assets/camp/%s.png" % id), [spot[0], 0] if u.get("ground", false) else spot, 2.0, false)
+	if c.ransom_open():
+		place.call(load("res://assets/camp/chest_%d.png" % c.ransom_stage()), db.camp["ransom"]["spot"], 2.0, false)
 	var free: Array = c.free_heroes()
-	var men: Array = free.filter(func(h): return c.merry_men.has(h.id)).map(func(h): return BattleView.sprite_for(h))
+	var men: Array = free.filter(func(h): return c.merry_men.has(h.id))
+	var row: Array = grow["men_row"]
+	for i in men.size():
+		var x: float = lerpf(row[1], row[2], 0.5 if men.size() == 1 else i / float(men.size() - 1))
+		place.call(BattleView.sprite_for(men[i]), [x, row[0] - (i % 2) * 6], 1.5, x > fire.x)
 	var folk: Array = free.filter(func(h): return not c.merry_men.has(h.id)).map(func(h): return BattleView.sprite_for(h))
 	if c.marian_home():
 		folk.insert(mini(1, folk.size()), BattleView.sprite_by_id("marian"))
-	var feet := minf(scene_h - 40, 290.0)
-	var back_step: float = minf(30.0, 220.0 / maxi(1, men.size()))
-	for i in men.size():
-		_sprite(men[i], Vector2(84 + i * back_step, feet - 64 - 40 - (i % 2) * 6), Vector2(56, 56))
-	var step: float = minf(44.0, 180.0 / maxi(1, folk.size()))
-	for i in folk.size():
-		_sprite(folk[i], Vector2(84 + i * step, feet - 64 - (i % 2) * 12), Vector2(64, 64))
+	for i in mini(folk.size(), grow["folk"].size()):
+		var spot: Array = grow["folk"][i]
+		place.call(folk[i], spot, 2.0, spot[0] > fire.x)
 	if c.visitor != "" and not night:
-		_sprite(BattleView.sprite_by_id(db.camp["visitors"][c.visitor]["sprite"]), Vector2(294, feet - 70), Vector2(64, 64), true)
+		place.call(BattleView.sprite_by_id(db.camp["visitors"][c.visitor]["sprite"]), grow["visitor"], 2.0, true)
+	items.sort_custom(func(a, b): return a[0] < b[0])
+	for it in items:
+		_sprite(it[1], it[2], it[3], it[4])
 	backdrop.modulate = NIGHT if night else Color.WHITE
-	scene_layer.modulate = NIGHT if night else Color.WHITE
-	if night:
-		# Firelight on the band from the cooking fire.
-		var glow := TextureRect.new()
-		var g := GradientTexture2D.new()
-		g.fill = GradientTexture2D.FILL_RADIAL
-		g.fill_from = Vector2(0.5, 0.5)
-		g.fill_to = Vector2(1.0, 0.5)
-		g.gradient = Gradient.new()
-		g.gradient.colors = PackedColorArray([Color(1.0, 0.6, 0.25, 0.45), Color(1.0, 0.5, 0.2, 0.0)])
-		glow.texture = g
-		glow.position = Vector2(-160, 20)
-		glow.size = Vector2(440, 320)
-		glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var add := CanvasItemMaterial.new()
-		add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		glow.material = add
-		glow.name = "Glow"
-		backdrop.get_parent().add_child(glow)
-	elif backdrop.get_parent().has_node("Glow"):
-		backdrop.get_parent().get_node("Glow").queue_free()
+	scene_layer.modulate = NIGHT if night else DUSK
+	# The lights are never dimmed: the lanterns in the oak, the fire and its glow on the band.
+	if c.stories_done.size() >= int(grow["lanterns_legends"]):
+		_light(load("res://assets/camp/lights.png"), Vector2(0, oy), Vector2(360, 440))
+	var glow := TextureRect.new()
+	var g := GradientTexture2D.new()
+	g.fill = GradientTexture2D.FILL_RADIAL
+	g.fill_from = Vector2(0.5, 0.5)
+	g.fill_to = Vector2(1.0, 0.5)
+	g.gradient = Gradient.new()
+	g.gradient.colors = PackedColorArray([Color(1.0, 0.6, 0.25, 0.5 if night else 0.35), Color(1.0, 0.5, 0.2, 0.0)])
+	glow.texture = g
+	glow.size = Vector2(340, 200)
+	glow.position = fire - glow.size / 2 - Vector2(0, 16)
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var add := CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	glow.material = add
+	light_layer.add_child(glow)
+	var flame := _light(load("res://assets/camp/fire_0.png"), fire - Vector2(20, 36), Vector2(40, 36))
+	flame.name = "Fire"
+
+
+func _light(tex: Texture2D, pos: Vector2, sz: Vector2) -> TextureRect:
+	var r := _sprite(tex, pos, sz)
+	r.reparent(light_layer, false)
+	return r
+
+
+## The fire flickers between its two frames.
+func _flicker() -> void:
+	if light_layer.has_node("Fire"):
+		_frame = 1 - _frame
+		light_layer.get_node("Fire").texture = load("res://assets/camp/fire_%d.png" % _frame)
 
 
 func _set_buttons(options: Array, columns := 2) -> void:
@@ -350,8 +384,9 @@ func _show_letter(reached: Array, i: int) -> void:
 	var st: Dictionary = reached[i]
 	_draw_scene()
 	if st == db.camp["ransom"]["stages"][-1]:
-		var feet := minf(scene_h - 40, 290.0)
-		_sprite(BattleView.sprite_by_id("king"), Vector2(294, feet - 70), Vector2(64, 64), true)
+		var v: Array = db.camp["growth"]["visitor"]
+		var feet: float = minf(scene_h - 4, db.camp["growth"]["fire"][1] + (scene_h - 300.0) / 2 + 96)
+		_sprite(BattleView.sprite_by_id("king"), Vector2(v[0] - 32, feet - 64), Vector2(64, 64), true)
 	Style.fit_text(text_label, "%s\n%s" % [st["name"].to_upper(), st["text"]])
 	if i + 1 < reached.size():
 		_set_buttons([["Read on", _show_letter.bind(reached, i + 1)]], 1)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dcg0xfdwhu116"
-path="res://.godot/imported/board.png-5562d6ba236935c876275446b10a7d80.ctex"
+uid="uid://dm74hr1x7d546"
+path="res://.godot/imported/fire_1.png-6a7e32430624d9f92e14f606578ed8bb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/camp/board.png"
-dest_files=["res://.godot/imported/board.png-5562d6ba236935c876275446b10a7d80.ctex"]
+source_file="res://assets/camp/fire_1.png"
+dest_files=["res://.godot/imported/fire_1.png-6a7e32430624d9f92e14f606578ed8bb.ctex"]
 
 [params]
 
