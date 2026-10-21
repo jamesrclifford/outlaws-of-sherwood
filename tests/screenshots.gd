@@ -11,6 +11,8 @@ const GameData = preload("res://core/game_data.gd")
 const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const Campaign = preload("res://core/campaign.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
+const Tips = preload("res://core/tips.gd")
 
 
 func _snap(dir: String, tag: String) -> void:
@@ -27,6 +29,10 @@ func _clear() -> void:
 
 func _init() -> void:
 	var dir: String = OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "user://"
+	# Tutorial tips stay out of the way except in their own shots.
+	TipCard.store = Tips.new("user://shot_tips.cfg")
+	TipCard.store.reset()
+	TipCard.store.enabled = false
 	root.add_child(load("res://scenes/menu/main_menu.tscn").instantiate())
 	await _snap(dir, "menu")
 	await _clear()
@@ -34,6 +40,18 @@ func _init() -> void:
 	var map := MapView.new()
 	root.add_child(map)
 	await _snap(dir, "map")
+	TipCard.store.enabled = true
+	map._next_tip()
+	await _snap(dir, "tip_map")
+	for ch in map.get_children():
+		if ch is TipCard:
+			ch._close()
+	await process_frame
+	await _snap(dir, "tip_legends")
+	for ch in map.get_children():
+		if ch is TipCard:
+			ch._close()
+	TipCard.store.enabled = false
 	map.campaign.stories_done = ["will_meets_robin", "little_john_bridge", "potter", "tinker", "beggar"]
 	map._show_legends()
 	await _snap(dir, "legends")
@@ -139,7 +157,14 @@ func _init() -> void:
 		var who: String = {"aim": "robin", "swing": "little_john", "rhythm": "will"}[kind]
 		var game := MinigameView.new()
 		game.start_move(7, kind, shot_db.abilities[move], who.capitalize(), who)
+		TipCard.store.enabled = kind == "aim"
 		root.add_child(game)
+		if kind == "aim":
+			await _snap(dir, "tip_aim")
+			for ch in game.get_children():
+				if ch is TipCard:
+					ch._close()
+			TipCard.store.enabled = false
 		await process_frame
 		game.t = 0.4
 		if kind == "rhythm":

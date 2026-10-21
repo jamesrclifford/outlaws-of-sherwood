@@ -7,6 +7,7 @@ const Campaign = preload("res://core/campaign.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
 
 const MAP_TOP := 80
 ## The bottom panel's least height: four lines of place info and five rows of buttons.
@@ -258,6 +259,25 @@ func _after_day() -> void:
 		_show_poster()
 	elif not campaign.ambush.is_empty():
 		_play(campaign.start_ambush())
+	else:
+		_next_tip()
+
+
+## The map's tutorial tips, one at a time, each when it first matters.
+func _next_tip() -> void:
+	var c = campaign
+	var due := ["map"]
+	if c.missions.values().any(func(m): return m["type"] == "story"):
+		due.append("legends")
+	if c.day >= 2:
+		due.append("villains")
+	if not c.captured.is_empty():
+		due.append("captured")
+	for id in due:
+		var card = TipCard.show_once(self, id)
+		if card:
+			card.closed.connect(_next_tip)
+			return
 
 
 func _start_job() -> void:

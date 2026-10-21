@@ -7,6 +7,7 @@ signal finished(battle)
 
 const GameData = preload("res://core/game_data.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
 const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
@@ -82,6 +83,7 @@ func _begin() -> void:
 	battle.status_added.connect(func(u, status): _anims.append(["status", u, status]))
 	_rebuild_units()
 	_advance()
+	TipCard.show_once(self, "battle")
 
 
 ## The field keeps the backdrop's height on tall phones; on short ones the panel takes room from it.

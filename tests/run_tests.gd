@@ -9,6 +9,7 @@ const Campaign = preload("res://core/campaign.gd")
 const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 ## The four heroes the older campaign tests were written for (a story campaign starts smaller).
+const Tips = preload("res://core/tips.gd")
 const BAND4 := ["robin", "little_john", "will", "tuck"]
 
 var failures := 0
@@ -18,6 +19,9 @@ var db
 
 func _init() -> void:
 	db = GameData.new()
+	# Screens built by the tests show no tutorial tips.
+	preload("res://scenes/ui/tip_card.gd").store = Tips.new("user://test_tips_off.cfg")
+	preload("res://scenes/ui/tip_card.gd").store.enabled = false
 	for m in get_method_list():
 		if m["name"].begins_with("test_") and (OS.get_environment("ONLY") == "" or m["name"].contains(OS.get_environment("ONLY"))):
 			call(m["name"])
@@ -710,6 +714,22 @@ func test_legend_scenes_move_with_the_story() -> void:
 	check(run.backdrop() == "nottingham_market", "the pots are sold at Nottingham market")
 	run.node_index = 3
 	check(run.backdrop() == "sherwood_edge", "and the Sheriff is caught deep in Sherwood")
+
+
+func test_tips_show_once_and_can_be_switched_off() -> void:
+	var path := "user://test_tips.cfg"
+	var t = Tips.new(path)
+	t.reset()
+	check(not t.take("battle").is_empty(), "the first fight brings its tip")
+	check(t.take("battle").is_empty(), "but only once")
+	check(Tips.new(path).take("battle").is_empty(), "even after the game restarts")
+	t.turn_off()
+	check(Tips.new(path).take("aim").is_empty(), "no more tips means none")
+	t.reset()
+	check(not Tips.new(path).take("battle").is_empty(), "and replaying the tips starts again")
+	for id in ["map", "legends", "villains", "mission", "battle", "aim", "swing", "rhythm", "captured"]:
+		check(t.tips.has(id), "there is a tip for %s" % id)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 func test_freeing_a_villager_says_what_it_did() -> void:
