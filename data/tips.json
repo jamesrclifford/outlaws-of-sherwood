@@ -9,6 +9,7 @@
     "swing": {"title": "A big swing", "text": "Tap when the white marker is in the gold, in the middle of the bar. Be quick: the green bar is your time."},
     "rhythm": {"title": "Quick cuts", "text": "Three fast cuts! Tap each time the marker passes the gold in the middle. Be quick: the green bar is your time."},
     "camp": {"title": "Major Oak Camp", "text": "Home! Rest the night to heal, and see what the evening brings. Spend gold to build up the camp: each thing you build helps the band for good. Visitors wait by the fire for a few days."},
+    "teams": {"title": "Sending a team", "text": "A band member can lead Merry Men on an ordinary job while Robin goes elsewhere. You don't play it: they come back in a few days with the gold, or someone is caught and needs rescuing. Merry Men fill the gaps in Robin's own party."},
     "captured": {"title": "Captured!", "text": "A captured hero waits in a cell. Send the band on the rescue job to free them, or bribe the jailer. Wait too long and they go to Nottingham's dungeon."}
   }
 }

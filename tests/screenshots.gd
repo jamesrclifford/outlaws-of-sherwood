@@ -257,4 +257,20 @@ func _init() -> void:
 	cv._rest()
 	await _snap(dir, "camp_evening")
 	await _clear()
+	# Sending a team of Merry Men off on a job, and the map while they are away.
+	home.reputation = 50
+	home.location = "camp"
+	for i in 3:
+		home.hire_merry_man()
+	var team_map := MapView.new()
+	team_map.start(cdb, home)
+	root.add_child(team_map)
+	var team_job: String = home.missions.keys().filter(func(n): return home.can_send_to(n))[0]
+	team_map._select(team_job)
+	team_map._show_team_pick(team_job)
+	await _snap(dir, "team_pick")
+	home.send_team("will", team_job)
+	team_map._select(team_job)
+	await _snap(dir, "team_away")
+	await _clear()
 	quit()

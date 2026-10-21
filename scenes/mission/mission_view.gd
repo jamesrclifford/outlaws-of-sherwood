@@ -261,7 +261,7 @@ func _show_briefing() -> void:
 		return
 	var m: Dictionary = run.mission
 	if m.has("rescue_heroes"):
-		var names: Array = m["rescue_heroes"].map(func(h): return db.heroes[h]["name"] if db.heroes.has(h) else "a Merry Man")
+		var names: Array = m["rescue_heroes"].map(func(h): return db.heroes[h]["name"] if db.heroes.has(h) else m.get("rescue_names", {}).get(h, "a Merry Man"))
 		run.mission_log.append("Briefing: %s held at %s. Break them out!" % [" and ".join(names), m["location_name"]])
 	elif m["type"] == "rescue":
 		run.mission_log.append("Briefing: the Sheriff has locked up a villager at %s. Free them! Reward: %d gold and %d reputation." % [m["location_name"], m["rewards"]["gold"], m["rewards"]["reputation"]])

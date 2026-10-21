@@ -273,9 +273,10 @@ func ambush(hunters: Array, place_name: String, backdrop: String, bounty: int, s
 
 ## Sir Guy rides out in force when his plot comes due: one very hard fight. Losing or running
 ## means he carries off one hero to Nottingham's dungeon.
-func guy_raid(place_name: String, backdrop: String, seed_value: int) -> Dictionary:
+## Guy brings riders to match the band: one more than its fighters, up to his whole troop (data/baits.json).
+func guy_raid(place_name: String, backdrop: String, seed_value: int, band_size := 5) -> Dictionary:
 	var g: Dictionary = db.baits["guy"]
-	var m := ambush(g["raid"], place_name, backdrop, 0, seed_value)
+	var m := ambush(g["raid"].slice(0, clampi(band_size + 1, 3, g["raid"].size())), place_name, backdrop, 0, seed_value)
 	m["name"] = "Gisborne's raid!"
 	m["raid"] = "guy"
 	m["prison"] = "nottingham"

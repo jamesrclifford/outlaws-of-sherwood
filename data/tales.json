@@ -21,6 +21,7 @@
     },
     "gamwell_christmas": {
       "name": "Christmas at Gamwell Hall",
+      "effects": {"supplies": 20},
       "node": "locksley",
       "backdrop": "locksley",
       "place": "Gamwell Hall",
@@ -40,6 +41,7 @@
     },
     "tanner": {
       "name": "Arthur a Bland the Tanner",
+      "effects": {"merry_man": "Arthur a Bland", "boon": "jerkins"},
       "node": "edwinstowe",
       "backdrop": "sherwood_edge",
       "place": "Deep in Sherwood, near Edwinstowe",
@@ -56,7 +58,7 @@
         {"kind": "duel", "text": "The tanner swings, and the oak leaves shake.", "party": ["robin"], "enemies": ["rival_tanner"], "friendly": true,
           "win": "Robin's staff whacks the tanner's knuckles. 'Ow! Fair hit!'",
           "lose": "THWACK! Robin sits down in the ferns, seeing stars. 'Hold your hand! I'll own you're the better man.'"},
-        {"kind": "objective", "text": "'Arthur a Bland is my name.' He promises to tan leather jerkins for the whole band, free of charge."}
+        {"kind": "objective", "text": "'Arthur a Bland is my name.' He joins the band, and tans leather jerkins for everyone, free of charge."}
       ]
     },
     "golden_prize": {
@@ -79,6 +81,7 @@
     },
     "tinker": {
       "name": "The Tinker's Warrant",
+      "effects": {"boon": "tinker"},
       "node": "edwinstowe",
       "backdrop": "locksley",
       "place": "The inn at Edwinstowe",
@@ -100,6 +103,7 @@
     },
     "pinder": {
       "name": "The Jolly Pinder of Wakefield",
+      "effects": {"merry_man": "George a Green"},
       "node": "locksley",
       "backdrop": "locksley",
       "place": "The cornfields of Wakefield",
@@ -116,11 +120,12 @@
         {"kind": "duel", "text": "The Pinder takes on both of them at once!", "party": ["robin", "will"], "enemies": ["rival_pinder"], "friendly": true,
           "win": "Robin and Will finally land him in the hedge. 'Well fought! Come and have bread and ale.'",
           "lose": "The Pinder plants his staff and laughs. 'Had enough? Then come and eat.'"},
-        {"kind": "objective", "text": "Over bread and ale the Pinder agrees to join the band at Michaelmas, when his year of service ends."}
+        {"kind": "objective", "text": "Over bread and ale George a Green, the Pinder, agrees to join the band."}
       ]
     },
     "much_miller": {
       "name": "Much the Miller's Son",
+      "effects": {"merry_man": "Much the Miller's Son"},
       "node": "blidworth",
       "backdrop": "locksley",
       "place": "Blidworth mill",
@@ -134,7 +139,7 @@
             {"label": "Hide in the flour sacks", "result": "sneak", "log": "Robin and Will climb into the flour sacks..."},
             {"label": "Stand in the mill door", "result": "fight", "enemies": ["tax_collector", "tax_collector", "man_at_arms"], "log": "'Put the miller's money back,' says Robin."}
           ]},
-        {"kind": "objective", "text": "The fine is paid back, and the villagers have flour for the winter. Much becomes the band's swiftest messenger."}
+        {"kind": "objective", "text": "The fine is paid back, and the villagers have flour for the winter. Much joins the band and becomes its swiftest messenger."}
       ]
     },
     "beggar": {
@@ -160,6 +165,7 @@
     },
     "shepherd": {
       "name": "Robin and the Shepherd",
+      "effects": {"boon": "shepherd"},
       "node": "blidworth",
       "backdrop": "great_north_road",
       "place": "The sheep meadows by Blidworth",
@@ -181,6 +187,7 @@
     },
     "ranger": {
       "name": "Robin and the Ranger",
+      "effects": {"boon": "ranger"},
       "node": "edwinstowe",
       "backdrop": "sherwood_edge",
       "place": "The King's deer park",
@@ -202,6 +209,7 @@
     },
     "bold_pedlar": {
       "name": "The Bold Pedlar",
+      "effects": {"merry_man": "Gamble Gold"},
       "node": "locksley",
       "backdrop": "great_north_road",
       "place": "The road out of Locksley",
@@ -218,7 +226,7 @@
         {"kind": "duel", "text": "Will against the pedlar, with Robin watching and eating an apple.", "party": ["will"], "enemies": ["rival_pedlar"], "friendly": true,
           "win": "Will spins the pedlar around until he sits down dizzy.",
           "lose": "The pedlar whacks Will's sword out of his hand. Robin laughs so hard he chokes on the apple."},
-        {"kind": "objective", "text": "'Gamble Gold is my name,' says the pedlar. 'I'm running from the Sheriff myself.' Robin knows the name: he's Robin's own cousin!"}
+        {"kind": "objective", "text": "'Gamble Gold is my name,' says the pedlar. 'I'm running from the Sheriff myself.' Robin knows the name: he's Robin's own cousin! Gamble joins the band."}
       ]
     },
     "poor_knight": {
@@ -243,6 +251,7 @@
     },
     "robins_larder": {
       "name": "Robin Hood's Larder",
+      "effects": {"supplies": 15},
       "node": "sherwood_edge",
       "backdrop": "sherwood_edge",
       "place": "The hollow oak called Robin Hood's Larder",
@@ -381,6 +390,7 @@
     },
     "scotsman": {
       "name": "Robin and the Scotsman",
+      "effects": {"merry_man": "The Scotsman"},
       "node": "sheriffs_toll_bridge",
       "backdrop": "sheriffs_toll_bridge",
       "place": "The Sheriff's toll bridge",
@@ -402,6 +412,7 @@
     },
     "three_pedlars": {
       "name": "Robin and the Three Pedlars",
+      "effects": {"boon": "pedlars"},
       "node": "sheriffs_toll_bridge",
       "backdrop": "great_north_road",
       "place": "The road by the toll bridge",
@@ -481,6 +492,7 @@
     },
     "knight_returns": {
       "name": "Sir Richard Keeps His Word",
+      "effects": {"boon": "bows"},
       "node": "blidworth",
       "backdrop": "locksley",
       "place": "The wrestling green at Wentbridge",
@@ -523,6 +535,7 @@
     },
     "will_stutly": {
       "name": "The Rescue of Will Stutly",
+      "effects": {"merry_man": "Will Stutly"},
       "node": "nottingham",
       "backdrop": "nottingham_gate",
       "place": "Nottingham gate",

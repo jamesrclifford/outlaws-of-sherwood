@@ -9,6 +9,7 @@ const MissionRun = preload("res://core/mission_run.gd")
 ## start_band and wins the others over through story missions.
 const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
+const LEGEND_INFAMY := 2          # infamy for each legend finished
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
 const STORY_RETRY := 3             # days before a legend the band failed or lost at the butts comes back
@@ -46,10 +47,12 @@ var poster_news := 0               # a new poster for the screen to show (its le
 var ambush := {}                   # bounty hunters waiting on the road, until the fight is played
 var flags: Array = []              # story choices that later stories depend on (Sir Richard's loan)
 var upgrades: Array = []           # camp improvements built (data/camp.json)
+var boons: Array = []              # lasting gifts from friends made in the legends (camp.json boons)
 var visitor := ""                  # someone waiting at camp to speak with the band
 var visitor_until := 0             # the last day they will wait
 var evening := ""                  # tonight's campfire evening, told when the band rests
 var evening_open := false          # tonight's evening still waits for the band's choice
+var teams: Array = []              # teams away on jobs: {leader, men, node, mission, back}
 var econ: Dictionary
 
 
@@ -111,13 +114,14 @@ func route(to: String) -> Array:
 	return path
 
 
-## Everyone in the band who isn't captured: the named heroes first, then hired Merry Men.
+## Everyone in the band who isn't captured or away with a team: the named heroes first, then hired Merry Men.
 func free_heroes() -> Array:
 	var ids: Array = band + merry_men.keys()
-	return ids.filter(func(h): return heroes.has(h) and not captured.has(h)).map(func(h): return heroes[h])
+	return ids.filter(func(h): return heroes.has(h) and not captured.has(h) and not is_away(h)).map(func(h): return heroes[h])
 
 
-## Who goes on the next job: the first five free members. Merry Men fill gaps left by captured heroes.
+## Who goes on the next job: the first five free members. Merry Men fill gaps left by heroes who are
+## captured or away leading a team.
 func party() -> Array:
 	return free_heroes().slice(0, PARTY_SIZE)
 
@@ -147,7 +151,7 @@ func travel(to: String) -> Array:
 ## Each night brings a campfire evening (see evening); one with options waits for choose_evening.
 func rest() -> void:
 	if location == "camp":
-		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]) * (1 + int(upgrade_sum("lie_low"))))
+		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]) - int(upgrade_sum("lie_low")))
 		supplies += int(upgrade_sum("rest_supplies"))
 		_tell_evening()
 		if marian_home():
@@ -157,13 +161,133 @@ func rest() -> void:
 		_end_day(true)
 
 
+# --- Teams -------------------------------------------------------------------------
+
+func is_away(hero_id: String) -> bool:
+	return teams.any(func(t): return t["leader"] == hero_id or t["men"].has(hero_id))
+
+
+func team_at(node_id: String) -> Dictionary:
+	for t in teams:
+		if t["node"] == node_id:
+			return t
+	return {}
+
+
+## Whether a team could take the job at this place: an ordinary robbery or rescue, nobody there yet.
+func can_send_to(node_id: String) -> bool:
+	if not missions.has(node_id) or not team_at(node_id).is_empty() or not ambush.is_empty():
+		return false
+	var m: Dictionary = missions[node_id]
+	return m["type"] in ["robbery", "rescue"] and not m.has("rescue_heroes") and not team_men().is_empty()
+
+
+## Who may lead a team: any free band member but Robin, who stays with the band.
+func team_leaders() -> Array:
+	return free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin").map(func(h): return h.id)
+
+
+## The free Merry Men who would go with a team, healthiest first.
+func team_men() -> Array:
+	var men: Array = free_heroes().filter(func(h): return merry_men.has(h.id))
+	men.sort_custom(func(a, b): return a.hp > b.hp)
+	return men.slice(0, int(econ["teams"]["max_men"])).map(func(h): return h.id)
+
+
+## The chance, 0-1, that this leader and the free Merry Men bring off the job at node_id.
+func team_odds(leader: String, node_id: String) -> float:
+	var t: Dictionary = econ["teams"]
+	var m: Dictionary = missions[node_id]
+	var who: Array = [leader] + team_men()
+	var odds := float(t["base"]) + float(t["per_member"]) * who.size() - float(t["per_threat"]) * int(m["threat"])
+	odds += float(_knack(leader).get("odds", 0))
+	for n in m["nodes"]:
+		if n.has("trap") and not n["trap"]["revealed"]:
+			odds -= float(t["trap"])
+	if not m["bait"].is_empty():
+		odds -= float(t["bait"])
+	var health := 0.0
+	for id in who:
+		health += float(heroes[id].hp) / heroes[id].max_hp
+	odds *= health / who.size()
+	return clampf(odds, float(t["min"]), float(t["max"]))
+
+
+## Sends a band member and the free Merry Men off to do the job at node_id on their own.
+## The job leaves the map; the team comes back with the result a few days later.
+func send_team(leader: String, node_id: String) -> bool:
+	if not can_send_to(node_id) or not team_leaders().has(leader):
+		return false
+	var men: Array = team_men()
+	var back: int = day + int(econ["teams"]["days"]) + route(node_id).size()
+	teams.append({"leader": leader, "men": men, "node": node_id, "mission": missions[node_id], "back": back,
+		"odds": team_odds(leader, node_id)})
+	missions.erase(node_id)
+	_news("%s leads %s to %s. They should be back by day %d." % [hero_name(leader),
+		" and ".join(men.map(func(h): return hero_name(h))), node(node_id)["name"], back])
+	return true
+
+
+func _teams_return() -> void:
+	for t in teams.duplicate():
+		if day >= int(t["back"]):
+			teams.erase(t)
+			_team_report(t)
+
+
+## What a leader is good at (data/economy.json teams.leaders), or nothing special.
+func _knack(leader: String) -> Dictionary:
+	return econ["teams"]["leaders"].get(leader, {})
+
+
+## The job is done or lost. Either way everyone comes home a bit battered, unless they were caught.
+func _team_report(t: Dictionary) -> void:
+	var m: Dictionary = t["mission"]
+	var region: String = node(t["node"])["region"]
+	var who: Array = [t["leader"]] + t["men"]
+	var place: String = node(t["node"])["name"]
+	var knack := _knack(t["leader"])
+	for id in who:
+		var u = heroes.get(id)
+		if u != null:
+			u.hp = maxi(1, u.hp - int(ceil(u.max_hp * float(econ["teams"]["hurt"]) * float(knack.get("hurt", 1.0)))))
+	if rng.randf() < float(t["odds"]):
+		var reward: Dictionary = m["rewards"]
+		var takings := int(round(int(reward.get("gold", 0)) * float(econ["teams"]["share"]) * float(knack.get("gold", 1.0))))
+		gold += takings
+		reputation += int(reward.get("reputation", 0)) + int(knack.get("reputation", 0))
+		if not m["bait"].is_empty():
+			infamy = mini(100, infamy + 3)
+			plots[m["bait"]["by"]] = maxi(0, plots[m["bait"]["by"]] - 30)
+		elif m["type"] == "robbery":
+			infamy = mini(100, infamy + 6)
+			control[region] = maxi(0, control[region] - 8)
+		else:
+			control[region] = maxi(0, control[region] - RESCUE_GRIP)
+			_villager_may_join()
+		_news("%s's team is back from %s: the job is done, and they bring %d gold." % [hero_name(t["leader"]), place, takings])
+		_update_wanted()
+		return
+	control[region] = mini(100, control[region] + 5)
+	reputation = maxi(0, reputation - 2)
+	var caught: String = t["leader"]
+	if not t["men"].is_empty() and rng.randf() >= float(econ["teams"]["leader_caught"]):
+		caught = t["men"][rng.randi_range(0, t["men"].size() - 1)]
+	var held_at: String = m.get("prison", t["node"])
+	captured[caught] = {"node": held_at, "since": day}
+	_news("%s's team failed at %s, and %s was captured! They are held at %s." % [hero_name(t["leader"]), place, hero_name(caught), node(held_at)["name"]])
+	_post_rescue(caught, held_at)
+
+
 # --- Major Oak Camp ------------------------------------------------------------
 
-## The total of one effect over every upgrade built (0 when none gives it).
+## The total of one effect over every upgrade built and every boon from the legends (0 when none gives it).
 func upgrade_sum(key: String) -> float:
 	var total := 0.0
 	for id in upgrades:
 		total += float(db.camp["upgrades"][id].get(key, 0))
+	for id in boons:
+		total += float(db.camp["boons"][id].get(key, 0))
 	return total
 
 
@@ -328,7 +452,7 @@ func _maybe_ambush() -> bool:
 	var level := wanted_level()
 	if level == 0 or location == "camp" or not ambush.is_empty() or free_heroes().is_empty():
 		return false
-	if rng.randf() >= float(econ["wanted"]["ambush_chance_per_level"]) * level:
+	if rng.randf() >= float(econ["wanted"]["ambush_chance_per_level"]) * level * (1.0 + upgrade_sum("ambush")):
 		return false
 	var n: Dictionary = node(location)
 	var backdrop: String = n.get("location", "sherwood_edge")
@@ -385,6 +509,8 @@ func finish_mission(run) -> void:
 					if db.disguises[id]["legend"] == m["story"]:
 						_news("New disguise learned from the legend: %s." % db.disguises[id]["name"])
 				_news("%s: the band's legend grows." % m["name"])
+				# Every tale told makes the Sheriff look foolish, and him keener to catch the band.
+				infamy = mini(100, infamy + LEGEND_INFAMY)
 				if run.recruited != "":
 					_join(run.recruited)
 					_news("%s joins the band!" % hero_name(run.recruited))
@@ -408,6 +534,7 @@ func finish_mission(run) -> void:
 				_news("The band escaped %s's trap." % db.baits[m["bait"]["by"]]["name"])
 			else:
 				control[region] = maxi(0, control[region] - RESCUE_GRIP)
+				_villager_may_join()
 		"failed":
 			control[region] = mini(100, control[region] + 5)
 			reputation = maxi(0, reputation - 2)
@@ -457,6 +584,33 @@ func _story_effects(effects: Dictionary) -> void:
 	if effects.get("reset_plots", false):
 		plots = {"sheriff": 0, "guy": 0}
 		hunted_hero = ""
+	supplies += int(effects.get("supplies", 0))
+	if effects.has("boon") and not boons.has(effects["boon"]):
+		boons.append(effects["boon"])
+		for h in heroes:
+			_apply_gear(h)
+		var b: Dictionary = db.camp["boons"][effects["boon"]]
+		_news("%s: %s" % [b["name"], b["text"]])
+	if effects.has("merry_man"):
+		_friend_joins(effects["merry_man"])
+
+
+## After freeing villagers, now and then one of them asks to come to Sherwood.
+func _villager_may_join() -> void:
+	var names: Array = econ["merry_men"]["names"].filter(func(n): return not merry_men.values().has(n))
+	if not names.is_empty() and merry_men.size() < men_max() and rng.randf() < float(econ["merry_men"]["join_from_rescue"]):
+		var who: String = names[rng.randi_range(0, names.size() - 1)]
+		_news("One of the freed villagers, %s, asks to join the band!" % who)
+		_add_merry_man(who)
+
+
+## Someone from a legend or a rescue asks to join. With no room in camp they go home a friend.
+func _friend_joins(who: String) -> void:
+	if merry_men.size() < men_max() and not merry_men.values().has(who):
+		_add_merry_man(who)
+	else:
+		reputation += 2
+		_news("%s would join the band, but there is no room at camp. They go home singing Robin's praises." % who)
 
 
 ## Maid Marian can visit the band's jobs once they have met, unless Sir Guy has her in the tower.
@@ -514,10 +668,15 @@ func can_buy_supplies() -> bool:
 
 
 func buy_supplies() -> bool:
-	if not can_buy_supplies() or not _spend(int(econ["supplies"]["price"])):
+	if not can_buy_supplies() or not _spend(supply_price()):
 		return false
 	supplies += int(econ["supplies"]["bundle"])
 	return true
+
+
+## The price of a bundle of supplies: the Tinker's friendship knocks some off.
+func supply_price() -> int:
+	return maxi(1, int(econ["supplies"]["price"]) - int(upgrade_sum("supply_price")))
 
 
 ## Days of food and arrows left for the whole band.
@@ -558,6 +717,7 @@ func _apply_gear(hero_id: String) -> void:
 			stats[k] += float(bonus[k])
 	var damage: int = u.max_hp - u.hp
 	stats["atk"] += upgrade_sum("atk")
+	stats["def"] += upgrade_sum("def")
 	u.max_hp = int(stats["hp"])
 	u.hp = maxi(1, u.max_hp - damage)
 	u.atk = int(stats["atk"])
@@ -583,12 +743,15 @@ func hire_merry_man() -> bool:
 	return true
 
 
-func _add_merry_man() -> void:
+## A new Merry Man: a hired name from the list, or someone from a legend by name.
+func _add_merry_man(who := "") -> void:
 	var names: Array = econ["merry_men"]["names"].filter(func(n): return not merry_men.values().has(n))
 	var id := "merry_man_%d" % (merry_men.size() + 1)
 	while heroes.has(id):
 		id += "_"
-	merry_men[id] = names[rng.randi_range(0, names.size() - 1)]
+	if who == "":
+		who = names[rng.randi_range(0, names.size() - 1)] if not names.is_empty() else "Merry Man %d" % (merry_men.size() + 1)
+	merry_men[id] = who
 	heroes[id] = _make_merry_man(id)
 	_news("%s joins the band." % merry_men[id])
 
@@ -597,6 +760,10 @@ func _make_merry_man(id: String):
 	var u = db.make_hero("merry_man")
 	u.id = id
 	u.name = merry_men[id]
+	# Will Stutly is "Stutly", so he isn't mistaken for Will Scarlet.
+	var taken: Array = heroes.keys().filter(func(h): return h != id).map(func(h): return heroes[h].short_name())
+	if taken.has(u.short_name()):
+		u.short = u.name.split(" ")[-1]
 	return u
 
 
@@ -673,6 +840,7 @@ func _end_day(resting: bool, heal := true) -> void:
 		_spawn_mission()
 	_maybe_post_contest()
 	_visitor_comes()
+	_teams_return()
 
 
 func _sheriff_acts() -> void:
@@ -700,7 +868,10 @@ func raid_chance() -> float:
 
 
 func _guy_acts() -> void:
-	plots["guy"] = mini(100, plots["guy"] + maxi(0, 5 + infamy / 8 + int(upgrade_sum("guy_per_day"))))
+	# Sir Guy takes no notice of a lone outlaw and a friend or two; he starts plotting once the band is a real band.
+	if band.size() < int(db.baits["guy"].get("band_from", 0)):
+		return
+	plots["guy"] = mini(100, plots["guy"] + maxi(0, 3 + infamy / 10 + int(upgrade_sum("guy_per_day"))))
 	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
@@ -712,7 +883,7 @@ func _guy_acts() -> void:
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
 		if ambush.is_empty() and not free_heroes().is_empty():
 			var n: Dictionary = node(location)
-			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi())
+			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi(), party().size())
 			ambush["hunted"] = hunted_hero
 			_news("Sir Guy of Gisborne rides out to raid the band!")
 
@@ -835,12 +1006,16 @@ func story_ready(id: String) -> bool:
 func _post_rescue(hero_id: String, at: String) -> void:
 	if missions.has(at) and missions[at].has("rescue_heroes"):
 		missions[at]["rescue_heroes"].append(hero_id)
+		if not missions[at].has("rescue_names"):
+			missions[at]["rescue_names"] = {}
+		missions[at]["rescue_names"][hero_id] = hero_name(hero_id)
 		missions[at]["name"] = "Rescue the prisoners"
 		return
 	var gen = MissionGen.new(db)
 	var extra := 25 if at == DUNGEON else 0
 	var m: Dictionary = gen.generate("rescue", mini(100, threat(at) + extra), rng.randi(), node(at)["location"], hunted_hero)
 	m["rescue_heroes"] = [hero_id]
+	m["rescue_names"] = {hero_id: hero_name(hero_id)}
 	m["expires"] = 0
 	m["name"] = "Rescue %s" % hero_name(hero_id)
 	missions[at] = m
@@ -863,7 +1038,7 @@ func to_dict() -> Dictionary:
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
 		"band": band, "stories_done": stories_done, "story_retry": story_retry, "posted_wanted": posted_wanted, "poster_news": poster_news,
-		"ambush": ambush, "flags": flags, "upgrades": upgrades, "visitor": visitor, "visitor_until": visitor_until, "evening": evening}
+		"ambush": ambush, "flags": flags, "teams": teams, "upgrades": upgrades, "boons": boons, "visitor": visitor, "visitor_until": visitor_until, "evening": evening}
 
 
 static func from_dict(game_data, data: Dictionary):
@@ -880,6 +1055,11 @@ static func from_dict(game_data, data: Dictionary):
 	c.poster_news = int(data.get("poster_news", 0))
 	c.ambush = data.get("ambush", {})
 	c.upgrades = data.get("upgrades", [])
+	c.boons = data.get("boons", [])
+	c.teams = data.get("teams", [])
+	for t in c.teams:
+		t["back"] = int(t["back"])
+		_fix_ints(t["mission"])
 	c.visitor = data.get("visitor", "")
 	c.visitor_until = int(data.get("visitor_until", 0))
 	c.evening = data.get("evening", "")
