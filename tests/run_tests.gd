@@ -1996,3 +1996,35 @@ func test_teams_go_out_on_their_own() -> void:
 	MissionGen.new(db).make_bait(bait, "sheriff", "")
 	c.missions["sherwood_edge"] = bait
 	check(c.team_odds("will", "sherwood_edge") < odds, "a bait job is a worse bet")
+
+
+func test_legend_friends_join_and_bring_gifts() -> void:
+	var db = GameData.new()
+	var c = Campaign.new(db, 5, Campaign.FULL_BAND)
+	var def: int = c.heroes["little_john"].def
+	c._story_effects(db.stories["stories"]["tanner"]["effects"])
+	check(c.merry_men.values().has("Arthur a Bland"), "Arthur a Bland joins the band by name")
+	check(c.boons.has("jerkins") and c.heroes["little_john"].def == def + 1, "and his jerkins toughen everyone up")
+	var price: int = c.supply_price()
+	c._story_effects(db.stories["stories"]["tinker"]["effects"])
+	check(c.supply_price() == price - 3, "the tinker makes supplies cheaper")
+	c._story_effects(db.stories["stories"]["will_stutly"]["effects"])
+	var stutly: String = c.merry_men.keys().filter(func(id): return c.merry_men[id] == "Will Stutly")[0]
+	check(c.heroes[stutly].short_name() != c.heroes["will"].short_name(), "Will Stutly isn't mixed up with Will Scarlet")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.boons == c.boons and copy.heroes["little_john"].def == def + 1, "gifts survive a save")
+	while c.merry_men.size() < c.men_max():
+		c._add_merry_man()
+	var rep: int = c.reputation
+	c._story_effects(db.stories["stories"]["scotsman"]["effects"])
+	check(not c.merry_men.values().has("The Scotsman") and c.reputation == rep + 2, "with no room, a friend goes home singing your praises")
+	for id in db.camp["boons"]:
+		if not id.begins_with("_"):
+			check(db.stories["stories"].values().any(func(st): return st.get("effects", {}).get("boon", "") == id), "%s is won in some legend" % id)
+	# Freed villagers sometimes join.
+	var joined := 0
+	for seed in 40:
+		var v = Campaign.new(db, seed, Campaign.FULL_BAND)
+		v._villager_may_join()
+		joined += v.merry_men.size()
+	check(joined > 3 and joined < 20, "now and then a freed villager joins (%d of 40)" % joined)

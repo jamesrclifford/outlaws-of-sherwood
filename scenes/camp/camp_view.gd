@@ -47,7 +47,7 @@ func _ready() -> void:
 	clip.size = Vector2(360, scene_h)
 	add_child(clip)
 	backdrop = TextureRect.new()
-	backdrop.texture = BattleView.backdrop_for("major_oak")
+	backdrop.texture = load("res://assets/camp/clearing.png")
 	backdrop.size = Vector2(360, 440)
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
@@ -103,6 +103,17 @@ func _draw_scene() -> void:
 	for ch in scene_layer.get_children():
 		ch.queue_free()
 	var c = campaign
+	# What the camp has grown into on its own: the board, lanterns, tents for the men, Robin's banner.
+	var grow: Dictionary = db.camp["growth"]
+	if c.band.size() >= int(grow["board_band"]):
+		_sprite(load("res://assets/camp/board.png"), Vector2.ZERO, Vector2(360, 440))
+	if c.stories_done.size() >= int(grow["lanterns_legends"]):
+		_sprite(load("res://assets/camp/lanterns.png"), Vector2.ZERO, Vector2(360, 440))
+	var tents: int = mini(grow["tents"].size(), ceili(c.merry_men.size() / float(grow["tent_per_men"])))
+	for i in tents:
+		_sprite(load("res://assets/camp/tent.png"), Vector2(grow["tents"][i][0], grow["tents"][i][1]), Vector2(44, 32))
+	if c.stories_done.size() >= int(grow["banner_legends"]):
+		_sprite(load("res://assets/camp/banner.png"), Vector2(grow["banner"][0], grow["banner"][1]), Vector2(32, 80))
 	var count := {}
 	for id in c.upgrades:
 		var u: Dictionary = db.camp["upgrades"][id]
@@ -113,17 +124,21 @@ func _draw_scene() -> void:
 		if nth > 0:
 			pos = Vector2(u["more"][nth - 1][0], u["more"][nth - 1][1])
 		_sprite(tex, pos, tex.get_size() * 2)
-	var folk: Array = c.free_heroes().map(func(h): return BattleView.sprite_for(h))
+	# The Merry Men stand in a row behind; the band (and Marian) gather in front, between the fire and the butts.
+	var free: Array = c.free_heroes()
+	var men: Array = free.filter(func(h): return c.merry_men.has(h.id)).map(func(h): return BattleView.sprite_for(h))
+	var folk: Array = free.filter(func(h): return not c.merry_men.has(h.id)).map(func(h): return BattleView.sprite_for(h))
 	if c.marian_home():
-		folk.insert(1, BattleView.sprite_by_id("marian"))
-	var shown: Array = folk.slice(0, 7)
-	# The band gathers between the fire and the archery butts.
-	var step: float = minf(44.0, 180.0 / maxi(1, shown.size()))
+		folk.insert(mini(1, folk.size()), BattleView.sprite_by_id("marian"))
 	var feet := minf(scene_h - 40, 290.0)
-	for i in shown.size():
-		_sprite(shown[i], Vector2(84 + i * step, feet - 64 - (i % 2) * 12), Vector2(64, 64))
+	var back_step: float = minf(30.0, 220.0 / maxi(1, men.size()))
+	for i in men.size():
+		_sprite(men[i], Vector2(84 + i * back_step, feet - 64 - 40 - (i % 2) * 6), Vector2(56, 56))
+	var step: float = minf(44.0, 180.0 / maxi(1, folk.size()))
+	for i in folk.size():
+		_sprite(folk[i], Vector2(84 + i * step, feet - 64 - (i % 2) * 12), Vector2(64, 64))
 	if c.visitor != "" and not night:
-		_sprite(BattleView.sprite_by_id(db.camp["visitors"][c.visitor]["sprite"]), Vector2(6, feet - 70), Vector2(64, 64), true)
+		_sprite(BattleView.sprite_by_id(db.camp["visitors"][c.visitor]["sprite"]), Vector2(294, feet - 70), Vector2(64, 64), true)
 	backdrop.modulate = NIGHT if night else Color.WHITE
 	scene_layer.modulate = NIGHT if night else Color.WHITE
 	if night:
@@ -169,7 +184,7 @@ func _show_camp(message := "") -> void:
 	var c = campaign
 	_draw_scene()
 	title_label.text = "Major Oak Camp  -  Day %d" % c.day
-	var lines := ["Gold %d   Supplies %d   Men %d/%d" % [c.gold, c.supplies, c.merry_men.size(), c.men_max()]]
+	var lines := ["Gold %d   Supplies %d" % [c.gold, c.supplies], _progress()]
 	if message != "":
 		lines.append(message)
 	elif c.visitor != "":
@@ -187,9 +202,71 @@ func _show_camp(message := "") -> void:
 	elif c.merry_men.size() < c.men_max():
 		opts.append(["Men join: %d rep" % mm["min_reputation"], func(): pass, false])
 	var sup: Dictionary = c.econ["supplies"]
-	opts.append(["Supplies %d (%dg)" % [sup["bundle"], sup["price"]], _do.bind(c.buy_supplies)])
+	opts.append(["Supplies %d (%dg)" % [sup["bundle"], c.supply_price()], _do.bind(c.buy_supplies)])
+	opts.append(["Camp ledger", _show_ledger])
 	opts.append(["Back to the map", func(): closed.emit(false)])
 	_set_buttons(opts)
+
+
+## How far the camp has come: what's built, the Merry Men and the gifts from the legends.
+func _progress() -> String:
+	var c = campaign
+	var ups: Dictionary = db.camp["upgrades"]
+	var most := 0
+	for id in ups:
+		most += int(ups[id].get("max", 1))
+	return "Built %d/%d   Men %d/%d   Gifts %d/%d" % [c.upgrades.size(), most, c.merry_men.size(), c.men_max(),
+		c.boons.size(), db.camp["boons"].keys().filter(func(k): return not k.begins_with("_")).size()]
+
+
+## A page listing everything the camp has: buildings, Merry Men and the legends' gifts.
+func _show_ledger() -> void:
+	var c = campaign
+	var page := Control.new()
+	page.set_anchors_preset(Control.PRESET_FULL_RECT)
+	page.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(page)
+	var h := Style.screen_height(self)
+	page.add_child(Style.panel(Vector2(0, 0), Vector2(360, h)))
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(10, 10)
+	scroll.size = Vector2(340, h - 64)
+	page.add_child(scroll)
+	var text := Label.new()
+	text.custom_minimum_size = Vector2(326, 0)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	scroll.add_child(text)
+	var out := ["CAMP LEDGER", _progress(), "", "BUILT"]
+	var ups: Dictionary = db.camp["upgrades"]
+	for id in ups:
+		var n: int = c.built(id)
+		if n > 0:
+			out.append("%s%s: %s" % [ups[id]["name"], " x%d" % n if n > 1 else "", ups[id]["text"]])
+	if c.upgrades.is_empty():
+		out.append("Nothing yet. Spend gold on Build.")
+	out += ["", "MERRY MEN"]
+	for id in c.merry_men:
+		var where := ""
+		if c.captured.has(id):
+			where = " (captured)"
+		elif c.is_away(id):
+			where = " (away with a team)"
+		out.append(c.merry_men[id] + where)
+	if c.merry_men.is_empty():
+		out.append("None yet. Hire them at camp, free villagers, or meet them in the legends.")
+	out += ["", "GIFTS FROM THE LEGENDS"]
+	for id in c.boons:
+		out.append("%s: %s" % [db.camp["boons"][id]["name"], db.camp["boons"][id]["text"]])
+	var left: int = db.camp["boons"].keys().filter(func(k): return not k.begins_with("_") and not c.boons.has(k)).size()
+	if left > 0:
+		out.append("%d more to win in the legends." % left)
+	text.text = "\n".join(out)
+	var back := Button.new()
+	back.text = "Back"
+	back.position = Vector2(8, h - 48)
+	back.size = Vector2(344, 40)
+	back.pressed.connect(page.queue_free)
+	page.add_child(back)
 
 
 func _do(action: Callable) -> void:

@@ -7,8 +7,9 @@
   "informant": {"base": 15, "per_threat": 0.3},
   "jailer": {"base": 50, "per_prisoner": 20, "dungeon_multiplier": 2},
   "merry_men": {
-    "price": 50, "min_reputation": 10, "max": 4,
-    "names": ["Gilbert Whitehand", "Wat the Tinker", "Midge", "Bartholomew", "Old Reynold", "Simon of the Lea", "Hob o' the Hill", "Ralph Longshanks"]
+    "price": 50, "min_reputation": 10, "max": 4, "join_from_rescue": 0.25,
+    "names": ["Gilbert Whitehand", "Wat the Tinker", "Midge", "Bartholomew", "Old Reynold", "Simon of the Lea", "Hob o' the Hill", "Ralph Longshanks",
+      "Tom o' the Lea", "Dickon Fletcher", "Jack Fisher", "Hal the Smith", "Nat Cooper", "Edwin Brook", "Ned the Swineherd", "Watkin Low"]
   },
   "teams": {
     "_doc": "A band member (never Robin) can lead Merry Men on an ordinary job away from the band. The odds: base + per_member for each in the team, less per_threat for each point of threat, trap for each trap nobody knows of and bait for a bait job, plus the leader's odds, times the team's health, kept between min and max. Each leader has a knack (leaders): more gold, fewer wounds (hurt scales the damage) or more reputation; note is its tag on the leader's button. The team is gone days (plus the road there); a lost job sends one of them to the cells, the leader with leader_caught chance.",

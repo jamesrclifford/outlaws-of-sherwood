@@ -237,7 +237,7 @@ func _select(id: String) -> void:
 			opts.append(["Enter camp", _show_camp])
 		elif c.can_buy_supplies():
 			var sup: Dictionary = c.econ["supplies"]
-			opts.append(["Supplies %d (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
+			opts.append(["Supplies %d (%dg)" % [sup["bundle"], c.supply_price()], _act.bind(c.buy_supplies)])
 	else:
 		opts.append(["Travel (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
 	if c.can_send_to(id):

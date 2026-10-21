@@ -637,8 +637,9 @@ def bd_archery_contest():
     return c
 
 
-def bd_major_oak():
-    """The band's home under the Major Oak: the great tree, a cooking fire and a long feasting board."""
+def bd_major_oak(board=True, lanterns=True):
+    """The band's home under the Major Oak: the great tree, a cooking fire and a long feasting board.
+    The camp scene starts from the bare clearing and adds the board and lanterns as the band grows."""
     rng = random.Random(20)
     c = new_backdrop()
     c.gradient(0, HORIZON, ["#e8c070", "#c8a860", "#7a8a48", "#4f6a36"])
@@ -664,15 +665,8 @@ def bd_major_oak():
     speckle(c, HORIZON, BH - 1, ["#7a9a46", "#3a5426", "#8a7a4a"], rng, 0.07)
     c.rect(54, HORIZON, 86, HORIZON + 8, "#4a3322")
     c.rect(76, HORIZON, 86, HORIZON + 8, "#33231a")
-    # the feasting board on trestles, laden
-    c.rect(104, HORIZON + 10, 172, HORIZON + 13, "#8a6a40")
-    c.rect(104, HORIZON + 14, 172, HORIZON + 14, "#5a3d24")
-    for tx in (108, 166):
-        c.rect(tx, HORIZON + 15, tx + 1, HORIZON + 22, "#5a3d24")
-    for x, col in ((110, "#c8a060"), (122, "#a8603a"), (134, "#e8e0c8"), (146, "#c8a060"), (158, "#7a3a2a")):
-        c.ellipse(x, HORIZON + 8, 4, 2, col)            # loaves, a roast, cheese, pies
-    for x in (116, 140, 164):
-        c.rect(x, HORIZON + 5, x + 1, HORIZON + 9, "#9a9a92")   # tankards
+    if board:
+        oak_board(c)
     # cooking fire with a spit
     fx, fy = 30, HORIZON + 30
     for i in range(-6, 7, 3):
@@ -685,11 +679,29 @@ def bd_major_oak():
     c.ellipse(fx, fy - 12, 5, 2, "#a8603a")
     for y in range(fy - 30, fy - 14, 3):                # smoke
         c.px(fx + (y % 5) - 2, y, (220, 220, 210, 90))
-    for x in range(0, BW, 23):   # lanterns strung from the boughs
-        c.px(x + 4, 30 + (x % 3), "#3a2a1a")
-        c.rect(x + 3, 31 + (x % 3), x + 5, 33 + (x % 3), "#f0c050")
+    if lanterns:
+        oak_lanterns(c)
     grass_tufts(c, rng, HORIZON + 6, BH - 2, 50, ["#7aa046", "#8ab24e"])
     return c
+
+
+def oak_board(c):
+    """The feasting board on trestles, laden."""
+    c.rect(104, HORIZON + 10, 172, HORIZON + 13, "#8a6a40")
+    c.rect(104, HORIZON + 14, 172, HORIZON + 14, "#5a3d24")
+    for tx in (108, 166):
+        c.rect(tx, HORIZON + 15, tx + 1, HORIZON + 22, "#5a3d24")
+    for x, col in ((110, "#c8a060"), (122, "#a8603a"), (134, "#e8e0c8"), (146, "#c8a060"), (158, "#7a3a2a")):
+        c.ellipse(x, HORIZON + 8, 4, 2, col)            # loaves, a roast, cheese, pies
+    for x in (116, 140, 164):
+        c.rect(x, HORIZON + 5, x + 1, HORIZON + 9, "#9a9a92")   # tankards
+
+
+def oak_lanterns(c):
+    """Lanterns strung from the boughs."""
+    for x in range(0, BW, 23):
+        c.px(x + 4, 30 + (x % 3), "#3a2a1a")
+        c.rect(x + 3, 31 + (x % 3), x + 5, 33 + (x % 3), "#f0c050")
 
 
 def bd_nottingham_market():
@@ -1663,6 +1675,42 @@ def camp_paths():
     return c
 
 
+def camp_tent():
+    """A Merry Man's tent of Lincoln green, with its flap tied back."""
+    c = Canvas(22, 16)
+    for y in range(1, 15):
+        half = y * 10 // 14
+        c.rect(11 - half, y, 11 + half, y, "#3a6a2c" if y % 4 else "#2e5a24")
+    for y in range(6, 15):
+        half = (y - 6) * 3 // 8
+        c.rect(11 - half, y, 11 + half, y, "#1e2a14")
+    c.line(11, 0, 11, 2, "#5a3d24")
+    c.rect(0, 15, 21, 15, "#4a3a22")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_banner():
+    """Robin Hood's banner on a tall pole: a white arrow on Lincoln green."""
+    c = Canvas(16, 40)
+    c.rect(1, 0, 2, 39, "#5a3d24")
+    c.rect(3, 2, 14, 16, "#2e6a2a")
+    c.rect(3, 15, 14, 16, "#1e4a1c")
+    c.line(5, 13, 12, 5, "#f0f0e0")
+    c.rect(11, 4, 12, 6, "#f0f0e0")
+    c.px(5, 12, "#c8a868")
+    c.px(6, 13, "#c8a868")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_overlay(fn):
+    """A backdrop-sized layer holding just one part of the camp (the board, the lanterns)."""
+    c = Canvas(BW, BH)
+    fn(c)
+    return c
+
+
 CAMP = {
     "lookout": camp_lookout,
     "larder": camp_larder,
@@ -1686,6 +1734,11 @@ def make_all():
     make_icon()
     for name, fn in CAMP.items():
         fn().save("assets", "camp", name + ".png")
+    bd_major_oak(board=False, lanterns=False).save("assets", "camp", "clearing.png")
+    camp_overlay(oak_board).save("assets", "camp", "board.png")
+    camp_overlay(oak_lanterns).save("assets", "camp", "lanterns.png")
+    camp_tent().save("assets", "camp", "tent.png")
+    camp_banner().save("assets", "camp", "banner.png")
 
 
 if __name__ == "__main__":

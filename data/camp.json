@@ -2,14 +2,28 @@
   "_doc": "Major Oak Camp. upgrades: bought once with gold (short: the name on the build button; max: how many may be built, default 1, with \"more\" giving where the extra ones stand), shown in the camp scene at x,y (screen pixels; ground ones stand at the foot of the scene); their effects last for the rest of the campaign. evenings: one is told each time the band rests (needs: heroes free in camp; flags; upgrade; captured: someone is held; merry_men: hired men; guy_plot: Guy's raid plot at least this). visitors: someone may come to camp each day and waits visitor_days for the band to speak with them. Effects: gold, supplies, reputation, infamy, plots, control (Sherwood), reveal (traps and baits on every job), spawn (a job of that type), merry_man (a man joins free if there is room). Options may cost gold.",
   "visitor_chance": 0.3,
   "visitor_days": 3,
+  "growth": {
+    "_doc": "The camp grows on its own as the campaign goes on: the feasting board once the band has board_band members, lanterns after lanterns_legends legends, Robin's banner after banner_legends, and a tent for every tent_per_men Merry Men (at tents, screen pixels).",
+    "board_band": 3, "lanterns_legends": 5, "banner_legends": 15, "banner": [118, 28],
+    "tent_per_men": 2, "tents": [[60, 102], [184, 94], [6, 138], [214, 100], [318, 96]]
+  },
   "upgrades": {
     "lookout": {"name": "Lookout in the Oak", "short": "Lookout", "cost": 60, "x": 160, "y": 40, "text": "A platform high in the Major Oak. Sir Guy's raid plot grows more slowly.", "guy_per_day": -2},
     "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "x": 4, "y": 84, "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
     "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
-    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "x": 292, "y": 176, "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
+    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "x": 2, "y": 206, "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
     "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
     "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "x": 236, "y": 72, "more": [[150, 116], [258, 112]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
     "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
+  },
+  "boons": {
+    "_doc": "Lasting gifts from friends made in the legends (a tale's effects give \"boon\"). They add to the same effects as upgrades: atk, def, road_heal, lie_low, supply_price (gold off each bundle) and ambush (scales the bounty hunters' ambush chance).",
+    "jerkins": {"name": "Arthur a Bland's jerkins", "text": "Tanned leather jerkins for everyone: +1 defence.", "def": 1},
+    "tinker": {"name": "The Tinker's pots", "text": "He mends the band's pots and kettles for life: supplies cost 3 gold less.", "supply_price": 3},
+    "shepherd": {"name": "The Shepherd's warnings", "text": "He warns the band when riders cross his meadows: half as many ambushes on the road.", "ambush": -0.5},
+    "ranger": {"name": "The Ranger's blind eye", "text": "He looks the other way: lying low cools infamy faster.", "lie_low": 1},
+    "pedlars": {"name": "The Pedlars' herbs", "text": "Healing herbs at half price: heroes heal faster on the road.", "road_heal": 0.1},
+    "bows": {"name": "Sir Richard's bows", "text": "A hundred fine bows from Castle Lee: +1 attack.", "atk": 1}
   },
   "evenings": {
     "alan_song": {"needs": ["alan"], "text": "Alan-a-Dale tunes his harp and sings a new ballad: 'A Gest of Robyn Hode'. Charcoal burners hiding in the trees creep closer to listen, and carry the song home to their villages.", "effects": {"reputation": 1}},
