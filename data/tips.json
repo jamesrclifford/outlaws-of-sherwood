@@ -1,0 +1,13 @@
+{
+  "tips": {
+    "map": {"title": "Welcome to Sherwood!", "text": "Tap a place on the map to see what is there. Jobs are tagged ROBBERY, FREE VILLAGERS or LEGEND. Travelling takes days and eats supplies. Rest at Major Oak Camp to heal the band."},
+    "legends": {"title": "Legends", "text": "LEGEND jobs are the old tales of Robin Hood. Play them to grow your fame, win new friends for the band and learn disguises. The Legends button counts how many you have told."},
+    "villains": {"title": "Your enemies", "text": "Each day the Sheriff and Sir Guy plot. At 100% the Sheriff sets a trap on a rich job, and Sir Guy may ride out to raid the band. Robbing makes you famous, and more wanted."},
+    "mission": {"title": "Setting out", "text": "A job is a short trail of scenes. Tap the buttons to move on. Choices and fights come up along the way. Win the fights and reach the end to finish the job."},
+    "battle": {"title": "Fighting", "text": "Heroes spend AP (action points) on moves. Tap a move to read it, then tap it again to use it on the ringed foe, or tap any glowing foe. Tap End turn when you are done. Foes are knocked out or run away."},
+    "aim": {"title": "Aiming a shot", "text": "Tap once to fix your aim left and right. Tap again to shoot as the sight crosses the gold. Mind the wind arrow, and be quick: the green bar is your time."},
+    "swing": {"title": "A big swing", "text": "Tap when the white marker is in the gold, in the middle of the bar. Be quick: the green bar is your time."},
+    "rhythm": {"title": "Quick cuts", "text": "Three fast cuts! Tap each time the marker passes the gold in the middle. Be quick: the green bar is your time."},
+    "captured": {"title": "Captured!", "text": "A captured hero waits in a cell. Send the band on the rescue job to free them, or bribe the jailer. Wait too long and they go to Nottingham's dungeon."}
+  }
+}

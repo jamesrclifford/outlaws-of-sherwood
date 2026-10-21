@@ -8,6 +8,7 @@ const MapView = preload("res://scenes/map/map_view.gd")
 const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
 
 
 func _ready() -> void:
@@ -46,6 +47,13 @@ func _ready() -> void:
 			var db = GameData.new()
 			_open_map(db, Campaign.load_saved(db)))
 	_button(box, "New campaign", func(): _open_map(null, null))
+	var replay := Button.new()
+	replay.text = "Replay the tips"
+	replay.custom_minimum_size = Vector2(0, 34)
+	replay.pressed.connect(func():
+		TipCard.tips().reset()
+		replay.text = "Tips will show again")
+	box.add_child(replay)
 	var practice := Label.new()
 	practice.text = "- Practice -"
 	practice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

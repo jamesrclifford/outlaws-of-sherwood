@@ -10,6 +10,7 @@ const MissionGen = preload("res://core/mission_gen.gd")
 const MissionRun = preload("res://core/mission_run.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
 const MinigameView = preload("res://scenes/minigame/minigame_view.gd")
 
 const PARTY := ["robin", "little_john", "will", "tuck"]
@@ -50,6 +51,7 @@ func _ready() -> void:
 	_build_layout()
 	backdrop.texture = BattleView.backdrop_for(run.backdrop())
 	_show_briefing()
+	TipCard.show_once(self, "mission")
 
 
 ## The scene keeps its size; the panel below grows with the phone, and the buttons sit at its foot.

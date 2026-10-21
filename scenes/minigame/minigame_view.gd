@@ -9,6 +9,7 @@ signal finished(round)
 const Archery = preload("res://core/archery.gd")
 const Timing = preload("res://core/timing.gd")
 const Style = preload("res://scenes/ui/style.gd")
+const TipCard = preload("res://scenes/ui/tip_card.gd")
 
 ## Target ring colours from the outside in: white, black, blue, red, gold, two rings each.
 const RINGS := ["f0ece0", "f0ece0", "2a2a2a", "2a2a2a", "3a7ad0", "3a7ad0", "d04030", "d04030", "f0c030", "f0c030"]
@@ -25,6 +26,7 @@ var t := 0.0
 var _paused := 0.0
 var _flash := ""              # the last tap's verdict, shown for a moment
 var _over := false
+var _tip_open := false        # the clock waits while a tutorial tip is on screen
 
 var _board: Control           # where the target or the meter is drawn
 var _late := false            # this tap was forced because time ran out
@@ -111,6 +113,12 @@ func _ready() -> void:
 	add_child(_continue)
 	_title_label.text = title
 	_refresh_text()
+	var card = TipCard.show_once(self, mode)
+	if card:
+		_tip_open = true
+		card.closed.connect(func():
+			_tip_open = false
+			t = 0.0)
 
 
 func _label(pos: Vector2, sz: Vector2, colour: Color) -> Label:
@@ -125,7 +133,7 @@ func _label(pos: Vector2, sz: Vector2, colour: Color) -> Label:
 
 
 func _process(delta: float) -> void:
-	if _over:
+	if _over or _tip_open:
 		return
 	if _paused > 0.0:
 		_paused -= delta
