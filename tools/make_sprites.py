@@ -322,6 +322,11 @@ def alan():
     s.rect(18, top - 2, 20, top - 2, "#e0c050")
     s.line(14, top - 3, 10, top - 7, "#c0392b")         # long red feather
     s.rect(16, top + 9, 18, top + 11, "#e0c050")       # motley diamond on the tunic
+    # a short bow slung on his back, its strap across his chest
+    for y0, y1, x in ((top + 5, top + 8, 9), (top + 9, top + 16, 8), (top + 17, top + 20, 9)):
+        s.rect(x, y0, x, y1, "#8a5a2b")
+    s.line(10, top + 5, 10, top + 20, "#e8e0c8")
+    s.line(13, top + 8, 18, top + 14, "#5a3a20")
     # lute held across the body
     for y in range(15, 22):
         w = 3 - abs(y - 18) // 2
