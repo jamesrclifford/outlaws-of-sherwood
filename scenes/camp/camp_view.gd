@@ -355,6 +355,8 @@ func _show_letter(reached: Array, i: int) -> void:
 	Style.fit_text(text_label, "%s\n%s" % [st["name"].to_upper(), st["text"]])
 	if i + 1 < reached.size():
 		_set_buttons([["Read on", _show_letter.bind(reached, i + 1)]], 1)
+	elif campaign.finale_won():
+		_set_buttons([["Onward", func(): closed.emit(false)]], 1)
 	elif campaign.ransom_full():
 		_set_buttons([["Back to camp", _show_camp.bind("")]], 1)
 	else:

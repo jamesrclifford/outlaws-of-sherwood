@@ -315,7 +315,7 @@ func build(id: String) -> bool:
 
 ## The chest appears once the band has lived enough legends to hear the news.
 func ransom_open() -> bool:
-	return stories_done.size() >= int(db.camp["ransom"]["legends"])
+	return stories_done.size() >= int(db.camp["ransom"]["legends"]) or castle_taken()
 
 
 ## How many of the ransom's stages the chest has reached.
@@ -672,11 +672,16 @@ func legends() -> Array:
 
 
 ## True once the Sheriff has been driven out of Nottingham Castle.
-func finale_won() -> bool:
+func castle_taken() -> bool:
 	for id in stories_done:
 		if db.stories["stories"][id].get("finale", false):
 			return true
 	return false
+
+
+## The end of the tale: the Sheriff driven out of the castle and King Richard home, in either order.
+func finale_won() -> bool:
+	return castle_taken() and flags.has("richard_home")
 
 
 # --- Spending gold -----------------------------------------------------------

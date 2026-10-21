@@ -1473,7 +1473,7 @@ func test_storming_the_castle_frees_sherwood() -> void:
 		c.missions["nottingham"] = MissionGen.new(db).story("storm_castle", 60, 7 + s)
 		c.missions["nottingham"]["expires"] = 0
 		c.location = "nottingham"
-		check(not c.finale_won(), "the Sheriff still holds the castle")
+		check(not c.castle_taken(), "the Sheriff still holds the castle")
 		var run = c.start_mission()
 		check(run.mission["location"] == "castle_courtyard", "the finale is fought in the castle courtyard")
 		autoplay_mission(run, false, true)
@@ -1481,7 +1481,9 @@ func test_storming_the_castle_frees_sherwood() -> void:
 		if run.result != "success":
 			continue
 		wins += 1
-		check(c.finale_won(), "the Sheriff is driven out")
+		check(c.castle_taken() and not c.finale_won(), "the Sheriff is driven out, but the tale waits for the King")
+		c.flags.append("richard_home")
+		check(c.finale_won(), "the castle and the King together end the tale")
 		check(c.infamy == 0 and c.wanted_level() == 0, "the posters come down for good")
 		check(c.control.values().all(func(v): return v <= 40), "the Sheriff's grip is broken everywhere (%s)" % [c.control])
 		check(c.captured.is_empty(), "every cell is opened")
@@ -2094,7 +2096,7 @@ func _pt_camp(c, log: Dictionary) -> void:
 	if c.can_hire() and c.gold >= 110:
 		c.hire_merry_man()
 	# Spare gold goes in the King's ransom; more is kept back while there is still building to do.
-	var keep := 300 if BUILD_ORDER.any(func(id): return c.built(id) < int(db.camp["upgrades"][id].get("max", 1))) else 150
+	var keep := 200 if BUILD_ORDER.any(func(id): return c.built(id) < int(db.camp["upgrades"][id].get("max", 1))) else 100
 	for st in c.give_ransom(c.gold - keep):
 		log["ransom"].append("%s d%d" % [st["name"], c.day])
 	if c.visitor != "":

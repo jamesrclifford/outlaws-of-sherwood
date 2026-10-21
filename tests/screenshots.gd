@@ -226,6 +226,10 @@ func _init() -> void:
 	won_map.start(cdb, camp)
 	root.add_child(won_map)
 	await process_frame
+	won_map._show_castle_taken()
+	await _snap(dir, "castle_taken")
+	won_map.get_child(won_map.get_child_count() - 1).queue_free()
+	won_map.busy = false
 	camp.flags.append("richard_home")
 	won_map._show_finale()
 	await _snap(dir, "finale")
