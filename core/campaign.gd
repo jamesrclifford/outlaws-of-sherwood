@@ -9,6 +9,7 @@ const MissionRun = preload("res://core/mission_run.gd")
 ## start_band and wins the others over through story missions.
 const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
+const LEGEND_INFAMY := 2          # infamy for each legend finished
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
 const STORY_RETRY := 3             # days before a legend the band failed or lost at the butts comes back
@@ -150,7 +151,7 @@ func travel(to: String) -> Array:
 ## Each night brings a campfire evening (see evening); one with options waits for choose_evening.
 func rest() -> void:
 	if location == "camp":
-		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]) * (1 + int(upgrade_sum("lie_low"))))
+		infamy = maxi(0, infamy - int(econ["wanted"]["lie_low"]) - int(upgrade_sum("lie_low")))
 		supplies += int(upgrade_sum("rest_supplies"))
 		_tell_evening()
 		if marian_home():
@@ -252,7 +253,7 @@ func _team_report(t: Dictionary) -> void:
 			u.hp = maxi(1, u.hp - int(ceil(u.max_hp * float(econ["teams"]["hurt"]) * float(knack.get("hurt", 1.0)))))
 	if rng.randf() < float(t["odds"]):
 		var reward: Dictionary = m["rewards"]
-		var takings := int(round(int(reward.get("gold", 0)) * float(knack.get("gold", 1.0))))
+		var takings := int(round(int(reward.get("gold", 0)) * float(econ["teams"]["share"]) * float(knack.get("gold", 1.0))))
 		gold += takings
 		reputation += int(reward.get("reputation", 0)) + int(knack.get("reputation", 0))
 		if not m["bait"].is_empty():
@@ -508,6 +509,8 @@ func finish_mission(run) -> void:
 					if db.disguises[id]["legend"] == m["story"]:
 						_news("New disguise learned from the legend: %s." % db.disguises[id]["name"])
 				_news("%s: the band's legend grows." % m["name"])
+				# Every tale told makes the Sheriff look foolish, and him keener to catch the band.
+				infamy = mini(100, infamy + LEGEND_INFAMY)
 				if run.recruited != "":
 					_join(run.recruited)
 					_news("%s joins the band!" % hero_name(run.recruited))
@@ -865,7 +868,10 @@ func raid_chance() -> float:
 
 
 func _guy_acts() -> void:
-	plots["guy"] = mini(100, plots["guy"] + maxi(0, 5 + infamy / 8 + int(upgrade_sum("guy_per_day"))))
+	# Sir Guy takes no notice of a lone outlaw and a friend or two; he starts plotting once the band is a real band.
+	if band.size() < int(db.baits["guy"].get("band_from", 0)):
+		return
+	plots["guy"] = mini(100, plots["guy"] + maxi(0, 3 + infamy / 10 + int(upgrade_sum("guy_per_day"))))
 	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
@@ -877,7 +883,7 @@ func _guy_acts() -> void:
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
 		if ambush.is_empty() and not free_heroes().is_empty():
 			var n: Dictionary = node(location)
-			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi())
+			ambush = MissionGen.new(db).guy_raid(n["name"], n.get("location", "sherwood_edge"), rng.randi(), party().size())
 			ambush["hunted"] = hunted_hero
 			_news("Sir Guy of Gisborne rides out to raid the band!")
 
@@ -1000,12 +1006,16 @@ func story_ready(id: String) -> bool:
 func _post_rescue(hero_id: String, at: String) -> void:
 	if missions.has(at) and missions[at].has("rescue_heroes"):
 		missions[at]["rescue_heroes"].append(hero_id)
+		if not missions[at].has("rescue_names"):
+			missions[at]["rescue_names"] = {}
+		missions[at]["rescue_names"][hero_id] = hero_name(hero_id)
 		missions[at]["name"] = "Rescue the prisoners"
 		return
 	var gen = MissionGen.new(db)
 	var extra := 25 if at == DUNGEON else 0
 	var m: Dictionary = gen.generate("rescue", mini(100, threat(at) + extra), rng.randi(), node(at)["location"], hunted_hero)
 	m["rescue_heroes"] = [hero_id]
+	m["rescue_names"] = {hero_id: hero_name(hero_id)}
 	m["expires"] = 0
 	m["name"] = "Rescue %s" % hero_name(hero_id)
 	missions[at] = m

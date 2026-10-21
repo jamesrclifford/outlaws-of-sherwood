@@ -652,7 +652,7 @@ func test_guy_hunts_someone_new_each_time() -> void:
 	var c = Campaign.new(db, 77, BAND4)
 	c.infamy = 40
 	var picks: Array = []
-	for _d in 120:
+	for _d in 240:
 		var before: String = c.hunted_hero
 		c.rest()
 		c.ambush = {}
@@ -1444,6 +1444,7 @@ func test_sheriff_story_builds_to_the_castle() -> void:
 	check(c.missions.get("edwinstowe", {}).get("story", "") == "wanted_posters", "the posters story comes once the band is wanted")
 	check(not c.story_ready("hunters_hunted") and not c.story_ready("storm_castle"), "the rest of the story waits its turn")
 	c.stories_done.append("wanted_posters")
+	c.infamy = 25
 	check(not c.story_ready("hunters_hunted"), "Black Hob comes after the band only at a higher bounty")
 	c.infamy = 45
 	check(c.story_ready("hunters_hunted"), "then Black Hob's camp appears")
@@ -1983,7 +1984,7 @@ func test_teams_go_out_on_their_own() -> void:
 	var gold: int = won.gold
 	won.day = t["back"] - 1
 	won._end_day(false)
-	check(won.teams.is_empty() and not won.is_away("little_john") and won.gold >= gold + int(t["mission"]["rewards"]["gold"]) and won.captured.is_empty(), "a won job brings the gold home")
+	check(won.teams.is_empty() and not won.is_away("little_john") and won.gold >= gold + int(int(t["mission"]["rewards"]["gold"]) * float(db.economy["teams"]["share"])) and won.captured.is_empty(), "a won job brings the gold home")
 	var lost = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
 	lost.teams[0]["odds"] = 0.0
 	lost.day = t["back"] - 1
@@ -2028,3 +2029,150 @@ func test_legend_friends_join_and_bring_gifts() -> void:
 		v._villager_may_join()
 		joined += v.merry_men.size()
 	check(joined > 3 and joined < 20, "now and then a freed villager joins (%d of 40)" % joined)
+
+
+# --- Full playthroughs (PLAYTHROUGH=n to run; slow) --------------------------------
+
+const BUILD_ORDER := ["larder", "herbs", "hunting", "butts", "lookout", "hall", "paths", "hall", "hall"]
+
+
+func _pt_go(c, to: String, log: Dictionary) -> void:
+	for _i in 10:
+		c.travel(to)
+		if not c.ambush.is_empty():
+			var raid: bool = c.ambush.has("raid")
+			var run = c.start_ambush()
+			if run == null:
+				c.ambush = {}
+				return
+			autoplay_mission(run, false, true)
+			log["raids" if raid else "ambushes"] += 1
+			if run.result != "success":
+				log["raids_lost" if raid else "ambushes_lost"] += 1
+			c.finish_mission(run)
+		if c.location == to or c.free_heroes().is_empty():
+			return
+
+
+## A day at camp the way a sensible player spends it: supplies, building, hiring, visitors, rest.
+func _pt_camp(c, log: Dictionary) -> void:
+	while c.supply_days() < 8 and c.buy_supplies():
+		pass
+	for id in BUILD_ORDER:
+		if c.can_build(id) and c.gold - int(db.camp["upgrades"][id]["cost"]) >= 60:
+			c.build(id)
+			log["built"].append("%s d%d" % [id, c.day])
+			break
+	if c.can_hire() and c.gold >= 110:
+		c.hire_merry_man()
+	if c.visitor != "":
+		var opts: Array = db.camp["visitors"][c.visitor]["options"]
+		for i in opts.size():
+			if c.can_take(opts[i]) and c.answer_visitor(i) != "":
+				log["visitors"] += 1
+				break
+	c.rest()
+	if c.evening_open:
+		var opts: Array = db.camp["evenings"][c.evening]["options"]
+		if c.choose_evening(0) == "":
+			c.choose_evening(opts.size() - 1)
+
+
+func _pt_play(seed: int) -> Dictionary:
+	var c = Campaign.new(db, seed)
+	var log := {"won": {}, "lost": {}, "raids": 0, "raids_lost": 0, "ambushes": 0, "ambushes_lost": 0, "captures": 0,
+		"teams": 0, "teams_won": 0, "built": [], "visitors": 0, "legend_fails": {}, "finale_day": 0, "max_wanted": 0, "broke_days": 0}
+	var day_cap := 400
+	while c.day < day_cap and not c.finale_won():
+		log["max_wanted"] = maxi(log["max_wanted"], c.wanted_level())
+		for id in ["wanted_posters", "hunters_hunted", "storm_castle", "marian_wedding"]:
+			if c.stories_done.has(id) and not log.has(id):
+				log[id] = c.day
+		if c.gold < 10:
+			log["broke_days"] += 1
+		# Hurt, hungry or nothing to do: home to camp.
+		var hurt: bool = c.free_heroes().any(func(h): return h.hp < h.max_hp * 0.5)
+		var hungry: bool = c.supply_days() < 3 and c.gold >= c.supply_price()
+		if hurt or hungry or c.missions.is_empty():
+			_pt_go(c, "camp", log)
+			if c.location == "camp":
+				_pt_camp(c, log)
+			else:
+				c._end_day(false)
+			continue
+		# A legend waiting on infamy (the Sheriff's arc) means robbing, not resting.
+		var need_infamy: bool = db.stories["stories"].keys().any(func(id): return not c.stories_done.has(id) and c.infamy < int(db.stories["stories"][id]["requires"].get("infamy", 0)))
+		# Send teams on easy jobs when the band is big enough to spare someone.
+		if c.band.size() >= 4 and not need_infamy:
+			for n in c.missions.keys():
+				if c.can_send_to(n):
+					var best := ""
+					var odds := 0.0
+					for h in c.team_leaders():
+						if c.team_odds(h, n) > odds:
+							odds = c.team_odds(h, n)
+							best = h
+					if best != "" and odds >= 0.6 and c.free_heroes().size() >= 4:
+						var before: int = c.captured.size()
+						c.send_team(best, n)
+						log["teams"] += 1
+		# Rescues first, then legends, then the job with the best reward.
+		var targets: Array = c.missions.keys().filter(func(n): return not (c.missions[n].get("bait", {}).get("revealed", false)))
+		if targets.is_empty():
+			_pt_go(c, "camp", log)
+			if c.location == "camp":
+				_pt_camp(c, log)
+			continue
+		var score := func(n):
+			var m: Dictionary = c.missions[n]
+			if m.has("rescue_heroes"):
+				return 1000
+			if m["type"] == "story":
+				return 500 - c.route(n).size()
+			if c.band.size() >= 3 and ((need_infamy and m["type"] == "robbery") or c.gold < 30):
+				return 600 + int(m["rewards"].get("gold", 0)) - 5 * c.route(n).size()
+			return int(m["rewards"].get("gold", 0)) - 5 * c.route(n).size()
+		targets.sort_custom(func(a, b): return score.call(a) > score.call(b))
+		var to: String = targets[0]
+		_pt_go(c, to, log)
+		if c.location != to:
+			continue
+		var run = c.start_mission()
+		if run == null:
+			continue
+		var kind: String = "legend" if run.mission["type"] == "story" else ("rescue friends" if run.mission.has("rescue_heroes") else run.mission["type"])
+		autoplay_mission(run, true, true)
+		var key: String = "won" if run.result == "success" else "lost"
+		log[key][kind] = log[key].get(kind, 0) + 1
+		if kind == "legend" and run.result != "success":
+			log["legend_fails"][run.mission["story"]] = log["legend_fails"].get(run.mission["story"], 0) + 1
+		log["captures"] += run.captured.size()
+		c.finish_mission(run)
+	# Teams that came home with the gold show up as news.
+	for n in c.news:
+		if n.contains("team is back"):
+			log["teams_won"] += 1
+		if n.contains("team failed"):
+			log["captures"] += 1
+	log["finale_day"] = c.day if c.finale_won() else -1
+	log["legends"] = c.stories_done.size()
+	log["band"] = c.band.size()
+	log["men"] = c.merry_men.size()
+	log["boons"] = c.boons.size()
+	log["gold"] = c.gold
+	log["rep"] = c.reputation
+	log["infamy"] = c.infamy
+	log["control"] = c.control
+	log["marian_wed"] = c.marian_home()
+	return log
+
+
+func test_zz_full_playthroughs() -> void:
+	var n := int(OS.get_environment("PLAYTHROUGH"))
+	if n <= 0:
+		return
+	for i in n:
+		var t := Time.get_ticks_msec()
+		var log := _pt_play(500 + i)
+		log["seconds"] = (Time.get_ticks_msec() - t) / 1000
+		print("PLAYTHROUGH %d: %s" % [i, JSON.stringify(log)])

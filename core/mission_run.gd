@@ -412,7 +412,8 @@ func advance() -> void:
 func _rescue_impact() -> String:
 	var who: String = "The villager is home safe"
 	if mission.has("rescue_heroes"):
-		var names: Array = mission["rescue_heroes"].map(func(h): return db.heroes[h]["name"])
+		# Captured Merry Men aren't in the hero data; the campaign writes their names on the job.
+		var names: Array = mission["rescue_heroes"].map(func(h): return db.heroes[h]["name"] if db.heroes.has(h) else mission.get("rescue_names", {}).get(h, "Your friend"))
 		who = "%s is back with the band" % " and ".join(names)
 	var text := "%s! The tale spreads: +%d reputation" % [who, reputation]
 	if grip.is_empty():

@@ -12,9 +12,9 @@
       "Tom o' the Lea", "Dickon Fletcher", "Jack Fisher", "Hal the Smith", "Nat Cooper", "Edwin Brook", "Ned the Swineherd", "Watkin Low"]
   },
   "teams": {
-    "_doc": "A band member (never Robin) can lead Merry Men on an ordinary job away from the band. The odds: base + per_member for each in the team, less per_threat for each point of threat, trap for each trap nobody knows of and bait for a bait job, plus the leader's odds, times the team's health, kept between min and max. Each leader has a knack (leaders): more gold, fewer wounds (hurt scales the damage) or more reputation; note is its tag on the leader's button. The team is gone days (plus the road there); a lost job sends one of them to the cells, the leader with leader_caught chance.",
+    "_doc": "A band member (never Robin) can lead Merry Men on an ordinary job away from the band. The odds: base + per_member for each in the team, less per_threat for each point of threat, trap for each trap nobody knows of and bait for a bait job, plus the leader's odds, times the team's health, kept between min and max. Each leader has a knack (leaders): more gold, fewer wounds (hurt scales the damage) or more reputation; note is its tag on the leader's button. The team is gone days (plus the road there); they bring home share of the purse (the men keep the rest); a lost job sends one of them to the cells, the leader with leader_caught chance.",
     "base": 0.45, "per_member": 0.12, "per_threat": 0.005, "trap": 0.1, "bait": 0.35, "min": 0.1, "max": 0.9,
-    "max_men": 2, "days": 2, "leader_caught": 0.4, "hurt": 0.3,
+    "max_men": 2, "days": 2, "share": 0.6, "leader_caught": 0.4, "hurt": 0.3,
     "leaders": {
       "little_john": {"odds": 0.1, "note": "strong"},
       "will": {"odds": 0.06, "gold": 1.25, "note": "+gold"},
