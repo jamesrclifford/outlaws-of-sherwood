@@ -164,12 +164,18 @@ func _path_medallion(n: Dictionary, i: int) -> Control:
 func _refresh_party() -> void:
 	for c in party_box.get_children():
 		c.queue_free()
-	var x: float = (360 - 80 * run.heroes.size()) / 2.0
+	# A guest who doesn't fight (Maid Marian) stands at the right, facing the band.
+	var guest: String = run.guest()
+	var room: float = 360.0 - (68.0 if guest != "" else 0.0)
+	var step: float = minf(80.0, room / maxi(1, run.heroes.size()))
+	var x: float = (room - step * run.heroes.size()) / 2.0
+	if guest != "":
+		_add_guest(guest)
 	for h in run.heroes:
 		var card := Control.new()
 		card.position = Vector2(x, 0)
-		card.size = Vector2(80, 124)
-		x += 80
+		card.size = Vector2(step, 124)
+		x += step
 		party_box.add_child(card)
 		var captured: bool = run.captured.has(h.id)
 		var shadow := TextureRect.new()
@@ -177,14 +183,14 @@ func _refresh_party() -> void:
 		shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		shadow.stretch_mode = TextureRect.STRETCH_SCALE
 		shadow.size = Vector2(56, 16)
-		shadow.position = Vector2(12, 52)
+		shadow.position = Vector2((step - 56) / 2, 52)
 		card.add_child(shadow)
 		var art := TextureRect.new()
 		art.texture = BattleView.sprite_for(h)
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_SCALE
 		art.size = Vector2(64, 64)
-		art.position = Vector2(8, 0)
+		art.position = Vector2((step - 64) / 2, 0)
 		if captured:
 			art.modulate = Color(1, 1, 1, 0.25)
 		elif h.has_status("netted"):
@@ -193,15 +199,42 @@ func _refresh_party() -> void:
 		var plate := ColorRect.new()
 		plate.color = Color(0.08, 0.06, 0.04, 0.72)
 		plate.position = Vector2(2, 66)
-		plate.size = Vector2(76, Style.lines(2))
+		plate.size = Vector2(step - 4, Style.lines(2))
 		card.add_child(plate)
 		var info := Label.new()
 		info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		info.position = Vector2(-2, 68)
-		info.size = Vector2(84, Style.lines(2))
+		info.position = Vector2(0, 68)
+		info.size = Vector2(step, Style.lines(2))
 		var state := "Caught" if captured else ("Netted" if h.has_status("netted") else "%d/%d" % [h.hp, h.max_hp])
 		info.text = "%s\n%s" % [h.short_name(), state]
 		card.add_child(info)
+
+
+func _add_guest(id: String) -> void:
+	var card := Control.new()
+	card.position = Vector2(292, 0)
+	card.size = Vector2(68, 124)
+	party_box.add_child(card)
+	var art := TextureRect.new()
+	art.texture = BattleView.sprite_by_id(id)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_SCALE
+	art.flip_h = true
+	art.size = Vector2(64, 64)
+	art.position = Vector2(2, 0)
+	card.add_child(art)
+	var plate := ColorRect.new()
+	plate.color = Color(0.08, 0.06, 0.04, 0.72)
+	plate.position = Vector2(2, 66)
+	plate.size = Vector2(64, Style.lines(1))
+	card.add_child(plate)
+	var name_label := Label.new()
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.position = Vector2(0, 68)
+	name_label.size = Vector2(68, Style.lines(1))
+	name_label.text = id.capitalize()
+	name_label.add_theme_color_override("font_color", Color("f0b0b8"))
+	card.add_child(name_label)
 
 
 func _set_buttons(options: Array) -> void:
@@ -234,6 +267,8 @@ func _show_briefing() -> void:
 		run.mission_log.append("Briefing: the Sheriff has locked up a villager at %s. Free them! Reward: %d gold and %d reputation." % [m["location_name"], m["rewards"]["gold"], m["rewards"]["reputation"]])
 	else:
 		run.mission_log.append("Briefing: %s at %s. Reward: %d gold." % [m["type"].capitalize(), m["location_name"], m["rewards"]["gold"]])
+	if m.has("marian_text"):
+		run.mission_log.append(m["marian_text"])
 	if run.is_bait() and run.mission["bait"]["revealed"]:
 		run.mission_log.append("You already know this job is %s's trap." % db.baits[run.mission["bait"]["by"]]["name"])
 		_refresh()

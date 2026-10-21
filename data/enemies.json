@@ -22,6 +22,7 @@
   "rival_will": {"name": "The Stranger in Scarlet", "short": "Stranger", "sprite": "will", "hp": 32, "atk": 8, "def": 3, "spd": 8, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "flourish"]},
   "rival_tinker": {"name": "The Tinker", "sprite": "tradesman", "hp": 30, "atk": 7, "def": 4, "spd": 5, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},
   "rival_tanner": {"name": "Arthur a Bland", "short": "Arthur", "sprite": "tradesman", "hp": 34, "atk": 7, "def": 4, "spd": 5, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "staff_sweep"]},
+  "rival_marian":  {"name": "The Page", "short": "Page", "sprite": "marian_page", "hp": 30, "atk": 7, "def": 3, "spd": 8, "crit": 0.1, "row": "front", "tags": ["rival"], "abilities": ["strike"]},
   "rival_potter": {"name": "The Potter", "sprite": "tradesman", "hp": 30, "atk": 6, "def": 4, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike"]},
   "rival_pinder": {"name": "The Pinder of Wakefield", "short": "Pinder", "sprite": "tradesman", "hp": 46, "atk": 8, "def": 5, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "staff_sweep", "defend"]},
   "rival_beggar": {"name": "The Beggar", "sprite": "beggar", "hp": 30, "atk": 7, "def": 3, "spd": 6, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},

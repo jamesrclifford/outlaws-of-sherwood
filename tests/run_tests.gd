@@ -716,6 +716,72 @@ func test_legend_scenes_move_with_the_story() -> void:
 	check(run.backdrop() == "sherwood_edge", "and the Sheriff is caught deep in Sherwood")
 
 
+func test_maid_marian_visits_jobs() -> void:
+	var gen = MissionGen.new(db)
+	for id in db.marian["visits"]:
+		var v: Dictionary = db.marian["visits"][id]
+		var found := false
+		for s in 60:
+			var m: Dictionary = gen.generate("robbery", 60, 300 + s, "great_north_road")
+			if not MissionGen.marian_visits(db, m, v["kind"]).has(id):
+				continue
+			found = true
+			var before: Array = m["nodes"].filter(func(n): return n.has("enemies")).map(func(n): return n["enemies"].size())
+			var gold: int = m["rewards"]["gold"]
+			gen.add_marian(m, id)
+			var after: Array = m["nodes"].filter(func(n): return n.has("enemies")).map(func(n): return n["enemies"].size())
+			check(m["guest"] == "marian" and m["marian_text"] == v["text"], "%s: Marian comes along and the briefing says why" % id)
+			if v.has("remove_enemy"):
+				check(after.reduce(func(a, b): return a + b, 0) == before.reduce(func(a, b): return a + b, 0) - 1, "%s: one guard fewer" % id)
+			if v.has("add_enemy"):
+				check(after.reduce(func(a, b): return a + b, 0) == before.reduce(func(a, b): return a + b, 0) + 1, "%s: one foe more" % id)
+			if v.has("gold"):
+				check(m["rewards"]["gold"] > gold, "%s: a fatter purse" % id)
+			if v.get("reveal_traps", false):
+				check(m["nodes"].all(func(n): return not n.has("trap") or n["trap"]["revealed"]) and (m["bait"].is_empty() or m["bait"]["revealed"]), "%s: every trap is known" % id)
+			if v.has("heal"):
+				var heroes: Array = [db.make_hero("robin"), db.make_hero("will")]
+				for h in heroes:
+					h.hp = 5
+				var run = MissionRun.new(db, m, heroes)
+				run.arrive()
+				check(heroes.all(func(h): return h.hp > 5), "%s: the band is patched up" % id)
+			break
+		check(found, "visit %s can happen" % id)
+
+
+func test_maid_marian_story_line() -> void:
+	var c = Campaign.new(db, 5, BAND4 + ["alan"])
+	check(not c.marian_free(), "Marian keeps away until the band has met her")
+	c.stories_done.append("marian_page")
+	check(c.marian_free(), "after the disguise legend she may turn up on jobs")
+	var seen := 0
+	for _i in 60:
+		c._spawn_mission("robbery")
+		for n in c.missions.keys():
+			if c.missions[n].has("marian"):
+				seen += 1
+			if c.missions[n]["type"] != "story":
+				c.missions.erase(n)
+	check(seen >= 8 and seen <= 32, "she turns up on some jobs, not all (%d of 60)" % seen)
+	c.missions["nottingham"] = MissionGen.new(db).story("marian_taken", 40, 1)
+	check(not c.marian_free(), "not while Sir Guy has her in the tower")
+	c.missions.erase("nottingham")
+	var grip: int = c.control["nottingham"]
+	c.plots["sheriff"] = 60
+	c._story_effects(db.stories["stories"]["marian_word"]["effects"])
+	check(c.control["nottingham"] == grip - 15 and c.plots["sheriff"] == 20, "burning the tax rolls loosens Nottingham and spoils the Sheriff's plans")
+	c.plots["guy"] = 50
+	c._story_effects(db.stories["stories"]["marian_wedding"]["effects"])
+	check(c.flags.has("marian_wed") and c.plots["guy"] == 50, "the wedding is remembered, and does not wipe Guy's plot")
+	var run = MissionRun.new(db, MissionGen.new(db).story("marian_taken", 40, 1), [db.make_hero("robin")])
+	check(run.guest() == "", "Marian is not with the band until she is freed")
+	run.node_index = 4
+	check(run.guest() == "marian", "she rides out with them after")
+	check(MissionRun.new(db, MissionGen.new(db).story("marian_alms", 40, 1), [db.make_hero("robin")]).guest() == "marian", "she hosts her own fair")
+	check(db.enemies["rival_marian"]["sprite"] == "marian_page" and ResourceLoader.exists("res://assets/sprites/marian.png"), "Marian has her own sprites")
+
+
 func test_tips_show_once_and_can_be_switched_off() -> void:
 	var path := "user://test_tips.cfg"
 	var t = Tips.new(path)
@@ -1109,7 +1175,7 @@ func test_tales_are_capped_and_chained() -> void:
 			c._join(h)
 	c.missions.clear()
 	c._post_stories()
-	var posted: Array = c.missions.values().filter(func(m): return m["type"] == "story")
+	var posted: Array = c.missions.values().filter(func(m): return Campaign._is_tale(m))
 	check(posted.size() == Campaign.MAX_TALES, "only %d tales on the map at once (%d)" % [Campaign.MAX_TALES, posted.size()])
 	check(not c.story_ready("cellarer"), "a tale that follows another waits for it")
 	c.stories_done.append_array(["poor_knight", "knight_pays_abbot"])

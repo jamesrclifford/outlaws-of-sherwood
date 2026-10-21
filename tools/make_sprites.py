@@ -458,7 +458,42 @@ def bounty_hunter():
     return s.save("bounty_hunter")
 
 
-DRAWERS = [robin, robin_staff, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king, bounty_hunter]
+def marian():
+    """Maid Marian: a lady of the court in a long crimson gown, auburn hair to her waist, a gold
+    circlet, and the light hunting bow she shoots as well as any outlaw."""
+    s = Sprite()
+    top = humanoid(s, "#f0c8a8", "#a8283a", "#801c2c", "#a8283a", "#5a2a1a", belt="#e0c050")
+    # the gown falls to the ground over the legs, widening at the hem
+    for y in range(20, 32):
+        w = (y - 20) // 3
+        s.rect(12 - w, y, 15, y, "#a8283a")
+        s.rect(16, y, 20 + w, y, "#801c2c")
+    s.rect(12, 30, 20, 30, "#e0c050")                    # gold trim at the hem
+    s.rect(14, top + 8, 18, top + 9, "#f0e6cc")          # white collar
+    s.rect(12, top - 1, 19, top + 1, "#b0542a")          # auburn hair
+    s.rect(11, top, 13, top + 14, "#b0542a")             # long hair down her back
+    s.rect(10, top + 6, 11, top + 16, "#94441f")
+    s.rect(13, top - 2, 18, top - 2, "#e0c050")          # gold circlet
+    s.px(15, top - 3, "#4ac0e0")                         # its jewel
+    bow(s, x=24, y0=10, y1=24, wood="#a07040")
+    return s.save("marian")
+
+
+def marian_page():
+    """Marian disguised as a page boy, as in the ballad: hair hidden under a cap, a short sword."""
+    s = Sprite()
+    top = humanoid(s, "#f0c8a8", "#4a6a8a", "#365270", "#6a5a3a", "#3a2a18", belt="#6b3d1e")
+    s.rect(12, top - 2, 19, top + 1, "#365270")          # floppy page's cap hiding her hair
+    s.rect(18, top - 1, 21, top, "#365270")
+    s.px(12, top + 2, "#b0542a")                         # one stray auburn curl
+    s.px(12, top + 3, "#b0542a")
+    s.line(13, top - 2, 10, top - 6, "#f0e6cc")          # white plume
+    s.rect(14, top + 8, 18, top + 8, "#f0e6cc")
+    sword(s, hx=22, hy=17)
+    return s.save("marian_page")
+
+
+DRAWERS = [robin, robin_staff, little_john, will, tuck, alan, merry_man, man_at_arms, crossbowman, knight, forester, tax_collector, hound, bishop, guy, sheriff, monk, tradesman, beggar, pirate, king, bounty_hunter, marian, marian_page]
 
 
 def contact_sheet(images, path, scale=5):

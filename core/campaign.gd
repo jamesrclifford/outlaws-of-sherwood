@@ -286,21 +286,32 @@ func finish_mission(run) -> void:
 		_end_day(false, false)
 
 
-## What a big story changes on the map. The finale sets infamy back to nothing, breaks the Sheriff's
-## grip everywhere and opens every cell.
+## What a big story changes on the map: "control" shifts the Sheriff's grip everywhere and
+## "region_control" in one region, "plots" sets the villains' schemes back, "flags" are remembered.
+## The finale sets infamy back to nothing, opens every cell and wipes the villains' plots.
 func _story_effects(effects: Dictionary) -> void:
 	if effects.has("infamy"):
 		infamy = int(effects["infamy"])
 	for r in control:
-		control[r] = clampi(control[r] + int(effects.get("control", 0)), 0, 100)
+		control[r] = clampi(control[r] + int(effects.get("control", 0)) + int(effects.get("region_control", {}).get(r, 0)), 0, 100)
+	for p in effects.get("plots", {}):
+		plots[p] = clampi(plots[p] + int(effects["plots"][p]), 0, 100)
+	for f in effects.get("flags", []):
+		if not flags.has(f):
+			flags.append(f)
 	if effects.get("free_captured", false):
 		for h in captured.keys():
 			captured.erase(h)
 			_news("%s is free and back with the band!" % hero_name(h))
 		_remove_rescues()
-	if not effects.is_empty():
+	if effects.get("reset_plots", false):
 		plots = {"sheriff": 0, "guy": 0}
 		hunted_hero = ""
+
+
+## Maid Marian can visit the band's jobs once they have met, unless Sir Guy has her in the tower.
+func marian_free() -> bool:
+	return stories_done.has("marian_page") and not missions.values().any(func(m): return m.get("story", "") == "marian_taken")
 
 
 ## Every legend in the book, the band's own story first, then the tales; each as [id, name, told].
@@ -573,6 +584,11 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 		var m: Dictionary = gen.generate(t, threat(n), rng.randi(), loc, hunted_hero)
 		if forced_bait != "":
 			gen.make_bait(m, forced_bait, hunted_hero)
+		elif marian_free() and rng.randf() < float(db.marian["chance"]):
+			var helps: bool = rng.randf() < float(db.marian["help_chance_wed" if flags.has("marian_wed") else "help_chance"])
+			var visits: Array = MissionGen.marian_visits(db, m, "help" if helps else "trouble")
+			if not visits.is_empty():
+				gen.add_marian(m, visits[rng.randi_range(0, visits.size() - 1)])
 		m["expires"] = day + MISSION_LIFETIME
 		missions[n] = m
 		return
@@ -623,7 +639,7 @@ func _post_stories() -> void:
 		var at: String = st["node"]
 		missions[at] = gen.story(id, threat(at), rng.randi())
 		missions[at]["expires"] = 0
-		_news("A tale is told of %s. (%s)" % [st["name"], node(at)["name"]])
+		_news(st.get("posted_news", "A tale is told of %s. (%s)" % [st["name"], node(at)["name"]]))
 
 
 ## A tale from the legends: a story that recruits nobody and isn't part of the Sheriff's arc.

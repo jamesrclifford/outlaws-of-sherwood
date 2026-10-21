@@ -161,6 +161,8 @@ func _refresh() -> void:
 				tag = "\n[LEGEND]"
 			else:
 				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
+			if m.has("marian"):
+				tag += "\n+ Maid Marian"
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 

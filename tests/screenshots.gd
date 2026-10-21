@@ -76,6 +76,27 @@ func _init() -> void:
 	await _clear()
 
 	var db = GameData.new()
+	# Maid Marian: on an ordinary job, at her own legend, and as the page in the greenwood.
+	var job: Dictionary = MissionGen.new(db).generate("robbery", 40, 11, "great_north_road")
+	MissionGen.new(db).add_marian(job, "distraction")
+	var with_marian := MissionView.new()
+	with_marian.play(db, MissionRun.new(db, job, [db.make_hero("robin"), db.make_hero("will"), db.make_hero("little_john"), db.make_hero("tuck"), db.make_hero("alan")]))
+	root.add_child(with_marian)
+	await _snap(dir, "marian_job")
+	await _clear()
+	var fair := MissionView.new()
+	fair.play(db, MissionRun.new(db, MissionGen.new(db).story("marian_alms", 30, 2), [db.make_hero("robin"), db.make_hero("will"), db.make_hero("little_john")]))
+	root.add_child(fair)
+	await _snap(dir, "marian_legend")
+	await _clear()
+	var page_run = MissionRun.new(db, MissionGen.new(db).story("marian_page", 20, 3), [db.make_hero("robin"), db.make_hero("will")])
+	page_run.node_index = 2
+	var duel := BattleView.new()
+	duel.run_battle(db, page_run.make_battle(["rival_marian"]), "The page", page_run.backdrop())
+	root.add_child(duel)
+	await _snap(dir, "marian_duel")
+	await _clear()
+
 	var story := MissionView.new()
 	var run = MissionRun.new(db, MissionGen.new(db).story("little_john_bridge", 25, 1), [db.make_hero("robin"), db.make_hero("will")])
 	story.play(db, run)

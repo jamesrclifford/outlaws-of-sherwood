@@ -1,0 +1,15 @@
+{
+  "_doc": "Maid Marian turns up on ordinary jobs once she has met the band (the marian_page legend), except while she is locked in the tower. chance: how often a new robbery or rescue has her; help_chance: how often she makes it easier (help_chance_wed after the wedding).",
+  "chance": 0.3,
+  "help_chance": 0.6,
+  "help_chance_wed": 0.8,
+  "visits": {
+    "warning": {"kind": "help", "text": "Maid Marian slips out of the castle with a warning: she knows exactly where the Sheriff's traps are laid.", "reveal_traps": true},
+    "distraction": {"kind": "help", "text": "Maid Marian drops her glove in front of a guard and asks him to fetch it... all the way back to the castle. One less guard to fight!", "remove_enemy": 1},
+    "bandages": {"kind": "help", "text": "Maid Marian meets the band with a basket of bread, honey and clean bandages. Everyone feels much better.", "heal": 0.5},
+    "fat_purse": {"kind": "help", "text": "Maid Marian heard the Sheriff's steward boasting: this purse is far fatter than it looks!", "gold": 0.5},
+    "followed": {"kind": "trouble", "text": "Maid Marian rides out to warn the band, but Sir Guy's men have followed her! A knight comes crashing through the trees.", "add_enemy": "knight"},
+    "spotted": {"kind": "trouble", "text": "Maid Marian waves to the band from the road. A crossbowman on the wall sees her, and calls his friends.", "add_enemy": "crossbowman"},
+    "escort": {"kind": "trouble", "text": "Maid Marian insists on coming along to see the poor get their share. With a lady to guard, the band must fight extra carefully, and the Sheriff has doubled the guard.", "add_enemy": "man_at_arms"}
+  }
+}
