@@ -226,6 +226,7 @@ func _init() -> void:
 	won_map.start(cdb, camp)
 	root.add_child(won_map)
 	await process_frame
+	camp.flags.append("richard_home")
 	won_map._show_finale()
 	await _snap(dir, "finale")
 	await _clear()
@@ -253,6 +254,18 @@ func _init() -> void:
 	home.upgrades = ["lookout", "larder"]
 	cv._show_build("")
 	await _snap(dir, "camp_build")
+	# King Richard's ransom: the chest part full, and the King home once it is paid.
+	home.stories_done = cdb.stories["stories"].keys().slice(0, int(cdb.camp["ransom"]["legends"]))
+	home.ransom = 600
+	home.gold = 420
+	cv._show_ransom("")
+	await _snap(dir, "ransom")
+	home.gold = 2000
+	home.ransom = 1200
+	cv._give_ransom(2000)
+	await _snap(dir, "ransom_king")
+	cv._show_camp()
+	await _snap(dir, "ransom_full")
 	home.evening = "rain"
 	cv._rest()
 	await _snap(dir, "camp_evening")

@@ -114,6 +114,9 @@ func _draw_scene() -> void:
 		_sprite(load("res://assets/camp/tent.png"), Vector2(grow["tents"][i][0], grow["tents"][i][1]), Vector2(44, 32))
 	if c.stories_done.size() >= int(grow["banner_legends"]):
 		_sprite(load("res://assets/camp/banner.png"), Vector2(grow["banner"][0], grow["banner"][1]), Vector2(32, 80))
+	if c.ransom_open():
+		var chest: Texture2D = load("res://assets/camp/chest_%d.png" % c.ransom_stage())
+		_sprite(chest, Vector2(db.camp["ransom"]["x"], scene_h - 6 - chest.get_size().y * 2), chest.get_size() * 2)
 	var count := {}
 	for id in c.upgrades:
 		var u: Dictionary = db.camp["upgrades"][id]
@@ -196,6 +199,8 @@ func _show_camp(message := "") -> void:
 	if c.visitor != "":
 		opts.append(["Speak with visitor", _show_visitor])
 	opts.append(["Armory", func(): armory.call()])
+	if c.ransom_open() and not c.ransom_full():
+		opts.append(["King's ransom", _show_ransom.bind("")])
 	var mm: Dictionary = c.econ["merry_men"]
 	if c.can_hire():
 		opts.append(["Hire man (%dg)" % mm["price"], _do.bind(c.hire_merry_man)])
@@ -254,6 +259,10 @@ func _show_ledger() -> void:
 		out.append(c.merry_men[id] + where)
 	if c.merry_men.is_empty():
 		out.append("None yet. Hire them at camp, free villagers, or meet them in the legends.")
+	if c.ransom_open():
+		out += ["", "KING RICHARD'S RANSOM", _ransom_line()]
+		for st in db.camp["ransom"]["stages"].slice(0, c.ransom_stage()):
+			out.append("%s: %s" % [st["name"], st["text"]])
 	out += ["", "GIFTS FROM THE LEGENDS"]
 	for id in c.boons:
 		out.append("%s: %s" % [db.camp["boons"][id]["name"], db.camp["boons"][id]["text"]])
@@ -301,6 +310,55 @@ func _show_build(picked: String) -> void:
 		opts.append(["%s %dg" % [ups[id]["short"], ups[id]["cost"]], _show_build.bind(id)])
 	opts.append(["Back", _show_camp.bind("")])
 	_set_buttons(opts)
+
+
+# --- King Richard's ransom -----------------------------------------------------------
+
+func _ransom_line() -> String:
+	var stages: Array = db.camp["ransom"]["stages"]
+	if campaign.ransom_full():
+		return "Paid in full. The King is home!"
+	return "%d of %d gold. Next: %s at %d." % [campaign.ransom, stages[-1]["at"], stages[campaign.ransom_stage()]["name"], stages[campaign.ransom_stage()]["at"]]
+
+
+## The chest by the fire: how full it is, and gold to put in.
+func _show_ransom(_unused := "") -> void:
+	var c = campaign
+	_draw_scene()
+	var r: Dictionary = db.camp["ransom"]
+	var intro: String = r["opens"] if c.ransom == 0 else "The King's ransom chest sits by the fire."
+	Style.fit_text(text_label, "%s\n%s  Gold %d." % [intro, _ransom_line(), c.gold])
+	var opts := []
+	for g in r["gifts"]:
+		opts.append(["Put in %dg" % g, _give_ransom.bind(g), c.ransom_room() >= int(g)])
+	opts.append(["Put in all %dg" % c.ransom_room(), _give_ransom.bind(c.ransom_room()), c.ransom_room() > 0])
+	opts.append(["Back", _show_camp.bind("")])
+	_set_buttons(opts)
+
+
+func _give_ransom(amount: int) -> void:
+	var reached: Array = campaign.give_ransom(amount)
+	campaign.save()
+	if reached.is_empty():
+		_show_ransom()
+	else:
+		_show_letter(reached, 0)
+
+
+## The letters for the stages just reached, one at a time; the King himself comes with the last.
+func _show_letter(reached: Array, i: int) -> void:
+	var st: Dictionary = reached[i]
+	_draw_scene()
+	if st == db.camp["ransom"]["stages"][-1]:
+		var feet := minf(scene_h - 40, 290.0)
+		_sprite(BattleView.sprite_by_id("king"), Vector2(294, feet - 70), Vector2(64, 64), true)
+	Style.fit_text(text_label, "%s\n%s" % [st["name"].to_upper(), st["text"]])
+	if i + 1 < reached.size():
+		_set_buttons([["Read on", _show_letter.bind(reached, i + 1)]], 1)
+	elif campaign.ransom_full():
+		_set_buttons([["Back to camp", _show_camp.bind("")]], 1)
+	else:
+		_set_buttons([["Back to the chest", _show_ransom.bind("")]], 1)
 
 
 # --- Visitors and evenings ---------------------------------------------------------

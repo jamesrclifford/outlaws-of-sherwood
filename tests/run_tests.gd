@@ -1854,6 +1854,34 @@ func _tale_odds_print() -> void:   # rename to test_ to print legend odds while 
 		print("%-22s rep %2d band %d: plain %2d/12  tough %2d/12" % [id, int(db.stories["stories"][id]["requires"].get("reputation", 0)), band_for_story(id).size(), _tale_odds(id, 0.0), _tale_odds(id, 1.0)])
 
 
+func test_king_richards_ransom() -> void:
+	var c = Campaign.new(db, 31, Campaign.FULL_BAND)
+	c.location = "camp"
+	c.gold = 5000
+	check(not c.ransom_open() and c.give_ransom(100).is_empty() and c.gold == 5000, "no ransom chest before the news comes")
+	var r: Dictionary = db.camp["ransom"]
+	c.stories_done = db.stories["stories"].keys().slice(0, int(r["legends"]))
+	c.rest()
+	check(c.ransom_open() and c.news.any(func(n): return n.contains("ransom")), "the news of the King's capture opens the chest")
+	check(c.give_ransom(100).is_empty() and c.ransom == 100 and c.gold < 5000, "gold goes in a little at a time")
+	c.location = "great_north_road"
+	check(c.give_ransom(100).is_empty() and c.ransom == 100, "only at camp")
+	c.location = "camp"
+	var rep: int = c.reputation
+	var first: Array = c.give_ransom(int(r["stages"][0]["at"]) - 100)
+	check(first.size() == 1 and c.ransom_stage() == 1 and c.reputation > rep, "the first stage brings a letter")
+	c.infamy = 50
+	c._update_wanted()
+	c.captured["will"] = "nottingham"
+	var men: int = c.merry_men.size()
+	var rest: Array = c.give_ransom(99999)
+	check(rest.size() == r["stages"].size() - 1 and c.ransom_full() and c.ransom == int(r["stages"][-1]["at"]), "the rest fills the chest, and no more")
+	check(c.flags.has("richard_home") and c.infamy == 0 and c.captured.is_empty() and c.merry_men.size() == men + 1, "King Richard comes home and pardons the band")
+	check(c.give_ransom(50).is_empty(), "nothing more to put in")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.ransom == c.ransom and copy.ransom_full(), "the chest survives a save")
+
+
 func test_camp_upgrades_cost_gold_and_last() -> void:
 	var db = GameData.new()
 	var c = Campaign.new(db, 3, Campaign.FULL_BAND)
@@ -2065,6 +2093,10 @@ func _pt_camp(c, log: Dictionary) -> void:
 			break
 	if c.can_hire() and c.gold >= 110:
 		c.hire_merry_man()
+	# Spare gold goes in the King's ransom; more is kept back while there is still building to do.
+	var keep := 300 if BUILD_ORDER.any(func(id): return c.built(id) < int(db.camp["upgrades"][id].get("max", 1))) else 150
+	for st in c.give_ransom(c.gold - keep):
+		log["ransom"].append("%s d%d" % [st["name"], c.day])
 	if c.visitor != "":
 		var opts: Array = db.camp["visitors"][c.visitor]["options"]
 		for i in opts.size():
@@ -2081,9 +2113,16 @@ func _pt_camp(c, log: Dictionary) -> void:
 func _pt_play(seed: int) -> Dictionary:
 	var c = Campaign.new(db, seed)
 	var log := {"won": {}, "lost": {}, "raids": 0, "raids_lost": 0, "ambushes": 0, "ambushes_lost": 0, "captures": 0,
-		"teams": 0, "teams_won": 0, "built": [], "visitors": 0, "legend_fails": {}, "finale_day": 0, "max_wanted": 0, "broke_days": 0}
+		"teams": 0, "teams_won": 0, "built": [], "ransom": [], "visitors": 0, "legend_fails": {}, "finale_day": 0, "max_wanted": 0, "broke_days": 0}
 	var day_cap := 400
-	while c.day < day_cap and not c.finale_won():
+	# PLAY_ON=n keeps playing n days past the finale, as a player may.
+	var play_on := int(OS.get_environment("PLAY_ON")) if OS.get_environment("PLAY_ON") != "" else 0
+	var end := day_cap
+	while c.day < end and (play_on > 0 or not c.finale_won()):
+		if c.finale_won() and log["finale_day"] == 0:
+			log["finale_day"] = c.day
+			log["gold_at_finale"] = c.gold
+			end = mini(day_cap + play_on, c.day + play_on)
 		log["max_wanted"] = maxi(log["max_wanted"], c.wanted_level())
 		for id in ["wanted_posters", "hunters_hunted", "storm_castle", "marian_wedding"]:
 			if c.stories_done.has(id) and not log.has(id):
@@ -2154,7 +2193,11 @@ func _pt_play(seed: int) -> Dictionary:
 			log["teams_won"] += 1
 		if n.contains("team failed"):
 			log["captures"] += 1
-	log["finale_day"] = c.day if c.finale_won() else -1
+	if not c.finale_won():
+		log["finale_day"] = -1
+	elif log["finale_day"] == 0:
+		log["finale_day"] = c.day
+	log["ransom_gold"] = c.ransom
 	log["legends"] = c.stories_done.size()
 	log["band"] = c.band.size()
 	log["men"] = c.merry_men.size()

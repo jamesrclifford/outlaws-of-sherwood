@@ -373,6 +373,8 @@ func _show_poster() -> void:
 func _show_finale() -> void:
 	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt, and the people", "of the shire are free.", "",
 		"Your legend will be sung", "for a hundred years.", "", "(The greenwood still needs you.)"]
+	if campaign.flags.has("richard_home"):
+		lines = lines.slice(0, 4) + ["King Richard is home, and", "his friends of the greenwood", "are free men for ever.", ""] + lines.slice(4)
 	_notice("VICTORY", "SHERWOOD IS FREE", lines, "robin", "Play on")
 
 

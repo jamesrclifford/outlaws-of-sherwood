@@ -1704,6 +1704,35 @@ def camp_banner():
     return c
 
 
+def camp_chest(stage):
+    """King Richard's ransom chest, lid open, with the gold heaped higher at each stage (5: full, with a crown)."""
+    c = Canvas(24, 22)
+    c.rect(3, 2, 20, 8, "#5a3d24")                 # the open lid behind
+    c.rect(4, 3, 19, 7, "#7a5232")
+    c.rect(3, 5, 20, 5, "#c8a040")
+    c.ellipse(12, 5, 2, 1, "#c0302a")              # the royal seal on the lid
+    heap = [0, 2, 4, 6, 8, 10][stage]
+    for i in range(heap):                          # gold rising out of the chest
+        y = 11 - i // 2
+        half = 8 - i // 2
+        c.rect(12 - half, y, 11 + half, y, "#e8c040" if i % 2 else "#c89a28")
+    for x, y in ((6, 11), (14, 10), (9, 9), (17, 11)) if stage >= 2 else ():
+        c.px(x, y - (stage - 2), "#fff0a0")
+    if stage == 5:
+        c.rect(9, 3, 14, 4, "#e8c040")             # a crown on top of the heap
+        for x in (9, 11, 12, 14):
+            c.px(x, 2, "#e8c040")
+        c.px(11, 3, "#c0302a")
+    c.rect(2, 11, 21, 20, "#7a5232")               # the chest itself
+    c.rect(2, 11, 21, 12, "#9a6a3a")
+    c.rect(2, 15, 21, 15, "#c8a040")
+    c.rect(6, 11, 7, 20, "#c8a040")
+    c.rect(16, 11, 17, 20, "#c8a040")
+    c.rect(11, 14, 12, 16, "#3a2a1a")
+    c.outline("#1e140c")
+    return c
+
+
 def camp_overlay(fn):
     """A backdrop-sized layer holding just one part of the camp (the board, the lanterns)."""
     c = Canvas(BW, BH)
@@ -1739,6 +1768,8 @@ def make_all():
     camp_overlay(oak_lanterns).save("assets", "camp", "lanterns.png")
     camp_tent().save("assets", "camp", "tent.png")
     camp_banner().save("assets", "camp", "banner.png")
+    for stage in range(6):
+        camp_chest(stage).save("assets", "camp", "chest_%d.png" % stage)
 
 
 if __name__ == "__main__":
