@@ -650,6 +650,7 @@ func bribe_jailer() -> bool:
 func _end_day(resting: bool, heal := true) -> void:
 	day += 1
 	var band := free_heroes()
+	supplies += int(upgrade_sum("daily_supplies"))
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
 	var fed := supplies >= needed
 	supplies = maxi(0, supplies - needed)

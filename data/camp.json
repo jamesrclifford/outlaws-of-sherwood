@@ -6,6 +6,7 @@
     "lookout": {"name": "Lookout in the Oak", "short": "Lookout", "cost": 60, "x": 160, "y": 40, "text": "A platform high in the Major Oak. Sir Guy's raid plot grows more slowly.", "guy_per_day": -2},
     "larder": {"name": "Robin Hood's Larder", "short": "Larder", "cost": 40, "x": 4, "y": 84, "text": "A hollow oak full of venison and ale. Each rest at camp adds 3 supplies.", "rest_supplies": 3},
     "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
+    "hunting": {"name": "Hunting Camp", "short": "Hunting camp", "cost": 70, "x": 292, "y": 176, "text": "A hunters' lean-to deep in the forest. Huntsmen bring in 2 supplies every day, even while the band is on the road.", "daily_supplies": 2},
     "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
     "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "max": 3, "x": 236, "y": 72, "more": [[150, 116], [258, 112]], "text": "A long hall of woven branches and turf. Two more Merry Men can join the band for each hall, up to three halls.", "merry_men_max": 2},
     "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}

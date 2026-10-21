@@ -1874,6 +1874,10 @@ func test_camp_upgrades_cost_gold_and_last() -> void:
 	c.evening = "rain"   # any evening but the one below
 	c.rest()
 	check(c.supplies >= 50 + 3 - band - 3, "the larder fills up while the band rests")
+	c.build("hunting")
+	var stock: int = c.supplies
+	c._end_day(false)
+	check(c.supplies == stock + 2 - c.free_heroes().size(), "the hunting camp brings in supplies every day")
 	c.location = "nottingham"
 	check(not c.can_build("lookout"), "only at camp")
 	for id in db.camp["upgrades"]:

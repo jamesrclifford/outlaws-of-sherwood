@@ -1578,6 +1578,29 @@ def camp_butts():
     return c
 
 
+def camp_hunting():
+    """A hunters' lean-to of poles and bracken, with a deer hide stretched to dry and bows against it."""
+    c = Canvas(30, 22)
+    c.line(2, 21, 14, 3, "#5a3d24", 2)
+    c.line(26, 21, 14, 3, "#5a3d24", 2)
+    for y in range(6, 21):                          # bracken thatch on the near side
+        half = (y - 3) * 12 // 18
+        for x in range(14 - half, 15):
+            if (x + y) % 3:
+                c.px(x, y, "#5a8a3a" if (x * y) % 5 else "#3a6a2c")
+    c.rect(16, 9, 24, 17, "#a8784a")               # the hide on a frame
+    c.rect(17, 10, 23, 16, "#c89a68")
+    c.px(20, 13, "#8a5a34")
+    c.line(15, 8, 25, 8, "#5a3d24")
+    c.line(15, 18, 25, 18, "#5a3d24")
+    c.line(27, 20, 28, 6, "#7a4a22")                # a bow leaning on the frame
+    c.line(28, 6, 26, 13, "#e8e0c8")
+    c.rect(4, 19, 9, 20, "#c8a868")                 # a brace of rabbits
+    c.px(5, 18, "#8a6a40")
+    c.outline("#1e140c")
+    return c
+
+
 def camp_herbs():
     """Tuck's herb garden: wattle beds of comfrey, sage and yarrow with a straw skep for bees."""
     c = Canvas(32, 14)
@@ -1644,6 +1667,7 @@ CAMP = {
     "lookout": camp_lookout,
     "larder": camp_larder,
     "butts": camp_butts,
+    "hunting": camp_hunting,
     "herbs": camp_herbs,
     "hall": camp_hall,
     "paths": camp_paths,
