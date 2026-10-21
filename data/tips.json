@@ -8,6 +8,7 @@
     "aim": {"title": "Aiming a shot", "text": "Tap once to fix your aim left and right. Tap again to shoot as the sight crosses the gold. Mind the wind arrow, and be quick: the green bar is your time."},
     "swing": {"title": "A big swing", "text": "Tap when the white marker is in the gold, in the middle of the bar. Be quick: the green bar is your time."},
     "rhythm": {"title": "Quick cuts", "text": "Three fast cuts! Tap each time the marker passes the gold in the middle. Be quick: the green bar is your time."},
+    "camp": {"title": "Major Oak Camp", "text": "Home! Rest the night to heal, and see what the evening brings. Spend gold to build up the camp: each thing you build helps the band for good. Visitors wait by the fire for a few days."},
     "captured": {"title": "Captured!", "text": "A captured hero waits in a cell. Send the band on the rescue job to free them, or bribe the jailer. Wait too long and they go to Nottingham's dungeon."}
   }
 }

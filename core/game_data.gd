@@ -18,6 +18,7 @@ var economy: Dictionary
 var stories: Dictionary
 var contests: Dictionary
 var disguises: Dictionary
+var camp: Dictionary           # Major Oak Camp: upgrades, campfire evenings, visitors (data/camp.json)
 var marian: Dictionary         # Maid Marian's visits to ordinary jobs (data/marian.json)
 
 
@@ -37,6 +38,7 @@ func _init() -> void:
 	contests = _load("res://data/contests.json")
 	disguises = _load("res://data/disguises.json")["disguises"]
 	marian = _load("res://data/marian.json")
+	camp = _load("res://data/camp.json")
 	# Tales from the legends (data/tales.json) are story missions that recruit nobody.
 	var tales: Dictionary = _load("res://data/tales.json")["tales"]
 	for id in tales:

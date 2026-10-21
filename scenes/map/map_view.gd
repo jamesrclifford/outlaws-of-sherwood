@@ -8,6 +8,7 @@ const MissionView = preload("res://scenes/mission/mission_view.gd")
 const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
 const TipCard = preload("res://scenes/ui/tip_card.gd")
+const CampView = preload("res://scenes/camp/camp_view.gd")
 
 const MAP_TOP := 80
 ## The bottom panel's least height: four lines of place info and five rows of buttons.
@@ -171,6 +172,8 @@ func _refresh() -> void:
 				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
 			if m.has("marian"):
 				tag += "\n+ Maid Marian"
+		elif id == "camp" and c.visitor != "":
+			tag = "\n[VISITOR]"
 		b.text = c.node(id)["name"] + tag
 		_fit_plaque(id, id == selected)
 
@@ -219,19 +222,11 @@ func _select(id: String) -> void:
 			opts.append(["Bribe jailer (%dg)" % c.jailer_cost(), _act.bind(c.bribe_jailer)])
 		if c.can_give():
 			opts.append(["Give to the poor", _show_giving])
-		if c.can_buy_supplies():
+		if id == "camp":
+			opts.append(["Enter camp", _show_camp])
+		elif c.can_buy_supplies():
 			var sup: Dictionary = c.econ["supplies"]
 			opts.append(["Supplies %d (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
-		if id == "camp":
-			opts.append(["Rest a day", func():
-				c.rest()
-				_after_day()])
-			opts.append(["Armory", _show_armory])
-			var mm: Dictionary = c.econ["merry_men"]
-			if c.can_hire():
-				opts.append(["Hire man (%dg)" % mm["price"], _act.bind(c.hire_merry_man)])
-			elif c.merry_men.size() < int(mm["max"]):
-				opts.append(["Men join: %d rep" % mm["min_reputation"], func(): pass])
 	else:
 		opts.append(["Travel (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
 	opts.append(["News", _show_news])
@@ -312,6 +307,20 @@ func _play(run) -> void:
 			_show_finale()
 		else:
 			_after_day())
+	add_child(view)
+
+
+## Major Oak Camp's own screen. Resting there ends the day, and the map takes over again.
+func _show_camp() -> void:
+	var view := CampView.new()
+	view.start(db, campaign)
+	view.armory = _show_armory
+	view.closed.connect(func(rested: bool):
+		view.queue_free()
+		if rested:
+			_after_day()
+		else:
+			_select(campaign.location))
 	add_child(view)
 
 

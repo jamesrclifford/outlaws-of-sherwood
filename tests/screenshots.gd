@@ -238,5 +238,23 @@ func _init() -> void:
 	home.rest()
 	home_map._after_day()
 	await _snap(dir, "marian_home")
+	# The camp: a few things built, a visitor waiting, an evening, and the build list.
+	home.gold = 300
+	for id in ["lookout", "larder", "butts", "hall", "pigeons", "herbs", "paths"]:
+		home.upgrades.append(id)
+	home.visitor = "pedlar"
+	home.visitor_until = home.day + 3
+	home_map._select("camp")
+	home_map._show_camp()
+	await _snap(dir, "camp")
+	var cv = home_map.get_child(home_map.get_child_count() - 1)
+	cv._show_visitor()
+	await _snap(dir, "camp_visitor")
+	home.upgrades = ["lookout", "larder"]
+	cv._show_build("")
+	await _snap(dir, "camp_build")
+	home.evening = "rain"
+	cv._rest()
+	await _snap(dir, "camp_evening")
 	await _clear()
 	quit()

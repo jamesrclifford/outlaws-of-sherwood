@@ -1510,6 +1510,164 @@ def make_icon():
     icon.save(os.path.join(ROOT, "assets", "icon.png"))
 
 
+# ---------------------------------------------------------------- camp upgrades
+
+def camp_lookout():
+    """A plank platform lashed high in the Major Oak, with a rope ladder and a watchman's horn."""
+    c = Canvas(26, 22)
+    c.rect(1, 8, 24, 10, "#8a6a40")
+    c.rect(1, 11, 24, 11, "#5a3d24")
+    for x in range(2, 24, 4):
+        c.px(x, 9, "#6a4a2c")
+    for x in (2, 23):
+        c.rect(x, 2, x, 8, "#5a3d24")
+    c.line(2, 3, 23, 3, "#7a5a34")
+    c.line(2, 5, 23, 5, "#7a5a34")
+    for y in range(12, 22, 2):                      # rope ladder
+        c.px(10, y, "#c8a868")
+        c.px(14, y, "#c8a868")
+        c.line(10, y, 14, y, "#a88848")
+    c.rect(18, 5, 21, 7, "#e8e0c8")                 # the horn
+    c.px(22, 6, "#c8a860")
+    c.rect(6, 2, 8, 2, "#2a5a2a")                   # a green pennant
+    c.rect(6, 1, 10, 1, "#2a5a2a")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_pigeons():
+    """A pigeon loft on a tall pole, with two birds on its roof."""
+    c = Canvas(18, 34)
+    c.rect(8, 14, 9, 33, "#5a3d24")
+    c.rect(2, 6, 15, 14, "#a8885a")
+    c.rect(2, 13, 15, 14, "#6a4a2c")
+    for x in (4, 8, 12):
+        c.rect(x, 9, x + 1, 11, "#2a1e14")
+    for y, w in ((5, 0), (4, 1), (3, 2), (2, 3), (1, 4)):
+        c.rect(1 + w * 1, y, 16 - w * 1, y, "#7a3a2a" if y % 2 else "#9a4a32")
+    for bx in (5, 12):
+        c.rect(bx, -1 + 1, bx + 2, 1, "#c8c8d0")
+        c.px(bx + 2, 0, "#8a8a98")
+        c.px(bx - 1, 1, "#e8e0c8")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_larder():
+    """Robin Hood's Larder: a hollow stump stacked with barrels, a ham and a string of onions."""
+    c = Canvas(26, 24)
+    c.rect(2, 4, 23, 23, "#4a3322")
+    c.rect(18, 4, 23, 23, "#33231a")
+    c.rect(2, 4, 3, 23, "#6a4a30")
+    c.ellipse(12, 14, 6, 8, "#1e140c")
+    for bx, by in ((8, 17), (14, 17), (11, 11)):
+        c.rect(bx - 2, by - 3, bx + 2, by + 3, "#9a6a3a")
+        c.rect(bx - 2, by - 1, bx + 2, by - 1, "#5a3d24")
+        c.rect(bx - 2, by + 1, bx + 2, by + 1, "#5a3d24")
+    c.ellipse(19, 9, 2, 3, "#b86a4a")              # a ham hanging outside
+    c.px(19, 5, "#c8a868")
+    for x in range(4, 18, 3):                       # onions on a string
+        c.px(x, 3, "#c8a868")
+        c.px(x, 4, "#e8c890")
+    c.rect(0, 2, 25, 3, "#3a5a2c")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_butts():
+    """Two straw archery butts with painted targets, and a willow garland on a stake."""
+    c = Canvas(28, 24)
+    for bx in (6, 20):
+        c.ellipse(bx, 12, 5, 7, "#d8b860")
+        c.ellipse(bx, 12, 4, 5, "#e8e0c8")
+        c.ellipse(bx, 12, 3, 3, "#3a6ab0")
+        c.ellipse(bx, 12, 1, 1, "#c0302a")
+        c.line(bx - 4, 22, bx - 2, 18, "#5a3d24")
+        c.line(bx + 4, 22, bx + 2, 18, "#5a3d24")
+    c.line(17, 9, 22, 13, "#8a6a40")               # an arrow in the gold
+    c.px(16, 8, "#e8e0c8")
+    c.rect(13, 0, 13, 23, "#5a3d24")               # the garland stake
+    c.ellipse(13, 3, 3, 3, "#4a8a3a")
+    c.d[13, 3] = (0, 0, 0, 0)
+    c.px(11, 2, "#e04a6a")
+    c.px(15, 4, "#e04a6a")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_herbs():
+    """Tuck's herb garden: wattle beds of comfrey, sage and yarrow with a straw skep for bees."""
+    c = Canvas(32, 14)
+    c.rect(0, 6, 22, 13, "#6a4a2c")
+    c.rect(1, 7, 21, 12, "#4a3220")
+    rng = random.Random(5)
+    for x in range(2, 21, 2):
+        for y in (8, 10):
+            col = rng.choice(["#5a9a46", "#7aaa58", "#8aa0a0", "#f0f0e0", "#b07ac0"])
+            c.px(x, y, col)
+            c.px(x, y - 1, "#3a6a2c")
+    for x in range(0, 23, 3):
+        c.px(x, 5, "#8a6a40")
+    c.ellipse(27, 9, 4, 4, "#d8b860")              # the bee skep
+    c.line(23, 8, 31, 8, "#a88838")
+    c.line(23, 10, 31, 10, "#a88838")
+    c.px(27, 12, "#1e140c")
+    c.px(29, 3, "#f0d040")
+    c.px(25, 2, "#f0d040")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_hall():
+    """The Great Hall: a long lodge of woven branches with a turf roof and an open door glowing with firelight."""
+    c = Canvas(48, 28)
+    for y in range(4, 14):                          # turf roof
+        inset = (13 - y) // 2
+        c.rect(2 + inset, y, 45 - inset, y, "#4a7236" if y % 3 else "#5f8c40")
+    c.rect(4, 14, 43, 27, "#8a6a40")
+    for x in range(5, 43, 3):                       # wattle weave
+        for y in range(15, 27, 2):
+            c.px(x + (y // 2) % 2, y, "#6a4a2c")
+    for x in (4, 23, 43):
+        c.rect(x, 13, x, 27, "#4a3220")
+    c.rect(20, 18, 27, 27, "#f0a040")               # the door, with the fire inside
+    c.rect(21, 20, 26, 27, "#e8703a")
+    c.rect(22, 23, 25, 27, "#f8d060")
+    c.rect(9, 18, 12, 20, "#2a1e14")
+    c.rect(35, 18, 38, 20, "#2a1e14")
+    c.px(23, 1, "#b0b0a8")                          # smoke from the roof hole
+    c.px(24, 2, "#c8c8c0")
+    c.px(23, 3, "#a0a098")
+    c.outline("#1e140c")
+    return c
+
+
+def camp_paths():
+    """A hidden path: a trail of stepping logs half covered by brushwood and bracken."""
+    c = Canvas(44, 14)
+    rng = random.Random(6)
+    for i, x in enumerate(range(2, 42, 7)):
+        y = 6 + (i % 2) * 2
+        c.ellipse(x + 2, y, 3, 2, "#8a6a40")
+        c.ellipse(x + 2, y, 1, 1, "#c8a868")
+    for _ in range(26):                             # bracken over the trail
+        x, y = rng.randint(0, 43), rng.randint(0, 13)
+        c.line(x, y, x + rng.choice((-2, 2)), y - 2, rng.choice(["#3a6a2c", "#5a8a3a", "#7a6a3a"]))
+    c.outline("#1e140c")
+    return c
+
+
+CAMP = {
+    "lookout": camp_lookout,
+    "pigeons": camp_pigeons,
+    "larder": camp_larder,
+    "butts": camp_butts,
+    "herbs": camp_herbs,
+    "hall": camp_hall,
+    "paths": camp_paths,
+}
+
+
 def make_all():
     for name, fn in BACKDROPS.items():
         fn().save("assets", "backdrops", name + ".png")
@@ -1520,6 +1678,8 @@ def make_all():
     make_fx()
     make_title()
     make_icon()
+    for name, fn in CAMP.items():
+        fn().save("assets", "camp", name + ".png")
 
 
 if __name__ == "__main__":
