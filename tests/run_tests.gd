@@ -1952,3 +1952,47 @@ func test_camp_visitors() -> void:
 	check(c.visitor != "widow", "visitors don't wait forever")
 	for id in db.camp["visitors"]:
 		check(ResourceLoader.exists("res://assets/sprites/%s.png" % db.camp["visitors"][id]["sprite"]), "%s has a sprite" % id)
+
+
+func test_teams_go_out_on_their_own() -> void:
+	var db = GameData.new()
+	var c = Campaign.new(db, 21, Campaign.FULL_BAND)
+	c.missions.clear()
+	c.missions["great_north_road"] = MissionGen.new(db).generate("robbery", 30, 4, "great_north_road")
+	check(not c.can_send_to("great_north_road"), "a team needs Merry Men to lead")
+	c.gold = 500
+	c.reputation = 50
+	c.location = "camp"
+	c.hire_merry_man()
+	c.hire_merry_man()
+	c.hire_merry_man()
+	check(c.can_send_to("great_north_road") and not c.team_leaders().has("robin"), "Robin never leaves the band to lead")
+	var odds: float = c.team_odds("little_john", "great_north_road")
+	check(odds > 0.1 and odds < 0.9, "the odds are shown (%d%%)" % roundi(odds * 100))
+	check(c.send_team("little_john", "great_north_road"), "Little John takes two Merry Men")
+	var t: Dictionary = c.teams[0]
+	check(t["men"].size() == 2 and c.is_away("little_john") and not c.missions.has("great_north_road"), "they take the job off the map")
+	var party: Array = c.party().map(func(h): return h.id)
+	check(party.size() == 5 and not party.has("little_john") and party.has("robin") and party.any(func(h): return c.merry_men.has(h)), "a Merry Man takes John's place in Robin's five")
+	check(not c.can_send_to("great_north_road"), "one team to a job")
+	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	check(copy.is_away("little_john") and copy.teams[0]["back"] == t["back"], "teams survive a save")
+	# Run the outcome both ways.
+	var won = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	won.teams[0]["odds"] = 1.0
+	var gold: int = won.gold
+	won.day = t["back"] - 1
+	won._end_day(false)
+	check(won.teams.is_empty() and not won.is_away("little_john") and won.gold >= gold + int(t["mission"]["rewards"]["gold"]) and won.captured.is_empty(), "a won job brings the gold home")
+	var lost = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
+	lost.teams[0]["odds"] = 0.0
+	lost.day = t["back"] - 1
+	lost._end_day(false)
+	check(lost.teams.is_empty() and lost.captured.size() == 1, "a lost job lands one of them in the cells")
+	var caught: String = lost.captured.keys()[0]
+	check(lost.missions.values().any(func(m): return m.get("rescue_heroes", []).has(caught)), "and a rescue job goes up for %s" % lost.hero_name(caught))
+	# Odds over many sends: a strong healthy team usually wins, a bait job is a bad bet.
+	var bait: Dictionary = MissionGen.new(db).generate("robbery", 30, 4, "great_north_road")
+	MissionGen.new(db).make_bait(bait, "sheriff", "")
+	c.missions["sherwood_edge"] = bait
+	check(c.team_odds("will", "sherwood_edge") < odds, "a bait job is a worse bet")

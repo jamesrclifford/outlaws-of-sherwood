@@ -156,9 +156,14 @@ func _refresh() -> void:
 	var c = campaign
 	marian_token.visible = c.marian_home()
 	# The villains' plots fill up each day: at 100% the Sheriff baits a job; Guy may raid from 50%.
+	var last := []
+	if c.hunted_hero != "":
+		last.append("Guy hunts %s" % c.heroes[c.hunted_hero].short_name() if c.heroes.has(c.hunted_hero) else c.hero_name(c.hunted_hero))
+	if not c.teams.is_empty():
+		last.append("Away: %s" % ", ".join(c.teams.map(func(t): return c.heroes[t["leader"]].short_name())))
 	status_label.text = "Day %d  Gold %d  Rep %d%s\nSupplies %d (%d days)  Infamy %d\nSheriff's trap %d%%  Guy's raid %d%%%s" % [
 		c.day, c.gold, c.reputation, ("  Bounty %d" % c.bounty()) if c.wanted_level() > 0 else "", c.supplies, c.supply_days(), c.infamy, c.plots["sheriff"], c.plots["guy"],
-		("\nGuy is hunting %s" % c.hero_name(c.hunted_hero)) if c.hunted_hero != "" else ""]
+		("\n" + ".  ".join(last)) if not last.is_empty() else ""]
 	for id in c.map["nodes"]:
 		var b: Button = map_layer.get_node(id)
 		var tag := ""
@@ -172,6 +177,8 @@ func _refresh() -> void:
 				tag = "\n[%s]" % TAGS.get(m["type"], m["type"].to_upper())
 			if m.has("marian"):
 				tag += "\n+ Maid Marian"
+		elif not c.team_at(id).is_empty():
+			tag = "\n[%s'S TEAM]" % c.heroes[c.team_at(id)["leader"]].short_name().to_upper()
 		elif id == "camp" and c.visitor != "":
 			tag = "\n[VISITOR]"
 		b.text = c.node(id)["name"] + tag
@@ -195,6 +202,8 @@ func _select(id: String) -> void:
 		heroes_line.append("%s %d/%d" % [h.short_name(), h.hp, h.max_hp])
 	for h in c.captured:
 		heroes_line.append("%s caught" % (c.heroes[h].short_name() if c.heroes.has(h) else c.hero_name(h).split(" ")[0]))
+	for t in c.teams:
+		heroes_line.append("%s away" % c.heroes[t["leader"]].short_name())
 	lines.append(", ".join(heroes_line))
 	if c.missions.has(id):
 		var m: Dictionary = c.missions[id]
@@ -207,6 +216,8 @@ func _select(id: String) -> void:
 		else:
 			var expiry: String = "" if m.has("rescue_heroes") else ", gone after day %d" % m["expires"]
 			lines.append("Job: %s. Reward %d gold%s." % [m["name"], m["rewards"]["gold"], expiry])
+	if not c.team_at(id).is_empty():
+		lines.append("%s's team is on the job here, back by day %d." % [c.hero_name(c.team_at(id)["leader"]), c.team_at(id)["back"]])
 	if not c.news.is_empty():
 		lines.append(c.news.back())
 	Style.fit_text(info_label, "\n".join(lines))
@@ -229,6 +240,8 @@ func _select(id: String) -> void:
 			opts.append(["Supplies %d (%dg)" % [sup["bundle"], sup["price"]], _act.bind(c.buy_supplies)])
 	else:
 		opts.append(["Travel (%d day%s)" % [days, "" if days == 1 else "s"], _travel.bind(id)])
+	if c.can_send_to(id):
+		opts.append(["Send a team", _show_team_pick.bind(id)])
 	opts.append(["News", _show_news])
 	opts.append(["Legends %d/%d" % [campaign.stories_done.size(), campaign.legends().size()], _show_legends])
 	_set_buttons(opts)
@@ -308,6 +321,28 @@ func _play(run) -> void:
 		else:
 			_after_day())
 	add_child(view)
+
+
+## Who leads a team of Merry Men to the job at id: each band member but Robin, with the odds.
+func _show_team_pick(id: String) -> void:
+	var c = campaign
+	var men: Array = c.team_men().map(func(h): return c.heroes[h].short_name())
+	var back: int = c.day + int(c.econ["teams"]["days"]) + c.route(id).size()
+	if c.team_leaders().is_empty():
+		Style.fit_text(info_label, "There is nobody free to lead a team. Robin stays with the band.")
+		return
+	Style.fit_text(info_label, "Who leads %s to %s on their own? They will be back by day %d. Robin stays with the band." % [
+		" and ".join(men), c.node(id)["name"], back])
+	var opts := []
+	for h in c.team_leaders():
+		var note: String = c.econ["teams"]["leaders"].get(h, {}).get("note", "")
+		opts.append(["%s %d%% %s" % [c.heroes[h].short_name(), roundi(c.team_odds(h, id) * 100), note], func():
+			c.send_team(h, id)
+			c.save()
+			_select(id)])
+	opts.append(["Back", _select.bind(id)])
+	_set_buttons(opts)
+	TipCard.show_once(self, "teams")
 
 
 ## Major Oak Camp's own screen. Resting there ends the day, and the map takes over again.
