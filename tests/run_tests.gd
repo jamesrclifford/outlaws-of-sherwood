@@ -2015,12 +2015,17 @@ func test_teams_go_out_on_their_own() -> void:
 	won.day = t["back"] - 1
 	won._end_day(false)
 	check(won.teams.is_empty() and not won.is_away("little_john") and won.gold >= gold + int(int(t["mission"]["rewards"]["gold"]) * float(db.economy["teams"]["share"])) and won.captured.is_empty(), "a won job brings the gold home")
+	var rep: Dictionary = won.team_reports[0] if won.team_reports.size() == 1 else {}
+	check(rep.get("won", false) and rep["leader"] == "little_john" and rep["with"].size() == 2 and int(rep["gold"]) == won.gold - gold and rep["hurt"].size() == 3, "the team's report tells what they did and brought")
 	var lost = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
 	lost.teams[0]["odds"] = 0.0
 	lost.day = t["back"] - 1
 	lost._end_day(false)
 	check(lost.teams.is_empty() and lost.captured.size() == 1, "a lost job lands one of them in the cells")
 	var caught: String = lost.captured.keys()[0]
+	var lrep: Dictionary = lost.team_reports[0]
+	check(not lrep["won"] and lrep["caught"] == lost.hero_name(caught) and lrep["hurt"].size() == 2, "and its report names who was caught")
+	check(Campaign.from_dict(db, JSON.parse_string(JSON.stringify(lost.to_dict()))).team_reports.size() == 1, "reports wait in a save until they are read")
 	check(lost.missions.values().any(func(m): return m.get("rescue_heroes", []).has(caught)), "and a rescue job goes up for %s" % lost.hero_name(caught))
 	# Odds over many sends: a strong healthy team usually wins, a bait job is a bad bet.
 	var bait: Dictionary = MissionGen.new(db).generate("robbery", 30, 4, "great_north_road")
