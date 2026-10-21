@@ -774,6 +774,14 @@ func test_maid_marian_story_line() -> void:
 	c.plots["guy"] = 50
 	c._story_effects(db.stories["stories"]["marian_wedding"]["effects"])
 	check(c.flags.has("marian_wed") and c.plots["guy"] == 50, "the wedding is remembered, and does not wipe Guy's plot")
+	check(c.marian_home(), "after the wedding Marian lives in Sherwood")
+	var home_job: Dictionary = MissionGen.new(db).generate("robbery", 30, 5, "great_north_road")
+	MissionGen.new(db).add_marian(home_job, "bandages", true)
+	check(home_job["marian_text"] == db.marian["visits"]["bandages"]["text_home"], "and rides out to jobs from the camp, not the castle")
+	check(db.marian["visits"].values().all(func(v): return v.has("text_home")), "every visit has a Sherwood version")
+	c.location = "camp"
+	c.rest()
+	check(c.plots["guy"] < 50 + 5 + c.infamy / 8 - 1, "she keeps watch while the band rests, setting Guy's raid back")
 	var run = MissionRun.new(db, MissionGen.new(db).story("marian_taken", 40, 1), [db.make_hero("robin")])
 	check(run.guest() == "", "Marian is not with the band until she is freed")
 	run.node_index = 4

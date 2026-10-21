@@ -116,7 +116,7 @@
             {"label": "Alan-a-Dale, singing", "result": "next", "reputation": 1, "log": "Alan-a-Dale leads her in with a song so lovely that even the birds stop to listen."}
           ]},
         {"kind": "combat", "text": "'I forbid it!' The Bishop of Hereford has come to spoil the wedding, with Sir Guy's men behind him.", "enemies": ["bishop", "knight", "man_at_arms", "man_at_arms"]},
-        {"kind": "objective", "text": "The Bishop runs off without his hat, and Friar Tuck marries Robin Hood and Maid Marian under the Major Oak. Marian goes on living at the castle, the band's best friend inside its walls, and from now on she helps more often than she causes trouble."}
+        {"kind": "objective", "text": "The Bishop runs off without his hat, and Friar Tuck marries Robin Hood and Maid Marian under the Major Oak. Marian leaves the castle for good and makes her home at Major Oak Camp. She still rides out to help on the band's jobs, and from now on she helps more often than she causes trouble."}
       ]
     },
     "will_meets_robin": {

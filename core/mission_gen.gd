@@ -100,11 +100,12 @@ static func marian_visits(game_db, m: Dictionary, kind: String) -> Array:
 
 ## Maid Marian comes along on this job: she warns of traps, draws a guard away, patches the band up
 ## or tips them off to a fatter purse, or else brings trouble on her heels. The briefing says which.
-func add_marian(m: Dictionary, visit_id: String) -> void:
+## Once she lives in Sherwood (home) she comes from the camp rather than the castle.
+func add_marian(m: Dictionary, visit_id: String, home := false) -> void:
 	var v: Dictionary = db.marian["visits"][visit_id]
 	m["guest"] = "marian"
 	m["marian"] = visit_id
-	m["marian_text"] = v["text"]
+	m["marian_text"] = v["text_home"] if home and v.has("text_home") else v["text"]
 	var fights: Array = m["nodes"].filter(func(n): return n.has("enemies"))
 	if v.has("remove_enemy"):
 		for n in fights:
