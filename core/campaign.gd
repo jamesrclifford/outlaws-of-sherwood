@@ -177,10 +177,6 @@ func build(id: String) -> bool:
 	upgrades.append(id)
 	for h in heroes:
 		_apply_gear(h)
-	if upgrade_sum("reveal_bait") > 0:
-		for m in missions.values():
-			if not m.get("bait", {}).is_empty():
-				m["bait"]["revealed"] = true
 	_news("The band builds %s at Major Oak Camp." % db.camp["upgrades"][id]["name"])
 	return true
 
@@ -754,8 +750,6 @@ func _spawn_mission(force_type := "", forced_bait := "") -> void:
 			var visits: Array = MissionGen.marian_visits(db, m, "help" if helps else "trouble")
 			if not visits.is_empty():
 				gen.add_marian(m, visits[rng.randi_range(0, visits.size() - 1)], marian_home())
-		if not m["bait"].is_empty() and upgrade_sum("reveal_bait") > 0:
-			m["bait"]["revealed"] = true
 		m["expires"] = day + MISSION_LIFETIME
 		missions[n] = m
 		return

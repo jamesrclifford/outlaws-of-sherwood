@@ -240,7 +240,7 @@ func _init() -> void:
 	await _snap(dir, "marian_home")
 	# The camp: a few things built, a visitor waiting, an evening, and the build list.
 	home.gold = 300
-	for id in ["lookout", "larder", "butts", "hall", "pigeons", "herbs", "paths"]:
+	for id in ["lookout", "larder", "butts", "hall", "herbs", "paths"]:
 		home.upgrades.append(id)
 	home.visitor = "pedlar"
 	home.visitor_until = home.day + 3

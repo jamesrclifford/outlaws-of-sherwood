@@ -1872,16 +1872,6 @@ func test_camp_upgrades_cost_gold_and_last() -> void:
 	c.evening = "rain"   # any evening but the one below
 	c.rest()
 	check(c.supplies >= 50 + 3 - band - 3, "the larder fills up while the band rests")
-	c.build("pigeons")
-	var baits := 0
-	for i in 40:
-		c._spawn_mission("robbery", "sheriff")
-		for n in c.missions:
-			if not c.missions[n].get("bait", {}).is_empty():
-				baits += 1
-				check(c.missions[n]["bait"]["revealed"], "pigeons bring word of every bait")
-		c.missions.clear()
-	check(baits > 0, "baits were spawned to check")
 	c.location = "nottingham"
 	check(not c.can_build("lookout"), "only at camp")
 	for id in db.camp["upgrades"]:

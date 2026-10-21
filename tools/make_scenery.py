@@ -1535,23 +1535,6 @@ def camp_lookout():
     return c
 
 
-def camp_pigeons():
-    """A pigeon loft on a tall pole, with two birds on its roof."""
-    c = Canvas(18, 34)
-    c.rect(8, 14, 9, 33, "#5a3d24")
-    c.rect(2, 6, 15, 14, "#a8885a")
-    c.rect(2, 13, 15, 14, "#6a4a2c")
-    for x in (4, 8, 12):
-        c.rect(x, 9, x + 1, 11, "#2a1e14")
-    for y, w in ((5, 0), (4, 1), (3, 2), (2, 3), (1, 4)):
-        c.rect(1 + w * 1, y, 16 - w * 1, y, "#7a3a2a" if y % 2 else "#9a4a32")
-    for bx in (5, 12):
-        c.rect(bx, -1 + 1, bx + 2, 1, "#c8c8d0")
-        c.px(bx + 2, 0, "#8a8a98")
-        c.px(bx - 1, 1, "#e8e0c8")
-    c.outline("#1e140c")
-    return c
-
 
 def camp_larder():
     """Robin Hood's Larder: a hollow stump stacked with barrels, a ham and a string of onions."""
@@ -1659,7 +1642,6 @@ def camp_paths():
 
 CAMP = {
     "lookout": camp_lookout,
-    "pigeons": camp_pigeons,
     "larder": camp_larder,
     "butts": camp_butts,
     "herbs": camp_herbs,

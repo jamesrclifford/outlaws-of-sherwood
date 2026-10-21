@@ -8,7 +8,6 @@
     "butts": {"ground": true, "name": "Archery Butts", "short": "Butts", "cost": 90, "x": 300, "y": 0, "text": "Straw targets and a garland to shoot through. Every hero hits a little harder (+1 attack).", "atk": 1},
     "herbs": {"ground": true, "name": "Tuck's Herb Garden", "short": "Herbs", "cost": 50, "x": 4, "y": 0, "text": "Comfrey, yarrow and sage. Heroes heal twice as fast on the road.", "road_heal": 0.15},
     "hall": {"name": "Great Hall", "short": "Great hall", "cost": 120, "x": 236, "y": 72, "text": "A long hall of woven branches and turf. Two more Merry Men can join the band.", "merry_men_max": 2},
-    "pigeons": {"name": "Pigeon Loft", "short": "Pigeons", "cost": 70, "x": 84, "y": 66, "text": "Pigeons carry word from friends in every village. The villains' bait jobs are marked on the map.", "reveal_bait": true},
     "paths": {"ground": true, "name": "Hidden Paths", "short": "Paths", "cost": 80, "x": 96, "y": 0, "text": "Secret trails with brushwood to cover them. Lying low at camp cools infamy twice as fast.", "lie_low": 2}
   },
   "evenings": {
