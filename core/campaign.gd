@@ -11,6 +11,7 @@ const FULL_BAND := ["robin", "little_john", "will", "tuck", "alan"]
 const MISSION_LIFETIME := 5        # days a job stays on the map
 const RESCUE_DEADLINE := 6         # days before a prisoner is moved to Nottingham's dungeon
 const DUNGEON := "nottingham"
+const STORY_RETRY := 3             # days before a legend the band failed or lost at the butts comes back
 const RESCUE_GRIP := 5           # how much a freed prisoner (or any other honest job) loosens the Sheriff's grip
 const HEAL_AT_CAMP := 1.0          # fraction of max HP restored per day resting at camp
 const HEAL_ON_ROAD := 0.15
@@ -39,6 +40,7 @@ var news: Array = []               # what happened, newest last
 var merry_men := {}                # hired hero id -> name
 var equipment := {}                # hero id -> {slot: item id}
 var stories_done: Array = []       # story ids finished
+var story_retry := {}              # story id -> the day a failed or lost legend comes round again
 var posted_wanted := 0             # the wanted level on the posters the Sheriff has put up
 var poster_news := 0               # a new poster for the screen to show (its level), 0 when none
 var ambush := {}                   # bounty hunters waiting on the road, until the fight is played
@@ -259,6 +261,11 @@ func finish_mission(run) -> void:
 		"failed":
 			control[region] = mini(100, control[region] + 5)
 			reputation = maxi(0, reputation - 2)
+		"outshot":
+			reputation += run.reputation
+	if m["type"] == "story" and run.result != "success":
+		story_retry[m["story"]] = day + STORY_RETRY
+		_news("%s will come round again in a few days." % m["name"])
 	_update_wanted()
 	var held_at: String = m.get("prison", location)
 	for h in run.captured:
@@ -294,6 +301,14 @@ func _story_effects(effects: Dictionary) -> void:
 	if not effects.is_empty():
 		plots = {"sheriff": 0, "guy": 0}
 		hunted_hero = ""
+
+
+## Every legend in the book, the band's own story first, then the tales; each as [id, name, told].
+func legends() -> Array:
+	var out: Array = []
+	for id in db.stories["stories"]:
+		out.append([id, db.stories["stories"][id]["name"], stories_done.has(id)])
+	return out
 
 
 ## True once the Sheriff has been driven out of Nottingham Castle.
@@ -511,6 +526,9 @@ func _guy_acts() -> void:
 	if plots["guy"] >= 100 or rng.randf() < raid_chance():
 		plots["guy"] = 0
 		var targets := free_heroes().filter(func(h): return band.has(h.id) and h.id != "robin")
+		# He turns on someone new each time, when there is anyone else to hunt.
+		if targets.size() > 1:
+			targets = targets.filter(func(h): return h.id != hunted_hero)
 		if not targets.is_empty():
 			hunted_hero = targets[rng.randi_range(0, targets.size() - 1)].id
 			_news("Sir Guy of Gisborne is hunting %s." % hero_name(hunted_hero))
@@ -582,7 +600,7 @@ func _maybe_post_contest() -> void:
 
 
 ## Puts each story whose requirements are met on the map at its place, taking over any ordinary
-## job there (but never a rescue). Story jobs never expire; one that fails comes back the next day.
+## job there (but never a rescue). Story jobs never expire; one that fails (or is lost at the butts) comes back STORY_RETRY days later.
 ## A story where someone joins the band may also bump a waiting tale; tales are capped at MAX_TALES.
 func _post_stories() -> void:
 	var gen = MissionGen.new(db)
@@ -591,7 +609,7 @@ func _post_stories() -> void:
 		var st: Dictionary = db.stories["stories"][id]
 		var is_tale: bool = st["recruit"] == "" and not st.get("arc", false)
 		var held: Dictionary = missions.get(st["node"], {})
-		if stories_done.has(id) or held.has("rescue_heroes") or not story_ready(id):
+		if stories_done.has(id) or held.has("rescue_heroes") or not story_ready(id) or day < int(story_retry.get(id, 0)):
 			continue
 		if is_tale and not held.is_empty():
 			continue        # tales wait for a free spot; they never push out a job you may be heading to
@@ -661,7 +679,7 @@ func to_dict() -> Dictionary:
 		"control": control, "plots": plots, "hunted_hero": hunted_hero, "hero_hp": hp, "captured": captured,
 		"missions": missions, "news": news, "rng_state": str(rng.state),
 		"supplies": supplies, "merry_men": merry_men, "equipment": equipment,
-		"band": band, "stories_done": stories_done, "posted_wanted": posted_wanted, "poster_news": poster_news,
+		"band": band, "stories_done": stories_done, "story_retry": story_retry, "posted_wanted": posted_wanted, "poster_news": poster_news,
 		"ambush": ambush, "flags": flags}
 
 
@@ -669,6 +687,8 @@ static func from_dict(game_data, data: Dictionary):
 	# Saves from before story missions had the whole band.
 	var c = load("res://core/campaign.gd").new(game_data, 0, data.get("band", FULL_BAND.slice(0, 4)))
 	c.stories_done = data.get("stories_done", [])
+	for id in data.get("story_retry", {}):
+		c.story_retry[id] = int(data["story_retry"][id])
 	c.day = int(data["day"])
 	c.gold = int(data["gold"])
 	c.reputation = int(data["reputation"])
@@ -708,7 +728,7 @@ static func from_dict(game_data, data: Dictionary):
 
 ## JSON turns every number into a float; mission code expects ints for these keys.
 static func _fix_ints(m: Dictionary) -> void:
-	for k in ["seed", "threat", "expires"]:
+	for k in ["seed", "threat", "expires", "toughness"]:
 		if m.has(k):
 			m[k] = int(m[k])
 	for k in m["rewards"]:

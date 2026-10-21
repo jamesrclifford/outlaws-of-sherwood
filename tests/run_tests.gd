@@ -19,7 +19,7 @@ var db
 func _init() -> void:
 	db = GameData.new()
 	for m in get_method_list():
-		if m["name"].begins_with("test_"):
+		if m["name"].begins_with("test_") and (OS.get_environment("ONLY") == "" or m["name"].contains(OS.get_environment("ONLY"))):
 			call(m["name"])
 	print("\n%d passed, %d failed" % [passed, failures])
 	quit(1 if failures > 0 else 0)
@@ -52,6 +52,71 @@ func autoplay(b, max_turns := 400) -> void:
 				targets.sort_custom(func(x, y): return x.hp < y.hp)
 				b.perform(u, opts[0], targets[0])
 			b.end_turn()
+		turns += 1
+
+
+## Plays a hero's turn the way a sharp player would: patch up whoever is hurt, put the boss to
+## sleep, sweep crowds, then pour the strongest blows into one foe, with mini-games played well.
+func smart_turn(b, u, skill := 0.85) -> void:
+	while not b.is_over() and u.ap > 0:
+		var opts: Array = b.usable_abilities(u).filter(func(a): return a != "defend")
+		if opts.is_empty():
+			break
+		var heroes: Array = b.active("heroes")
+		var foes: Array = b.active("enemies")
+		var hurt: Array = heroes.filter(func(h): return h.hp < h.max_hp * 0.45)
+		var pick := ""
+		var target = null
+		for a in opts:
+			var ab: Dictionary = db.abilities[a]
+			if pick == "" and ab.has("heal") and not hurt.is_empty():
+				pick = a
+				hurt.sort_custom(func(x, y): return x.hp < y.hp)
+				target = hurt[0] if ab["target"] == "ally" else u
+		if pick == "" and opts.has("lullaby"):
+			for f in foes:
+				if f.tags.has("boss") and not f.has_status("stunned"):
+					pick = "lullaby"
+					target = f
+		if pick == "" and opts.has("bridge_hold") and not u.has_status("taunt") and foes.size() >= 3:
+			pick = "bridge_hold"
+			target = u
+		if pick == "" and opts.has("staff_sweep") and b.legal_targets(u, "staff_sweep").size() >= 2:
+			pick = "staff_sweep"
+			target = b.legal_targets(u, "staff_sweep")[0]
+		if pick == "":
+			var best := 0.0
+			for a in opts:
+				var ab: Dictionary = db.abilities[a]
+				var punch: float = float(ab.get("power", 0.0)) * int(ab.get("hits", 1)) / maxf(1.0, float(ab["ap"]))
+				if punch > best and ab["target"] == "enemy" and int(ab["ap"]) <= u.ap:
+					best = punch
+					pick = a
+			if pick == "":
+				pick = opts[0]
+			var ts: Array = b.legal_targets(u, pick)
+			ts.sort_custom(func(x, y): return x.hp < y.hp)
+			target = ts[0] if not ts.is_empty() else u
+		var hits: int = int(db.abilities[pick].get("hits", 1))
+		var sk: Array = []
+		if db.abilities[pick].has("minigame"):
+			for _i in hits:
+				sk.append(skill)
+		if not b.perform(u, pick, target, sk):
+			break
+	b.end_turn()
+
+
+func smart_battle(b, skill := 0.85) -> void:
+	var turns := 0
+	while not b.is_over() and turns < 400:
+		var u = b.next_turn()
+		if u == null:
+			break
+		if u.side == "enemies":
+			b.run_ai_turn()
+		else:
+			smart_turn(b, u, skill)
 		turns += 1
 
 
@@ -192,7 +257,8 @@ func party() -> Array:
 
 
 ## Plays a whole mission: walks into known traps, takes the first option, autoplays fights.
-func autoplay_mission(run, use_scouts := false) -> void:
+## smart plays fights like a sharp player (see smart_battle); otherwise the plain button-masher.
+func autoplay_mission(run, use_scouts := false, smart := false) -> void:
 	if use_scouts:
 		run.scout()
 	var guard := 0
@@ -207,12 +273,14 @@ func autoplay_mission(run, use_scouts := false) -> void:
 			step = run.choose(picks.filter(func(i): return i < step["options"].size() and run.can_choose(i))[0])
 		if step["type"] == "battle":
 			var b = run.make_battle(step["enemies"])
-			autoplay(b)
+			if smart:
+				smart_battle(b, 0.7)
+			else:
+				autoplay(b)
 			run.battle_finished(b)
 		if step["type"] == "archery":
 			var round = run.make_archery()
-			while not round.done():
-				round.tap(0.4 * round.shots.size())
+			shoot_well(round, 0.06, run.node_index + 1)
 			run.archery_finished(round)
 		run.advance()
 
@@ -574,6 +642,74 @@ func test_capture_creates_rescue_and_rescue_frees() -> void:
 	check(c.free_heroes().size() == 2, "only two heroes left to send")
 	c.finish_mission(_fake_run(c, "success", []))
 	check(c.captured.is_empty(), "rescue frees everyone held there")
+
+
+func test_guy_hunts_someone_new_each_time() -> void:
+	var c = Campaign.new(db, 77, BAND4)
+	c.infamy = 40
+	var picks: Array = []
+	for _d in 120:
+		var before: String = c.hunted_hero
+		c.rest()
+		c.ambush = {}
+		if c.hunted_hero != before:
+			picks.append(c.hunted_hero)
+	check(picks.size() >= 4, "Guy picks a quarry several times (%s)" % [picks])
+	var repeats := 0
+	for i in range(1, picks.size()):
+		repeats += 1 if picks[i] == picks[i - 1] else 0
+	check(repeats == 0 and picks.has("will") and picks.has("tuck") and picks.has("little_john"), "and turns on a different hero each time (%s)" % [picks])
+
+
+func test_a_lost_contest_legend_comes_round_again() -> void:
+	var c = Campaign.new(db, 21, BAND4 + ["alan"])
+	var st: Dictionary = db.stories["stories"]["silver_arrow"]
+	c.reputation = 200
+	c.infamy = 60
+	c.stories_done = c.legends().map(func(l): return l[0]).filter(func(id): return id != "silver_arrow")
+	for n in c.missions.keys():
+		if c.missions[n]["type"] == "story":
+			c.missions.erase(n)    # tales posted before the book was filled in
+	c.missions[st["node"]] = MissionGen.new(db).story("silver_arrow", 10, 3)
+	c.missions[st["node"]]["expires"] = 0
+	go(c, st["node"])
+	var run = c.start_mission()
+	var step: Dictionary = run.arrive()
+	while step["type"] != "archery":
+		run.advance()
+		step = run.arrive()
+	var round = run.make_archery()
+	while not round.done():
+		round.tap(0.0)
+		round.tap(0.0)
+	if round.won():
+		check(false, "the test archer should miss")
+		return
+	run.archery_finished(round)
+	check(run.result == "outshot", "losing a legend's match ends the outing")
+	c.finish_mission(run)
+	check(not c.stories_done.has("silver_arrow"), "the legend is not counted as told")
+	check(not c.missions.has(st["node"]) or c.missions[st["node"]].get("story", "") != "silver_arrow", "it is not straight back on the map")
+	go(c, "camp")
+	while c.day < int(c.story_retry["silver_arrow"]):
+		c.rest()
+	c.missions.erase(st["node"])    # tales wait for a free spot at their place
+	c._post_stories()
+	check(c.missions.get(st["node"], {}).get("story", "") == "silver_arrow", "it comes round again a few days later")
+
+
+func test_legend_scenes_move_with_the_story() -> void:
+	var stories: Dictionary = db.stories["stories"]
+	for id in stories:
+		for n in stories[id].get("nodes", []):
+			if n.has("backdrop"):
+				check(ResourceLoader.exists("res://assets/backdrops/%s.png" % n["backdrop"]), "%s has scenery %s" % [id, n["backdrop"]])
+	var run = MissionRun.new(db, MissionGen.new(db).story("potter", 1, 5), [db.make_hero("robin"), db.make_hero("little_john")])
+	check(run.backdrop() == "sherwood_edge", "the Potter is stopped on the road through Sherwood")
+	run.node_index = 2
+	check(run.backdrop() == "nottingham_market", "the pots are sold at Nottingham market")
+	run.node_index = 3
+	check(run.backdrop() == "sherwood_edge", "and the Sheriff is caught deep in Sherwood")
 
 
 func test_freeing_a_villager_says_what_it_did() -> void:
@@ -995,7 +1131,7 @@ func test_every_tale_is_winnable_by_its_band() -> void:
 			c.missions[at]["expires"] = 0
 			c.location = at
 			var run = c.start_mission()
-			autoplay_mission(run)
+			autoplay_mission(run, false, true)
 			wins += 1 if run.result == "success" else 0
 		if wins < tries / 2:
 			weak.append("%s %d/%d" % [id, wins, tries])
@@ -1049,6 +1185,9 @@ func test_every_legend_can_be_played_through() -> void:
 	var guard := 0
 	while c.stories_done.size() < db.stories["stories"].size() and guard < 300:
 		guard += 1
+		c.reputation = maxi(c.reputation, 60)    # Gisborne's raids, lost by the plain autoplayer, cost reputation
+		c.captured.clear()                       # and leave heroes in the dungeon, blocking the castle
+		c._remove_rescues()
 		var at := ""
 		for n in c.missions:
 			if c.missions[n]["type"] == "story":
@@ -1060,12 +1199,14 @@ func test_every_legend_can_be_played_through() -> void:
 		for h in c.heroes.values():
 			h.hp = h.max_hp
 		var run = c.start_mission()
-		autoplay_mission(run)
+		if run == null:
+			continue    # a raid on the road left nobody free to go; the loop frees them and tries again
+		autoplay_mission(run, false, true)
 		c.finish_mission(run)
 		c.captured.clear()
 		c._remove_rescues()
 		go(c, "camp")
-	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (%s)" % [c.stories_done])
+	check(c.stories_done.size() == db.stories["stories"].size(), "all legends finished (missing %s, retry %s, day %d)" % [db.stories["stories"].keys().filter(func(id): return not c.stories_done.has(id)), c.story_retry, c.day])
 	for h in Campaign.FULL_BAND:
 		check(c.band.has(h), "%s has joined by the end of the legends" % h)
 
@@ -1236,7 +1377,7 @@ func test_storming_the_castle_frees_sherwood() -> void:
 		check(not c.finale_won(), "the Sheriff still holds the castle")
 		var run = c.start_mission()
 		check(run.mission["location"] == "castle_courtyard", "the finale is fought in the castle courtyard")
-		autoplay_mission(run)
+		autoplay_mission(run, false, true)
 		c.finish_mission(run)
 		if run.result != "success":
 			continue
@@ -1381,6 +1522,12 @@ func test_disguises_are_learned_from_the_legends() -> void:
 ## A simulated archer who reads the wind from the screen's arrows and taps with a timing error.
 func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
 	var r = preload("res://core/archery.gd").new(seed_value, 3, skill, "Rival")
+	shoot_well(r, tap_error, seed_value)
+	return r.won()
+
+
+## Shoots a round as a player who reads the wind and taps within about tap_error seconds.
+func shoot_well(r, tap_error: float, seed_value: int) -> void:
 	var hand := RandomNumberGenerator.new()
 	hand.seed = seed_value * 7 + 1
 	var rate: float = r.SWING_RATE * r.speed
@@ -1393,7 +1540,6 @@ func _sim_round(skill: float, seed_value: int, tap_error: float) -> bool:
 			var a: float = asin(clampf(target / r.SWAY, -1, 1))
 			var t: float = minf(fposmod(a - r._phase, TAU), fposmod(PI - a - r._phase, TAU)) / rate
 			r.tap(maxf(0.0, t + hand.randfn(0.0, tap_error)))
-	return r.won()
 
 
 func test_contests_are_winnable() -> void:
@@ -1489,7 +1635,7 @@ func test_guy_raids_when_his_plot_is_full() -> void:
 	c.plots["guy"] = 99
 	c.rest()
 	check(not c.ambush.is_empty() and c.ambush.get("raid", "") == "guy", "at 100 Sir Guy rides out to raid the band")
-	check(c.ambush["nodes"][0]["enemies"].has("guy"), "and he comes himself")
+	check(c.ambush["nodes"][0]["enemies"].has("guy_raider"), "and he comes himself")
 	check(c.plots["guy"] < 20, "his plot starts again")
 	var copy = Campaign.from_dict(db, JSON.parse_string(JSON.stringify(c.to_dict())))
 	check(copy.ambush.get("raid", "") == "guy", "a waiting raid survives a save")
@@ -1526,7 +1672,9 @@ func test_guy_raid_is_hard_and_takes_one_hero() -> void:
 			check(c.free_heroes().size() == 3 and c.free_heroes().all(func(h): return h.hp >= 1), "the rest of the band gets away")
 	print("Guy's raid against four heroes: won %d/40" % wins)
 	check(wins <= 20, "Guy's raid is a very hard fight (%d/40 won)" % wins)
-	check(wins >= 2, "but it can be won (%d/40)" % wins)
+	# Played well, the whole band beats him some of the time; four heroes alone almost never.
+	var full: Array = _raid_odds(BAND4 + ["alan"], 0.85, 60)
+	check(full[0] >= 12 and full[0] <= 36, "a sharp player with the full band wins about a third of raids (%d/60)" % full[0])
 	check(one_taken == losses, "losing always costs exactly the hero Guy is hunting (%d/%d)" % [one_taken, losses])
 	# Running away counts as losing.
 	var c2 = Campaign.new(db, 7, BAND4)
@@ -1562,3 +1710,46 @@ func test_guy_may_raid_before_his_plot_is_full() -> void:
 				early += 1 if before + 5 < 100 else 0
 				break
 	check(early > 40 and early < 190, "Guy often strikes before the meter fills, but not always (%d/200)" % early)
+
+
+func _raid_odds(band: Array, skill: float, n: int) -> Array:
+	var wins := 0
+	var rounds := 0
+	for s in n:
+		var c = Campaign.new(db, 600 + s, band)
+		c.ambush = MissionGen.new(db).guy_raid("the road", "great_north_road", 900 + s)
+		c.location = "great_north_road"
+		var run = c.start_ambush()
+		var b = run.make_battle(run.arrive()["enemies"])
+		smart_battle(b, skill)
+		rounds += b.round_number
+		wins += 1 if b.result == "victory" else 0
+	return [wins, rounds / float(n)]
+
+
+func _raid_odds_print() -> void:   # rename to test_ to print the odds while balancing
+	for band in [BAND4, BAND4 + ["alan"]]:
+		for skill in [0.6, 0.85, 1.0]:
+			var r: Array = _raid_odds(band, skill, 100)
+			print("raid, %d heroes played well (skill %.2f): won %d/100, %.1f rounds" % [band.size(), skill, r[0], r[1]])
+
+
+func _tale_odds(id: String, tough_scale: float) -> int:
+	var wins := 0
+	for s in 12:
+		var c = Campaign.new(db, 500 + s, band_for_story(id))
+		c.missions.clear()
+		var at: String = db.stories["stories"][id]["node"]
+		c.missions[at] = MissionGen.new(db).story(id, 10, 900 + s)
+		c.missions[at]["toughness"] = int(c.missions[at]["toughness"] * tough_scale)
+		c.missions[at]["expires"] = 0
+		c.location = at
+		var run = c.start_mission()
+		autoplay_mission(run, false, true)
+		wins += 1 if run.result == "success" else 0
+	return wins
+
+
+func _tale_odds_print() -> void:   # rename to test_ to print legend odds while balancing
+	for id in db.stories["stories"]:
+		print("%-22s rep %2d band %d: plain %2d/12  tough %2d/12" % [id, int(db.stories["stories"][id]["requires"].get("reputation", 0)), band_for_story(id).size(), _tale_odds(id, 0.0), _tale_odds(id, 1.0)])

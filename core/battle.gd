@@ -3,6 +3,7 @@
 extends RefCounted
 
 const Unit = preload("res://core/unit.gd")
+const STEADFAST := 0.6        # how often a "steadfast" foe (Sir Guy's raiders) shakes off a stun or a net; they never flee
 
 signal event(text: String)
 ## For the battle screen's animations: who used what on whom, and what each target took.
@@ -179,6 +180,9 @@ func perform(u, ability_id: String, target, skill: Array = []) -> bool:
 			_emit("%s recovers %d HP." % [t.name, amount_healed])
 			healed.emit(t, amount_healed)
 		for eff in ab.get("effects", []):
+			if t.is_active() and eff["status"] in ["stunned", "netted"] and t.tags.has("steadfast") and rng.randf() < STEADFAST:
+				_emit("%s shrugs it off!" % t.name)
+				continue
 			if t.is_active() and rng.randf() < float(eff.get("chance", 1.0)):
 				t.add_status(eff["status"], int(eff["turns"]))
 				_emit("%s is %s." % [t.name, eff["status"]])
@@ -224,7 +228,7 @@ func _on_down(target) -> void:
 	gold_won += target.carries_gold
 	if target.tags.has("leader"):
 		for e in active("enemies"):
-			if not e.tags.has("boss") and rng.randf() < 0.5:
+			if not e.tags.has("boss") and not e.tags.has("steadfast") and rng.randf() < 0.5:
 				e.fled = true
 				_emit("%s loses heart and flees!" % e.name)
 				gold_escaped += e.carries_gold

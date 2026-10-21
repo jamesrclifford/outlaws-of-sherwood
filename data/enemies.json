@@ -6,6 +6,8 @@
   "tax_collector": {"name": "Tax Collector", "short": "Taxman",  "hp": 10, "atk": 3,  "def": 1, "spd": 9, "crit": 0.00, "row": "back",  "tags": ["coward"],             "abilities": ["strike"], "carries_gold": 20},
   "hound":         {"name": "Hound",          "hp": 12, "atk": 6,  "def": 1, "spd": 10,"crit": 0.10, "row": "front", "tags": ["beast"],              "abilities": ["bite"]},
   "guy":           {"name": "Sir Guy of Gisborne", "short": "Guy", "hp": 70, "atk": 11, "def": 6, "spd": 7, "crit": 0.12, "row": "front", "tags": ["boss", "knight", "leader"], "abilities": ["gisborne_duel", "throw_net", "call_guards"]},
+  "guy_raider": {"name": "Sir Guy of Gisborne", "short": "Guy", "sprite": "guy", "hp": 120, "atk": 13, "def": 7, "spd": 8, "crit": 0.15, "row": "front", "tags": ["boss", "knight", "leader", "steadfast"], "abilities": ["gisborne_duel", "charge", "throw_net"]},
+  "gisborne_rider": {"name": "Gisborne's Rider", "short": "Rider", "sprite": "knight", "hp": 44, "atk": 11, "def": 6, "spd": 5, "crit": 0.1, "row": "front", "tags": ["knight", "steadfast"], "abilities": ["strike", "charge"]},
   "rival_little_john": {"name": "The Stranger", "sprite": "little_john", "hp": 46, "atk": 8, "def": 6, "spd": 4, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "staff_sweep"]},
   "rival_tuck":    {"name": "The Friar",      "sprite": "tuck",        "hp": 38, "atk": 7,  "def": 4, "spd": 5, "crit": 0.05, "row": "front", "tags": ["rival"], "abilities": ["strike", "tavern_brawl"]},
   "bishop":        {"name": "Bishop of Hereford", "short": "Bishop", "hp": 18, "atk": 4, "def": 2, "spd": 4, "crit": 0.00, "row": "back", "tags": ["coward"], "abilities": ["call_guards"], "carries_gold": 40},

@@ -8,6 +8,8 @@ const SNEAK_BASE := 0.75       # chance for one or two heroes to creep past wher
 const SNEAK_PER_HERO := 0.04   # each extra hero makes more noise
 const SNEAK_MIN := 0.3
 const RAID_GLORY := 8          # reputation for beating Sir Guy's raid
+const TOUGH_HP := 0.02         # a legend's foes gain this much health per point of reputation it asks for
+const TOUGH_ATK := 0.005       # and this much bite
 
 var db
 var mission: Dictionary
@@ -20,7 +22,7 @@ var prisoner_freed := false
 var loot_taken := false
 var recruited := ""           # a story mission's new companion, once won over
 var captured: Array = []
-var result := ""              # "", "success", "failed", "called_off"
+var result := ""              # "", "success", "failed", "called_off", "outshot" (a legend's contest lost)
 var mission_log: Array = []
 var _trap_decided := false
 var _sprung := {}             # trap effects waiting for this node's battle
@@ -227,6 +229,14 @@ func make_battle(enemy_ids: Array):
 		_arm_for_duel(node["abilities"], node.get("sprites", {}))
 	var b = db.make_custom_battle(fighters(), enemy_ids, rng.randi())
 	b.friendly = node.get("friendly", false)
+	# Legends that ask for a big reputation are told of bigger, tougher foes.
+	var tough: int = int(mission.get("toughness", 0))
+	if tough > 0:
+		for u in b.units:
+			if u.side == "enemies":
+				u.max_hp = int(round(u.max_hp * (1.0 + tough * TOUGH_HP)))
+				u.hp = u.max_hp
+				u.atk = int(round(u.atk * (1.0 + tough * TOUGH_ATK)))
 	if surprise:
 		surprise = false
 		_log("Surprise attack! The enemy is caught flat-footed.")
@@ -257,6 +267,14 @@ func _disarm_after_duel() -> void:
 	_duel_loadouts.clear()
 
 
+## The scenery for where the band is now: a legend's node may move the scene (the Potter's fight
+## is deep in Sherwood, though the tale is told at Nottingham market).
+func backdrop() -> String:
+	if node_index < mission["nodes"].size():
+		return current_node().get("backdrop", mission["location"])
+	return mission["location"]
+
+
 ## The archery round at the current node, against its rival.
 func make_archery():
 	var node := current_node()
@@ -284,6 +302,10 @@ func archery_finished(round) -> void:
 	else:
 		_log(node.get("lose", "So close!"))
 		reputation += 1
+		if mission["type"] == "story":
+			# A legend lost at the butts is not over: the band will hear of another match.
+			result = "outshot"
+			_log("This legend is not finished. Another match will come round before long.")
 
 
 func active_heroes() -> Array:

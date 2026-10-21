@@ -150,6 +150,7 @@
       ]
     },
     "storm_castle": {
+      "toughness": 15,
       "name": "Storming Nottingham Castle",
       "node": "nottingham",
       "backdrop": "castle_courtyard",

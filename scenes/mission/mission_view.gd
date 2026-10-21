@@ -48,7 +48,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = Style.theme()
 	_build_layout()
-	backdrop.texture = BattleView.backdrop_for(mission["location"])
+	backdrop.texture = BattleView.backdrop_for(run.backdrop())
 	_show_briefing()
 
 
@@ -288,6 +288,7 @@ func _set_out() -> void:
 
 
 func _handle(step: Dictionary) -> void:
+	backdrop.texture = BattleView.backdrop_for(run.backdrop())
 	_refresh()
 	if run.is_over():
 		_finish()
@@ -317,7 +318,7 @@ func _handle(step: Dictionary) -> void:
 func _fight(enemy_ids: Array) -> void:
 	var view := BattleView.new()
 	view.set_anchors_preset(Control.PRESET_FULL_RECT)
-	view.run_battle(db, run.make_battle(enemy_ids), run.current_node()["text"], run.mission["location"])
+	view.run_battle(db, run.make_battle(enemy_ids), run.current_node()["text"], run.backdrop())
 	view.finished.connect(func(b):
 		view.queue_free()
 		run.battle_finished(b)
