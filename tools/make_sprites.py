@@ -169,8 +169,11 @@ def tuck():
     s.rect(17, 22, 20, 28, "#5c3f25")
     s.px(14, 20, "#d8c99a")                             # rope knot
     s.px(14, 21, "#d8c99a")
-    s.rect(25, 12, 26, 18, "#4a2f18")                   # blackthorn cudgel
-    s.rect(24, 10, 27, 12, "#3a2614")
+    sword(s, hx=22, hy=17, blade="#e8ecf2")            # the Curtal Friar's broadsword
+    s.rect(8, 17, 10, 21, "#8a6a40")                    # and his round buckler
+    s.rect(7, 18, 11, 20, "#8a6a40")
+    s.rect(8, 18, 10, 20, "#a8804a")
+    s.px(9, 19, "#d8c070")
     return s.save("tuck")
 
 

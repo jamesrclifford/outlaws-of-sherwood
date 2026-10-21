@@ -52,10 +52,11 @@ static func from_data(unit_id: String, data: Dictionary, unit_side: String):
 	return u
 
 
-## Abilities usable right now. Anyone standing in the back row can loose a bow shot.
+## Abilities usable right now. Anyone standing in the back row can loose a bow shot,
+## except those tagged no_bow (Friar Tuck sends his dogs instead).
 func available_abilities() -> Array:
 	var out := abilities.duplicate()
-	if row == "back" and not fixed_abilities and not out.has(BACK_ROW_ABILITY):
+	if row == "back" and not fixed_abilities and not out.has(BACK_ROW_ABILITY) and not tags.has("no_bow"):
 		out.append(BACK_ROW_ABILITY)
 	return out
 

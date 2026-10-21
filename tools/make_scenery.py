@@ -1294,6 +1294,14 @@ def item_sword(c, blade, hilt):
     c.px(14, 2, blade)
 
 
+def item_buckler(c, blade, hilt):
+    """A sword with a round buckler behind it: the Curtal Friar's arms."""
+    c.ellipse(5.5, 9.5, 4.5, 4.5, "#8a6a40")
+    c.ellipse(5.5, 9.5, 3, 3, "#a8804a")
+    c.rect(5, 9, 6, 10, "#d8c070")
+    item_sword(c, blade, hilt)
+
+
 def item_cudgel(c):
     c.line(3, 14, 10, 7, "#5a3a20")
     c.line(4, 14, 11, 7, "#3e2814")
@@ -1368,10 +1376,10 @@ ITEM_ICONS = {
     "hunters_recurve": lambda c: item_bow(c, "#6a4a2a"),
     "ironshod_staff": lambda c: item_staff(c, "#8a6a40", "#a8b0bc"),
     "great_oak_staff": lambda c: item_staff(c, "#6a4a2a", "#4a7a34"),
-    "friars_staff": lambda c: item_staff(c, "#a08050", "#e8e0c8"),
+    "friars_staff": lambda c: item_buckler(c, "#e8ecf2", "#c8a040"),
     "duelling_sword": lambda c: item_sword(c, "#e8ecf2", "#c8a040"),
     "fine_arming_sword": lambda c: item_sword(c, "#d0d6e0", "#a03a2a"),
-    "blackthorn_cudgel": item_cudgel,
+    "blackthorn_cudgel": lambda c: item_sword(c, "#c8ccd4", "#6a4a2a"),
     "outlaw_spear": item_spear,
     "padded_jerkin": lambda c: item_torso(c, "#8a7a5a", "#5a4a30"),
     "leather_brigandine": lambda c: item_torso(c, "#7a4a2a", "#4a2a14", studs="#d8c070"),
@@ -1422,6 +1430,23 @@ def make_fx():
     spark.px(6, 2, "#ffe080")
     spark.rect(3, 3, 5, 5, "#ffffff")
     spark.save("assets", "fx", "spark.png")
+    for frame in range(2):   # Friar Tuck's dogs, bounding (two frames)
+        dog = Canvas(16, 11)
+        dog.rect(3, 4, 11, 7, "#8a6a4a")                 # body
+        dog.rect(3, 7, 11, 7, "#6a4f36")
+        dog.rect(11, 1, 14, 5, "#8a6a4a")                # head
+        dog.rect(14, 3, 15, 4, "#8a6a4a")                # muzzle
+        dog.px(15, 3, "#1a1410")
+        dog.px(13, 2, "#1a1410")
+        dog.rect(11, 0, 12, 2, "#5a4028")                # ear
+        dog.rect(9, 4, 10, 4, "#3a6a2c")                 # a green collar: the friar's dog
+        dog.line(2, 4, 0, 1 + frame * 2, "#8a6a4a")      # tail
+        legs = ((3, 8, 1, 10), (5, 8, 6, 10), (9, 8, 8, 10), (11, 8, 13, 10)) if frame == 0 else \
+               ((3, 8, 4, 10), (5, 8, 4, 10), (9, 8, 10, 10), (11, 8, 10, 10))
+        for x0, y0, x1, y1 in legs:
+            dog.line(x0, y0, x1, y1, "#6a4f36")
+        dog.outline("#1e140c")
+        dog.save("assets", "fx", "dog_%d.png" % frame)
     note = Canvas(8, 10)
     note.rect(5, 0, 5, 7, "#f0d070")
     note.rect(6, 1, 7, 2, "#f0d070")

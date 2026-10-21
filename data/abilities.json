@@ -8,6 +8,8 @@
   "staff_sweep":   {"name": "Staff Sweep",     "ap": 2, "target": "all_enemies", "range": "melee", "power": 1.0, "effects": [{"status": "stunned", "turns": 1, "chance": 0.35}], "minigame": "swing", "desc": "Hits every foe in reach and may knock them down."},
   "flourish":      {"name": "Flourish",        "ap": 2, "target": "enemy",       "range": "melee", "power": 0.55, "hits": 3, "bonus_vs_tag": {"knight": 1.5}, "minigame": "rhythm", "desc": "Three quick cuts at one foe. Extra hard on knights."},
   "blessing":      {"name": "Blessing",        "ap": 2, "target": "ally",        "heal": 1.2, "desc": "Heals one friend a lot."},
+  "broadsword":    {"name": "Broadsword",      "ap": 1, "target": "enemy",       "range": "melee", "power": 1.1, "desc": "The Curtal Friar's broadsword, at a foe in reach."},
+  "fetch_boys":    {"fx": "dogs", "name": "Fetch, Boys!", "ap": 1, "target": "enemy", "range": "any", "power": 0.8, "effects": [{"status": "pinned", "turns": 2, "chance": 1.0}, {"status": "stunned", "turns": 1, "chance": 0.25}], "desc": "Tuck whistles up his dogs. They bound to any foe and pin him down, and may knock him flat."},
   "tavern_brawl":  {"name": "Tavern Brawl",    "ap": 2, "target": "enemy",       "range": "melee", "power": 0.7, "effects": [{"status": "stunned", "turns": 1, "chance": 0.6}], "desc": "A punch at a foe in reach. Often stuns for a turn."},
   "rally":         {"name": "Rally",           "ap": 2, "target": "all_allies",  "effects": [{"status": "inspired", "turns": 2}], "desc": "The whole band hits harder for 2 turns."},
   "shield_wall":   {"name": "Shield Wall",     "ap": 1, "target": "self",        "effects": [{"status": "defending", "turns": 1}], "desc": "Brace: take less harm until the next turn."},

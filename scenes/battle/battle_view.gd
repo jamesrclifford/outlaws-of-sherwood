@@ -26,6 +26,8 @@ const PROJECTILES := {
 	"net": preload("res://assets/fx/net.png"),
 }
 const SPARK := preload("res://assets/fx/spark.png")
+## Friar Tuck's dogs: two frames of a bounding run.
+const DOG := [preload("res://assets/fx/dog_0.png"), preload("res://assets/fx/dog_1.png")]
 
 var db
 var battle
@@ -541,11 +543,39 @@ func _animate_act(u, ability_id: String, targets: Array) -> void:
 		await flight.finished
 		shot.queue_free()
 		return
+	if fx == "dogs" and not targets.is_empty() and unit_buttons.has(targets[0]):
+		await _animate_dogs(b.position, unit_buttons[targets[0]].position, toward)
+		return
 	# Melee: lunge at the enemy (a long dash for a charge), then step back.
 	var reach: float = 44.0 if fx == "dash" else 18.0
 	tween.tween_property(b, "position:x", home.x + reach * toward, 0.1)
 	tween.tween_property(b, "position:x", home.x, 0.14)
 	await get_tree().create_timer(0.1).timeout
+
+
+## Two dogs bound from the friar to the foe, one just behind the other, leaping as they run.
+func _animate_dogs(from: Vector2, to: Vector2, toward: float) -> void:
+	var dogs: Array = []
+	for i in 2:
+		var dog := TextureRect.new()
+		dog.texture = DOG[i]
+		dog.flip_h = toward < 0
+		dog.scale = Vector2(3, 3)
+		dog.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		field.add_child(dog)
+		dogs.append(dog)
+	var start := from + Vector2(20, 44)
+	var end := to + Vector2(8 - 28 * toward, 44)
+	var steps := 8
+	for s in steps + 2:
+		var t := s / float(steps)
+		for i in 2:
+			var lag: float = clampf(t - i * 0.12, 0.0, 1.0)
+			dogs[i].position = start.lerp(end, lag) + Vector2(0, -absf(sin(lag * PI * 3)) * 10 - i * 4)
+			dogs[i].texture = DOG[(s + i) % 2]
+		await get_tree().create_timer(0.035).timeout
+	for d in dogs:
+		d.queue_free()
 
 
 func _animate_hit(u, amount: int, crit: bool) -> void:
