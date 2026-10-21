@@ -294,5 +294,20 @@ func _init() -> void:
 	home.send_team("will", team_job)
 	team_map._select(team_job)
 	await _snap(dir, "team_away")
+	# The team comes home: one job won, one lost.
+	home.teams[0]["odds"] = 1.0
+	home.day = home.teams[0]["back"] - 1
+	home._end_day(false)
+	team_map._show_team_report()
+	await _snap(dir, "team_report")
+	team_map.get_child(team_map.get_child_count() - 1).queue_free()
+	team_map.busy = false
+	home.missions["sherwood_edge"] = MissionGen.new(cdb).generate("robbery", 30, 9, "sherwood_edge")
+	home.send_team("little_john", "sherwood_edge")
+	home.teams[0]["odds"] = 0.0
+	home.day = home.teams[0]["back"] - 1
+	home._end_day(false)
+	team_map._show_team_report()
+	await _snap(dir, "team_report_lost")
 	await _clear()
 	quit()

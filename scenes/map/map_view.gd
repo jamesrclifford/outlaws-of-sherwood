@@ -277,6 +277,8 @@ func _after_day() -> void:
 	_select(campaign.location)
 	if campaign.poster_news > 0:
 		_show_poster()
+	elif not campaign.team_reports.is_empty():
+		_show_team_report()
 	elif not campaign.ambush.is_empty():
 		_play(campaign.start_ambush())
 	else:
@@ -373,6 +375,33 @@ func _show_camp() -> void:
 
 
 ## A wanted poster, nailed up over the map when the bounty rises.
+## A team is home: who went, how the job went, what they brought back, and who is hurt or caught.
+func _show_team_report() -> void:
+	var c = campaign
+	var r: Dictionary = c.team_reports.pop_front()
+	c.save()
+	var leader: String = c.hero_name(r["leader"])
+	var lines := [r["job"], "at " + r["place"]] if r["job"] != "" else [r["place"]]
+	for i in r["with"].size():
+		lines.append(("with " if i == 0 else "and ") + r["with"][i])
+	lines.append("")
+	if r["won"]:
+		lines.append("They bring home %d gold." % int(r["gold"]))
+		if int(r["reputation"]) > 0:
+			lines.append("Fame +%d" % int(r["reputation"]))
+		if r["joined"] != "":
+			lines.append("%s joins the band!" % r["joined"])
+	else:
+		lines.append("%s was captured!" % r["caught"])
+		lines.append("Held at %s." % r["held_at"])
+		lines.append("A rescue job is on the map.")
+	if not r["hurt"].is_empty():
+		lines.append("")
+		for h in r["hurt"]:
+			lines.append("%s %d/%d HP" % [h[0], int(h[1]), int(h[2])])
+	_notice("JOB DONE" if r["won"] else "CAUGHT!", ("%s's team" % leader).to_upper(), lines, r["leader"], "Welcome home" if r["won"] else "We'll get them back")
+
+
 func _show_poster() -> void:
 	var c = campaign
 	c.poster_news = 0
@@ -382,7 +411,6 @@ func _show_poster() -> void:
 	_notice("WANTED", "ROBIN HOOD", lines, "robin", "Let them try!")
 
 
-## The end of the Sheriff's story. The campaign carries on afterwards.
 ## The Sheriff is out of the castle, but the tale ends only when King Richard is home.
 func _show_castle_taken() -> void:
 	var lines := ["The Sheriff has fled Nottingham", "in his nightshirt!", "",
