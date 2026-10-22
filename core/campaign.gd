@@ -886,11 +886,14 @@ func _end_day(resting: bool, heal := true) -> void:
 	var needed: int = band.size() * int(econ["supplies"]["per_member_per_day"])
 	var fed := supplies >= needed
 	supplies = maxi(0, supplies - needed)
-	if not fed:
+	# At home under the Major Oak the band always rests and heals: the greenwood feeds them.
+	if not fed and resting:
+		_news("The supplies are gone, but the band sleeps safe at home and wakes stronger.")
+	elif not fed:
 		_news("The band has run out of food and arrows. Everyone grows weak.")
 	for h in band:
 		h.statuses.clear()
-		if fed and heal:
+		if (fed or resting) and heal:
 			h.heal(int(ceil(h.max_hp * (HEAL_AT_CAMP if resting else HEAL_ON_ROAD + upgrade_sum("road_heal")))))
 		elif not fed:
 			h.hp = maxi(1, h.hp - int(ceil(h.max_hp * float(econ["supplies"]["hunger_damage"]))))

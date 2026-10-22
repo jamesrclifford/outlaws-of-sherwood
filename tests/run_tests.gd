@@ -926,8 +926,12 @@ func test_supplies_run_down_and_hunger_hurts() -> void:
 	check(c.supplies == start - 4, "four heroes eat four supplies a day")
 	c.supplies = 0
 	var robin = c.heroes["robin"]
+	robin.hp = robin.max_hp / 2
 	c.rest()
-	check(robin.hp < robin.max_hp, "a hungry band gets weaker instead of healing")
+	check(robin.hp > robin.max_hp / 2 and c.supplies == 0, "a night at the Major Oak heals even with no supplies")
+	var hurt: int = robin.hp
+	c._end_day(false)
+	check(robin.hp < hurt, "a hungry band on the road gets weaker instead of healing")
 	check(robin.hp >= 1, "hunger never knocks anyone out")
 	c.gold = 15
 	check(c.buy_supplies() and c.supplies == 10 and c.gold == 0, "buy a bundle of supplies at camp")
