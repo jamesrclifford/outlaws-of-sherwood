@@ -10,7 +10,7 @@ const BattleView = preload("res://scenes/battle/battle_view.gd")
 const Style = preload("res://scenes/ui/style.gd")
 const TipCard = preload("res://scenes/ui/tip_card.gd")
 
-const BUTTON_ROWS := 4
+const BUTTON_ROWS := 5
 const NIGHT := Color(0.38, 0.42, 0.72)
 const DUSK := Color(0.6, 0.6, 0.82)
 

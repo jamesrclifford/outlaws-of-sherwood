@@ -186,20 +186,21 @@ func test_back_row_cannot_use_melee_while_front_row_ally_stands() -> void:
 	var b = db.make_battle(["robin", "little_john"], "tax_wagon", 3)
 	var tuck = Unit.from_data("tuck", db.heroes["tuck"], "heroes")
 	b.add_unit(tuck)
-	check(b.legal_targets(tuck, "strike").is_empty(), "back-row tuck cannot melee past little john")
+	check(b.legal_targets(tuck, "broadsword").is_empty(), "back-row tuck cannot melee past little john")
+	check(not b.legal_targets(tuck, "fetch_boys").is_empty(), "but his dogs reach any foe")
 
 
 func test_back_row_gets_bow_shot() -> void:
 	var b = db.make_battle(["robin", "little_john"], "tax_wagon", 3)
 	var tuck = Unit.from_data("tuck", db.heroes["tuck"], "heroes")
 	b.add_unit(tuck)
-	check(tuck.available_abilities().has("bow_shot"), "back-row tuck can use a bow shot")
-	check(b.legal_targets(tuck, "bow_shot").any(func(t): return t.row == "back"), "bow shot reaches the enemy back row")
+	check(not tuck.available_abilities().has("bow_shot") and b.legal_targets(tuck, "fetch_boys").any(func(t): return t.row == "back"), "back-row tuck sends his dogs instead of shooting")
 	var john = b.heroes()[1]
 	check(not john.available_abilities().has("bow_shot"), "front-row little john has no bow shot")
 	john.row = "back"
 	check(john.available_abilities().has("bow_shot"), "little john gets a bow shot after moving to the back row")
-	check(tuck.available_abilities().count("bow_shot") == 1 and b.heroes()[0].available_abilities().count("bow_shot") == 1, "no duplicate bow shot")
+	check(b.legal_targets(john, "bow_shot").any(func(t): return t.row == "back"), "bow shot reaches the enemy back row")
+	check(john.available_abilities().count("bow_shot") == 1 and b.heroes()[0].available_abilities().count("bow_shot") == 1, "no duplicate bow shot")
 
 
 func test_taunt_forces_targeting() -> void:
@@ -925,8 +926,12 @@ func test_supplies_run_down_and_hunger_hurts() -> void:
 	check(c.supplies == start - 4, "four heroes eat four supplies a day")
 	c.supplies = 0
 	var robin = c.heroes["robin"]
+	robin.hp = robin.max_hp / 2
 	c.rest()
-	check(robin.hp < robin.max_hp, "a hungry band gets weaker instead of healing")
+	check(robin.hp > robin.max_hp / 2 and c.supplies == 0, "a night at the Major Oak heals even with no supplies")
+	var hurt: int = robin.hp
+	c._end_day(false)
+	check(robin.hp < hurt, "a hungry band on the road gets weaker instead of healing")
 	check(robin.hp >= 1, "hunger never knocks anyone out")
 	c.gold = 15
 	check(c.buy_supplies() and c.supplies == 10 and c.gold == 0, "buy a bundle of supplies at camp")
@@ -1021,7 +1026,7 @@ func test_every_item_and_path_step_has_art() -> void:
 		check(ResourceLoader.exists("res://assets/ui/node_%s.png" % kind), "path step %s has a medallion" % kind)
 	for id in db.abilities:
 		var fx: String = db.abilities[id].get("fx", "")
-		check(fx in ["", "dash"] or ResourceLoader.exists("res://assets/fx/%s.png" % fx), "%s's effect has art" % id)
+		check(fx in ["", "dash"] or ResourceLoader.exists("res://assets/fx/%s.png" % fx) or ResourceLoader.exists("res://assets/fx/%s_0.png" % fx.trim_suffix("s")), "%s's effect has art" % id)
 
 
 func test_battle_reports_hits_for_animation() -> void:
